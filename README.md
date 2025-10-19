@@ -10,12 +10,14 @@ This repository tracks the **Part-2 deliverables** for the Event Lottery System:
 ---
 
 ## Repo Structure
-/docs/
-backlog/ # Team A: user stories, risk, halfway-checkpoint
-ux/ # Team B: mockups, storyboards
-crc/ # Team C: CRC cards, technical decisions
-.gitignore
-README.md
+"""
+├──/docs/
+│     ├──backlog/ # Team A: user stories, risk, halfway-checkpoint
+│     ├──ux/ # Team B: mockups, storyboards
+│     ├──crc/ # Team C: CRC cards, technical decisions
+├──.gitignore
+├──README.md
+
 
 ---
 
