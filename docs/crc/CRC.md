@@ -56,6 +56,7 @@
 **Responsibilities**
 - provide eventId, title, description, event poster
 - provide counts/summaries for UI (entrants in pool, selected, finalized)
+- provides a map to view where entrants have signed up from
 
 **Collaborators**
 - LotterySystem, FirebaseManager, NotificationManager
