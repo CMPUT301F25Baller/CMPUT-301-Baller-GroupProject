@@ -66,6 +66,7 @@
 **Responsibilities**
 - validate entrant eligibility, record join, deduplication per device/user/event
 - perform draw
+- sends invites to selected entrants
 - start acceptance timer, mark accepted/declined, trigger replacement backfill
 - enforce capacity limits, waitingListCap, registration window
 - summarize pool & results for Organizer/Admin dashboards
