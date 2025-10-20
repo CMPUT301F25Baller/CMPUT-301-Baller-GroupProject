@@ -13,6 +13,29 @@
 **Collaborators**
 - Entrant, Organizer, Admin, NotificationManager, FirebaseManager
 
+|User Story|Description|
+|----------|:----------|
+|01.02.01 |As an entrant, I want to provide my personal information such as name, email and optional phone number in the app|
+|01.02.02 |As an entrant I want to update information such as name, email and contact information on my profile|
+|01.02.03 |As an entrant, I want to have a history of events I have registered for, whether I was selected or not|
+|01.02.04 |As an entrant, I want to delete my profile if I no longer wish to use the app|
+|01.04.01 |As an entrant I want to receive notification when I am chosen to participate from the waiting list (when I "win" the lottery)|
+|01.04.02 |As an entrant I want to receive notification of when I am not chosen on the app (when I "lose" the lottery)|
+|01.04.03 |As an entrant I want to opt out of receiving notifications from organizers and admins|
+|01.05.01 |As an entrant I want another chance to be chosen from the waiting list if a selected user declines an invitation to sign up|
+|01.05.03 |As an entrant I want to be able to decline an invitation when chosen to participate in an event|
+|01.05.04 |As an entrant, I want to know how many total entrants are on the waiting list for an event|
+|01.07.01 |As an entrant, I want to be identified by my device, so that I don't have to use a username and password|
+|02.02.02 |As an organizer I want to see on a map where entrants joined my event waiting list from|
+|02.05.01 |As an organizer I want to send a notification to chosen entrants to sign up for events|
+|02.07.01 |As an organizer I want to send notifications to all entrants on the waiting list|
+|02.07.02 |As an organizer I want to send notifications to all selected entrants|
+|02.07.03 |As an organizer I want to send a notification to all cancelled entrants|
+|03.02.01 |As an administrator, I want to be able to remove profiles|
+|03.05.01 |As an administrator, I want to be able to browse profiles|
+|03.06.01 |As an administrator, I want to be able to browse images that are uploaded so I can remove them if necessary|
+|03.08.01 |As an administrator, I want to review logs of all notifications sent to entrants by organizers|
+
 ---
 
 ## Entrant
