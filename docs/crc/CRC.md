@@ -114,6 +114,18 @@
 
 **Collaborators**
 - User, FirebaseManager, NotificationManager, LotterySystem
+|User Story|Description|
+|----------|:----------|
+|01.04.03 |As an entrant I want to opt out of receiving notifications from organizers and admins|
+|01.05.01 |As an entrant I want another chance to be chosen from the waiting list if a selected user declines an invitation to sign up|
+|03.02.01 |As an administrator, I want to be able to remove profiles|
+|03.03.01 |As an administrator, I want to be able to remove images|
+|03.04.01 |As an administrator, I want to be able to browse events|
+|03.01.01 |As an administrator, I want to be able to remove events|
+|03.05.01 |As an administrator, I want to be able to browse profiles|
+|03.06.01 |As an administrator, I want to be able to browse images that are uploaded so I can remove them if necessary|
+|03.07.01 |As an administrator I want to remove organizers that violate app policy|
+|03.08.01 |As an administrator, I want to review logs of all notifications sent to entrants by organizers|
 
 ---
 
