@@ -267,6 +267,11 @@
 **Collaborators**
 - Event, FirebaseManager, LotterySystem
 
+|User Story|Description|
+|----------|:----------|
+|01.06.01 |As an entrant I want to view event details within the app by scanning the promotional QR code|
+|02.01.01 |As an organizer I want to create a new event and generate a unique promotional QR code that links to the event description and event poster in the app|
+
 ---
 
 ## FirebaseManager
