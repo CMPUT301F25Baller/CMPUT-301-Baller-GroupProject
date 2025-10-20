@@ -23,7 +23,7 @@ README.md
 
 **Branches**
 - `main` is protected (PRs only, 1 review minimum, squash merges).
-- Feature branches: `feat/<short-desc>`; docs branches: `docs/<area>`.
+- Feature branches: `feat/<short-desc>`
 
 **Commit messages**
 - Conventional style (e.g., `docs(crc): add LotteryDraw responsibilities`).
