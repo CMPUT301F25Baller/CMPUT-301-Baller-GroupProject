@@ -245,6 +245,17 @@
 **Collaborators**
 - User, Entrant, Organizer, Admin, LotterySystem, FirebaseManager
 
+|User Story|Description|
+|----------|:----------|
+|01.04.01 |As an entrant I want to receive notification when I am chosen to participate from the waiting list (when I "win" the lottery)|
+|01.04.02 |As an entrant I want to receive notification of when I am not chosen on the app (when I "lose" the lottery)|
+|01.04.03 |As an entrant I want to opt out of receiving notifications from organizers and admins|
+|02.05.01 |As an organizer I want to send a notification to chosen entrants to sign up for events|
+|02.07.01 |As an organizer I want to send notifications to all entrants on the waiting list|
+|02.07.02 |As an organizer I want to send notifications to all selected entrants|
+|02.07.03 |As an organizer I want to send a notification to all cancelled entrants|
+|03.08.01 |As an administrator, I want to review logs of all notifications sent to entrants by organizers|
+
 ---
 
 ## QRScanner
