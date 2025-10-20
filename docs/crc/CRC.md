@@ -114,6 +114,7 @@
 
 **Collaborators**
 - User, FirebaseManager, NotificationManager, LotterySystem
+  
 |User Story|Description|
 |----------|:----------|
 |01.04.03 |As an entrant I want to opt out of receiving notifications from organizers and admins|
