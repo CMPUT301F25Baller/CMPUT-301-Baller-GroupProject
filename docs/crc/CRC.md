@@ -25,6 +25,10 @@
 **Collaborators**
 - User, LotterySystem, NotificationManager, QRScanner, FirebaseManager
 
+|User Story|Description|
+|----------|-----------|
+|01.01.01  | As an entrant, I want to join the waiting list for a specific event|
+
 ---
 
 ## Organizer
