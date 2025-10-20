@@ -214,6 +214,27 @@
 **Collaborators**
 - Event, Entrant, Organizer, Admin, NotificationManager, FirebaseManager
 
+|User Story|Description|
+|----------|:----------|
+|01.02.03 |As an entrant, I want to have a history of events I have registered for, whether I was selected or not|
+|01.04.01 |As an entrant I want to receive notification when I am chosen to participate from the waiting list (when I "win" the lottery)|
+|01.04.02 |As an entrant I want to receive notification of when I am not chosen on the app (when I "lose" the lottery)|
+|01.05.01 |As an entrant I want another chance to be chosen from the waiting list if a selected user declines an invitation to sign up|
+|01.05.02 |As an entrant I want to be able to accept the invitation to register/sign up when chosen to participate in an event|
+|01.05.03 |As an entrant I want to be able to decline an invitation when chosen to participate in an event|
+|01.05.04 |As an entrant, I want to know how many total entrants are on the waiting list for an event|
+|01.05.05 |As an entrant, I want to be informed about the criteria or guidelines for the lottery selection process|
+|02.05.01 |As an organizer I want to send a notification to chosen entrants to sign up for events|
+|02.05.02 |As an organizer I want to set the system to sample a specified number of attendees to register for the event|
+|02.05.03 |As an organizer I want to be able to draw a replacement applicant from the pooling system when a previously selected applicant cancels or rejects the invitation|
+|02.06.01 |As an organizer I want to view a list of all chosen entrants who are invited to apply|
+|02.06.02 |As an organizer I want to see a list of all the cancelled entrants|
+|02.06.03 |As an organizer I want to see a final list of entrants who enrolled for the event|
+|02.06.04 |As an organizer I want to cancel entrants that did not sign up for the event|
+|02.06.05 |As an organizer I want to export a final list of entrants who enrolled for the event in CSV format|
+|02.07.02 |As an organizer I want to send notifications to all selected entrants|
+|02.07.03 |As an organizer I want to send a notification to all cancelled entrants|
+
 ---
 
 ## NotificationManager
