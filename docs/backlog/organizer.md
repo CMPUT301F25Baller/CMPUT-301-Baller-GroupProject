@@ -1,5 +1,6 @@
 # Organizer Backlog
-> ID format: US02.xx.yy for Organizer (02 = persona), then group (xx), then index (yy).
+
+> ID format: **US02.xx.yy** for Organizer (02 = persona), then group (xx), then index (yy).
 
 ## Create & Configure Events
 
@@ -35,7 +36,6 @@ As an organizer, I want to enable or disable the geolocation requirement for my 
 As an organizer, I want to optionally limit the number of entrants who can join my waiting list.  
 **Points:** 4 · **Risk:** Medium · **Release:** Halfway
 
-
 ## Event Poster
 
 <a id="US020401"></a>
@@ -47,7 +47,6 @@ As an organizer, I want to upload an event poster to the event details page to p
 ### US02.04.02 — Update event poster  
 As an organizer, I want to update an event poster to provide visual information to entrants.  
 **Points:** 3 · **Risk:** Low · **Release:** MVP
-
 
 ## Lottery & Notifications
 
@@ -65,7 +64,6 @@ As an organizer, I want to set the system to sample a specified number of attend
 ### US02.05.03 — Draw replacement  
 As an organizer, I want to draw a replacement applicant from the pooling system when a previously selected applicant cancels or rejects the invitation.  
 **Points:** 8 · **Risk:** High · **Release:** Final
-
 
 ## Manage Results
 
@@ -93,7 +91,6 @@ As an organizer, I want to cancel entrants who did not sign up for the event.
 ### US02.06.05 — Export final list (CSV)  
 As an organizer, I want to export a final list of entrants who enrolled for the event in CSV format.  
 **Points:** 4 · **Risk:** Medium · **Release:** Final
-
 
 ## Broadcast Messages
 
