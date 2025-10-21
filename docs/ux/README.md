@@ -4,12 +4,24 @@ This folder contains persona-grouped **screens (SCR-*)** and **storyboards (SBR-
 Every item is named with a stable ID and linked to the corresponding file.
 User Story IDs (USpp.xx.yy) are listed under each asset.
 
+
+## IDs & Naming Conventions
+
+- **SCR-*** = static screen. **SBR-*** = storyboard/flow.
+- **User Story IDs:** `USpp.xx.yy` (Entrant=01, Organizer=02, Admin=03).  
+
+> **Filename normalization used here**  
+> - Admin: `SCR-AdminDashboard.png`, `SCR-AdminEvents.png`, `SCR-AdminEventDetails.png`, `SCR-AdminProfiles.png`, `SCR-AdminProfileDetails.png`, `SCR-AdminNotificationLogs.png`, `SBR-AdminFlow.png`  
+> - Entrant: `SCR-EntrantHome.png`, `SCR-EntrantEventDetails.png`, `SCR-EntrantNotifications.png`, `SCR-EntrantNotifications-Empty.png`, `SCR-EntrantProfile.png`, `SBR-EntrantFlow.png`  
+> - Organizer: `SCR-OrganizerEventForm.png`, `SCR-OrganizerWaitlist.png`, `SCR-OrganizerInvited.png`, `SCR-OrganizerEnrolled.png`, `SCR-OrganizerProfile-About.png`, `SCR-OrganizerProfile-Event.png`, `SCR-OrganizerProfile-Following.png`, `SBR-OrganizerFlow.png`
+
+
 > Folder layout
 >
 > ```
 > docs/
 > └─ ux/
->    ├─ README.md               #table of content
+>    ├─ README.md                        #table of content
 >    ├─ AdminPages/
 >    ├─ EntrantPages/
 >    └─ OrganizerPages/
@@ -100,13 +112,3 @@ User Story IDs (USpp.xx.yy) are listed under each asset.
   _Storyboard across US03.01.01, US03.02.01, US03.03.01, US03.04.01, US03.05.01, US03.06.01, US03.07.01, US03.08.01_
 
 ---
-
-## IDs & Naming Conventions
-
-- **SCR-*** = static screen. **SBR-*** = storyboard/flow.
-- **User Story IDs:** `USpp.xx.yy` (Entrant=01, Organizer=02, Admin=03).  
-
-> **Filename normalization used here**  
-> - Admin: `SCR-AdminDashboard.png`, `SCR-AdminEvents.png`, `SCR-AdminEventDetails.png`, `SCR-AdminProfiles.png`, `SCR-AdminProfileDetails.png`, `SCR-AdminNotificationLogs.png`, `SBR-AdminFlow.png`  
-> - Entrant: `SCR-EntrantHome.png`, `SCR-EntrantEventDetails.png`, `SCR-EntrantNotifications.png`, `SCR-EntrantNotifications-Empty.png`, `SCR-EntrantProfile.png`, `SBR-EntrantFlow.png`  
-> - Organizer: `SCR-OrganizerEventForm.png`, `SCR-OrganizerWaitlist.png`, `SCR-OrganizerInvited.png`, `SCR-OrganizerEnrolled.png`, `SCR-OrganizerProfile-About.png`, `SCR-OrganizerProfile-Event.png`, `SCR-OrganizerProfile-Following.png`, `SBR-OrganizerFlow.png`
