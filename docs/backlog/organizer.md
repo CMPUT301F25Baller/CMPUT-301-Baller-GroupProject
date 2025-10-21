@@ -1,5 +1,5 @@
 # Organizer Backlog
-ID format: US02.xx.yy for Organizer (02 = persona), then group (xx), then index (yy).
+> ID format: US02.xx.yy for Organizer (02 = persona), then group (xx), then index (yy).
 
 ## Create & Configure Events
 
