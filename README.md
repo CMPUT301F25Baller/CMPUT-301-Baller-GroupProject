@@ -11,11 +11,11 @@ This repository tracks the **Part-2 deliverables** for the Event Lottery System:
 
 ## Repo Structure
 /docs/
-backlog/ # Team A: user stories, risk, halfway-checkpoint
-ux/ # Team B: mockups, storyboards
-crc/ # Team C: CRC cards, technical decisions
-.gitignore
-README.md
+- backlog/ # Team A: user stories, risk, halfway-checkpoint
+- ux/ # Team B: mockups, storyboards
+- crc/ # Team C: CRC cards, technical decisions
+- .gitignore
+- README.md
 
 ---
 
@@ -29,7 +29,7 @@ README.md
 - Conventional style (e.g., `docs(crc): add LotteryDraw responsibilities`).
 
 **Pull Requests**
-- Must link related stories (e.g., `US-07`) if affected.
+- Link related stories (e.g., `US01.01.01`) if affected.
 
 ---
 
