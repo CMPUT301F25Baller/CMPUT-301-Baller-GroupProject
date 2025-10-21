@@ -37,7 +37,7 @@ README.md
 
 | Artifact                    | ID Pattern         | Example                  |
 |-----------------------------|--------------------|--------------------------|
-| User Story                  | `US-<NN>`          | `US-07`                  |
+| User Story                  | `US<NN>`           | `USxx.xx.xx`             |
 | Screen (UI mockup)          | `SCR-<Name>`       | `SCR-EventDetails`       |
 | Storyboard (flow)           | `SBR-<Name>`       | `SBR-EntrantAcceptFlow`  |
 | CRC Class                   | `<ClassName>`      | `LotteryDraw`            |
