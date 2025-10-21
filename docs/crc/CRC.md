@@ -7,8 +7,9 @@
 
 ## User
 **Responsibilities**
-- manage profile: update name/contact, set notification preferences
+- manage profile: update name/contact
 - access registration history
+- handle generic notification preferences
 
 **Collaborators**
 - Entrant, Organizer, Admin, NotificationManager, FirebaseManager
@@ -27,7 +28,7 @@
 - manage notification opt-outs
 
 **Collaborators**
-- User, LotterySystem, NotificationManager, QRScanner, FirebaseManager
+- User, Event, LotterySystem, NotificationManager, QRScanner, FirebaseManager
 
 **Stories:**
 [US01.01.01](../backlog/entrant.md#US010101), [US01.01.02](../backlog/entrant.md#US010102), [US01.01.03](../backlog/entrant.md#US010103), [US01.01.04](../backlog/entrant.md#US010104),
@@ -87,7 +88,7 @@
 - provides a map to view where entrants have signed up from
 
 **Collaborators**
-- LotterySystem, FirebaseManager, NotificationManager
+- Organizer, Entrant, LotterySystem, FirebaseManager, NotificationManager
 
 **Stories:**
 [US01.01.03](../backlog/entrant.md#US010103), [US01.01.04](../backlog/entrant.md#US010104), [US01.05.04](../backlog/entrant.md#US010504),
@@ -121,6 +122,7 @@
 **Responsibilities**
 - compose messages (winners, waitlist, broadcast, cancellations)
 - enforce preferences/opt-outs (entrant, organizer/admin categories)
+- track message delivery status
 
 **Collaborators**
 - User, Entrant, Organizer, Admin, LotterySystem, FirebaseManager
