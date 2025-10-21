@@ -37,7 +37,7 @@ This repository tracks the **Part-2 deliverables** for the Event Lottery System:
 
 | Artifact                    | ID Pattern         | Example                  |
 |-----------------------------|--------------------|--------------------------|
-| User Story                  | `US<NN>`           | `USxx.xx.xx`             |
+| User Story                  | `US<pp.xx.yy>`     | `US01.01.01`             |
 | Screen (UI mockup)          | `SCR-<Name>`       | `SCR-EventDetails`       |
 | Storyboard (flow)           | `SBR-<Name>`       | `SBR-EntrantAcceptFlow`  |
 | CRC Class                   | `<ClassName>`      | `LotteryDraw`            |
