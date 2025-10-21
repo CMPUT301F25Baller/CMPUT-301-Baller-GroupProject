@@ -82,10 +82,10 @@ User Story IDs (USpp.xx.yy) are listed under each asset.
   _Entry to event creation → [US02.01.01](../backlog/organizer.md#US020101)_
 
 - **[SCR-OrganizerProfile-Event](OrganizerPages/SCR-OrganizerProfile-Event.png)**  
-  _Entry to EventForm/Lists (supports flows above)_
+  _Entry to EventForm/Lists_
 
 - **[SCR-OrganizerProfile-Following](OrganizerPages/SCR-OrganizerProfile-Following.png)**  
-  _Non-Part-1 functionality (navigation only)_
+  _navigation_
 
 - **[SBR-OrganizerFlow](OrganizerPages/SBR-OrganizerFlow.png)**  
   _[US02.01.01](../backlog/organizer.md#US020101) ·
