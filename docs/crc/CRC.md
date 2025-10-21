@@ -13,6 +13,9 @@
 **Collaborators**
 - Entrant, Organizer, Admin, NotificationManager, FirebaseManager
 
+**Stories:**
+[US01.01.01], [US01.01.02], [US01.02.03], [US01.02.04], [US01.04.01], [US01.04.02], [US01.04.03]
+
 ---
 
 ## Entrant
@@ -24,6 +27,9 @@
 
 **Collaborators**
 - User, LotterySystem, NotificationManager, QRScanner, FirebaseManager
+
+**Stories:**
+[US01.01.01], [US01.01.02], [US01.01.03], [US01.01.04], [US01.02.01], [US01.02.02], [US01.02.03], [US01.02.04], [US01.04.01], [US01.04.02], [US01.04.03], [US01.05.01], [US01.05.02], [US01.05.03], [US01.05.04], [US01.05.05], [US01.06.01], [US01.06.02]
 
 ---
 
@@ -39,6 +45,9 @@
 **Collaborators**
 - User, Event, LotterySystem, NotificationManager, FirebaseManager
 
+**Stories:** 
+[US02.01.01], [US02.01.04], [US02.02.01], [US02.02.02], [US02.02.03], [US02.03.01], [US02.04.01], [US02.04.02], [US02.05.01], [US02.05.02], [US02.05.03], [US02.06.01], [US02.06.02], [US02.06.03], [US02.06.04], [US02.06.05], [US02.07.01], [US02.07.02], [US02.07.03]
+
 ---
 
 ## Admin
@@ -49,6 +58,9 @@
 
 **Collaborators**
 - User, FirebaseManager, NotificationManager, LotterySystem
+  
+**Stories:** 
+[US03.02.01], [US03.03.01], [US03.04.01], [US03.01.01], [US03.05.01], [US03.06.01], [US03.07.01], [US03.08.01]
 
 ---
 
@@ -60,6 +72,9 @@
 
 **Collaborators**
 - LotterySystem, FirebaseManager, NotificationManager
+
+**Stories:** 
+[US01.01.03], [US01.01.04], [US01.05.04], [US01.05.05], [US01.06.01], [US01.06.02], [US01.01.01]
 
 ---
 
@@ -75,6 +90,9 @@
 **Collaborators**
 - Event, Entrant, Organizer, Admin, NotificationManager, FirebaseManager
 
+**Stories:** 
+[US01.01.01], [US01.01.02], [US01.05.01], [US01.05.02], [US01.05.03], [US01.05.04], [US01.06.02]
+
 ---
 
 ## NotificationManager
@@ -84,6 +102,9 @@
 
 **Collaborators**
 - User, Entrant, Organizer, Admin, LotterySystem, FirebaseManager
+
+**Stories:** 
+[US01.04.01], [US01.04.02], [US01.04.03], [US01.05.01], [US01.05.02], [US01.05.03]
 
 ---
 
@@ -96,6 +117,9 @@
 **Collaborators**
 - Event, FirebaseManager, LotterySystem
 
+**Stories:** 
+[US01.06.01]
+
 ---
 
 ## FirebaseManager
@@ -107,6 +131,9 @@
 
 **Collaborators**
 - User, Entrant, Organizer, Admin, Event, LotterySystem, NotificationManager
+
+**Stories:** 
+[US01.01.01], [US01.01.02], [US01.01.03], [US01.01.04], [US01.02.01], [US01.02.02], [US01.02.03], [US01.02.04], [US01.04.01], [US01.04.02], [US01.04.03], [US01.05.01], [US01.05.02], [US01.05.03], [US01.05.04], [US01.05.05], [US01.06.01], [US01.06.02]
 
 ---
 
