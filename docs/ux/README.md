@@ -27,77 +27,108 @@ User Story IDs (USpp.xx.yy) are listed under each asset.
 ## Entrant
 
 - **[SCR-EntrantHome](EntrantPages/SCR-EntrantHome.png)**  
-  _US01.01.03 View events; US01.01.04 Filter events_
+  _[US01.01.03](../backlog/entrant.md#US010103) ·
+  [US01.01.04](../backlog/entrant.md#US010104)_
 
 - **[SCR-EntrantEventDetails](EntrantPages/SCR-EntrantEventDetails.png)**  
-  _US01.06.02 Sign up via event details; US01.05.04 View waiting-list count; US01.05.05 View lottery criteria_
+  _[US01.06.02](../backlog/entrant.md#US010602) ·
+  [US01.05.04](../backlog/entrant.md#US010504) ·
+  [US01.05.05](../backlog/entrant.md#US010505)_
 
 - **[SCR-EntrantNotifications](EntrantPages/SCR-EntrantNotifications.png)**  
-  _US01.04.01 Notification (win); US01.04.02 Notification (lose);  
-  US01.05.02 Accept invitation; US01.05.03 Decline invitation_
+  _[US01.04.01](../backlog/entrant.md#US010401) ·
+  [US01.04.02](../backlog/entrant.md#US010402) ·
+  [US01.05.02](../backlog/entrant.md#US010502) ·
+  [US01.05.03](../backlog/entrant.md#US010503)_
 
 - **[SCR-EntrantNotifications-Empty](EntrantPages/SCR-EntrantNotifications-Empty.png)**  
-  _US01.04.01/US01.04.02 Empty state; respects opt-out_
+  _[US01.04.01](../backlog/entrant.md#US010401) ·
+  [US01.04.02](../backlog/entrant.md#US010402)_
 
 - **[SCR-EntrantProfile](EntrantPages/SCR-EntrantProfile.png)**  
-  _US01.02.01 Enter personal info; US01.02.02 Update profile; US01.02.03 View event history_
+  _[US01.02.01](../backlog/entrant.md#US010201) ·
+  [US01.02.02](../backlog/entrant.md#US010202) ·
+  [US01.02.03](../backlog/entrant.md#US010203)_
 
 - **[SBR-EntrantFlow](EntrantPages/SBR-EntrantFlow.png)**  
-  _US01.01.01 Join waiting list; US01.01.02 Leave waiting list;  
-  US01.06.01 Scan QR to details; US01.06.02 Sign up via details_
+  _[US01.01.01](../backlog/entrant.md#US010101) ·
+  [US01.01.02](../backlog/entrant.md#US010102) ·
+  [US01.06.01](../backlog/entrant.md#US010601) ·
+  [US01.06.02](../backlog/entrant.md#US010602)_
 
 ---
 
 ## Organizer
 
 - **[SCR-OrganizerEventForm](OrganizerPages/SCR-OrganizerEventForm.png)**  
-  _US02.01.01 Create/Update event; US02.01.04 Set registration period_
+  _[US02.01.01](../backlog/organizer.md#US020101) ·
+  [US02.01.04](../backlog/organizer.md#US020104)_
 
 - **[SCR-OrganizerWaitlist](OrganizerPages/SCR-OrganizerWaitlist.png)**  
-  _US02.02.01 View entrants; US02.05.02 Conduct draw_
+  _[US02.02.01](../backlog/organizer.md#US020201) ·
+  [US02.05.02](../backlog/organizer.md#US020502)_
 
 - **[SCR-OrganizerInvited](OrganizerPages/SCR-OrganizerInvited.png)**  
-  _US02.05.01 Notify selected; US02.06.02 View cancelled; US02.05.03 Replacement_
+  _[US02.05.01](../backlog/organizer.md#US020501) ·
+  [US02.06.02](../backlog/organizer.md#US020602) ·
+  [US02.05.03](../backlog/organizer.md#US020503)_
 
 - **[SCR-OrganizerEnrolled](OrganizerPages/SCR-OrganizerEnrolled.png)**  
-  _US02.06.01 View winners; US02.06.03 View final enrolled; US02.06.04 Cancel no-response_
+  _[US02.06.01](../backlog/organizer.md#US020601) ·
+  [US02.06.03](../backlog/organizer.md#US020603) ·
+  [US02.06.04](../backlog/organizer.md#US020604)_
 
 - **[SCR-OrganizerProfile-About](OrganizerPages/SCR-OrganizerProfile-About.png)**  
-  _Navigation shell → entry to event creation (US02.01.01)_
+  _Entry to event creation → [US02.01.01](../backlog/organizer.md#US020101)_
 
 - **[SCR-OrganizerProfile-Event](OrganizerPages/SCR-OrganizerProfile-Event.png)**  
-  _Organizer’s events list → entry to EventForm/Lists_
+  _Entry to EventForm/Lists (supports flows above)_
 
 - **[SCR-OrganizerProfile-Following](OrganizerPages/SCR-OrganizerProfile-Following.png)**  
-  _Non-Part-1 functionality; used for navigation/consistency_
+  _Non-Part-1 functionality (navigation only)_
 
 - **[SBR-OrganizerFlow](OrganizerPages/SBR-OrganizerFlow.png)**  
-  _Storyboard spanning US02.01.01, US02.05.01, US02.05.02, US02.05.03, US02.06.01–US02.06.04_
-
----
+  _[US02.01.01](../backlog/organizer.md#US020101) ·
+  [US02.05.01](../backlog/organizer.md#US020501) ·
+  [US02.05.02](../backlog/organizer.md#US020502) ·
+  [US02.05.03](../backlog/organizer.md#US020503) ·
+  [US02.06.01](../backlog/organizer.md#US020601) ·
+  [US02.06.02](../backlog/organizer.md#US020602) ·
+  [US02.06.03](../backlog/organizer.md#US020603) ·
+  [US02.06.04](../backlog/organizer.md#US020604)_
 
 ## Admin
 
 - **[SCR-AdminDashboard](AdminPages/SCR-AdminDashboard.png)**  
-  _US03.04.01 Browse events; US03.05.01 Browse profiles; US03.06.01 Browse uploaded images_
+  _[US03.04.01](../backlog/admin.md#US030401) ·
+  [US03.05.01](../backlog/admin.md#US030501) ·
+  [US03.06.01](../backlog/admin.md#US030601)_
 
 - **[SCR-AdminEvents](AdminPages/SCR-AdminEvents.png)**  
-  _US03.04.01 Browse events (list/search)_
+  _[US03.04.01](../backlog/admin.md#US030401)_
 
 - **[SCR-AdminEventDetails](AdminPages/SCR-AdminEventDetails.png)**  
-  _US03.01.01 Remove events_
+  _[US03.01.01](../backlog/admin.md#US030101)_
 
 - **[SCR-AdminProfiles](AdminPages/SCR-AdminProfiles.png)**  
-  _US03.05.01 Browse profiles_
+  _[US03.05.01](../backlog/admin.md#US030501)_
 
 - **[SCR-AdminProfileDetails](AdminPages/SCR-AdminProfileDetails.png)**  
-  _US03.02.01 Remove profiles; US03.07.01 Remove violating organizers_
+  _[US03.02.01](../backlog/admin.md#US030201) ·
+  [US03.07.01](../backlog/admin.md#US030701)_
 
 - **[SCR-AdminNotificationLogs](AdminPages/SCR-AdminNotificationLogs.png)**  
-  _US03.08.01 Review notification logs_
+  _[US03.08.01](../backlog/admin.md#US030801)_
 
 - **[SBR-AdminFlow](AdminPages/SBR-AdminFlow.png)**  
-  _Storyboard across US03.01.01, US03.02.01, US03.03.01, US03.04.01, US03.05.01, US03.06.01, US03.07.01, US03.08.01_
+  _[US03.01.01](../backlog/admin.md#US030101) ·
+  [US03.02.01](../backlog/admin.md#US030201) ·
+  [US03.03.01](../backlog/admin.md#US030301) ·
+  [US03.04.01](../backlog/admin.md#US030401) ·
+  [US03.05.01](../backlog/admin.md#US030501) ·
+  [US03.06.01](../backlog/admin.md#US030601) ·
+  [US03.07.01](../backlog/admin.md#US030701) ·
+  [US03.08.01](../backlog/admin.md#US030801)_
 
 ---
 
