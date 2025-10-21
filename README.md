@@ -10,12 +10,23 @@ This repository tracks the **Part-2 deliverables** for the Event Lottery System:
 ---
 
 ## Repo Structure
-/docs/
-- backlog/ # Team A: user stories, risk, halfway-checkpoint
-- ux/ # Team B: mockups, storyboards
-- crc/ # Team C: CRC cards, technical decisions
-- .gitignore
-- README.md
+```
+#docs/
+├─ backlog/                    # canonical product backlog (graded copy)
+│  ├─ README.md
+│  ├─ entrant.md
+│  ├─ organizer.md
+│  └─ admin.md
+├─ crc/                        # object-oriented analysis
+│  └─ CRC.md
+└─ ux/                         # mockups/storyboards
+   ├─ README.md
+   ├─ AdminPages/
+   ├─ EntrantPages/
+   └─ OrginizerPages/
+README.md
+.gitignore
+```
 
 ---
 
@@ -42,6 +53,18 @@ This repository tracks the **Part-2 deliverables** for the Event Lottery System:
 | Storyboard (flow)           | `SBR-<Name>`       | `SBR-EntrantAcceptFlow`  |
 | CRC Class                   | `<ClassName>`      | `LotteryDraw`            |
 
-These IDs appear in filenames, and figure captions.
+These IDs appear in filenames and figure captions.
 
 ---
+
+## Quick Links
+- 📚 **Backlog Index** → [`/docs/backlog/README.md`](docs/backlog/README.md)
+  - Entrant → [`/docs/backlog/entrant.md`](docs/backlog/entrant.md)  
+  - Organizer → [`/docs/backlog/organizer.md`](docs/backlog/organizer.md)  
+  - Admin → [`/docs/backlog/admin.md`](docs/backlog/admin.md)
+- 🧠 **CRC Cards** → [`/docs/crc/CRC.md`](docs/crc/CRC.md)
+- 🎬 **UX (Mockups & Storyboards)** → [`/docs/ux/`](docs/ux/)
+- 🗂️ **Project Board** → [_linked in repo Projects_](https://github.com/orgs/CMPUT301F25Baller/projects/1/views/1)
+
+---
+
