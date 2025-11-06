@@ -2,11 +2,18 @@ package com.example.ballerevents;
 
 import com.example.ballerevents.Event;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class EventRepository {
+
+    // --- MOCK USER ---
+    // This represents the "currently logged in" user
+    public static final String MOCK_USER_ID = "user_123_abc";
 
     // Note: You must add these drawables to your res/drawable folder
     private static final List<Event> allEvents = Arrays.asList(
@@ -60,6 +67,35 @@ public class EventRepository {
             )
     );
 
+    // --- NEW: Mock Database for Event Applications ---
+    // Map<EventID, List<UserID>>
+    private static Map<Long, List<String>> eventApplications = new HashMap<>();
+
+    // Static initializer to pre-populate the application data
+    static {
+        // Event 1 (Coldplay) - Our mock user IS applied
+        List<String> event1Applicants = new ArrayList<>();
+        for (int i = 0; i < 131; i++) {
+            event1Applicants.add("user_" + i); // Add 131 fake users
+        }
+        event1Applicants.add(MOCK_USER_ID); // Add our mock user
+        eventApplications.put(1L, event1Applicants);
+
+        // Event 2 (Muse) - Our mock user is NOT applied
+        List<String> event2Applicants = new ArrayList<>();
+        for (int i = 0; i < 45; i++) {
+            event2Applicants.add("user_" + i); // Add 45 fake users
+        }
+        eventApplications.put(2L, event2Applicants);
+
+        // Event 3 (Stand Up) - Our mock user is NOT applied
+        List<String> event3Applicants = new ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            event3Applicants.add("user_" + i); // Add 12 fake users
+        }
+        eventApplications.put(3L, event3Applicants);
+    }
+
     public static List<Event> getTrendingEvents() {
         return allEvents.stream()
                 .filter(Event::isTrending)
@@ -77,5 +113,58 @@ public class EventRepository {
                 .filter(event -> event.getId() == id)
                 .findFirst()
                 .orElse(null);
+    }
+
+    // --- NEW: Methods to manage event applications ---
+
+    /**
+     * Gets the dynamic, real-time count of applicants for an event.
+     */
+    public static int getDynamicWaitlistCount(long eventId) {
+        if (eventApplications.containsKey(eventId)) {
+            List<String> applicants = eventApplications.get(eventId);
+            if (applicants != null) {
+                return applicants.size();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Checks if a specific user is applied to a specific event.
+     */
+    public static boolean isUserApplied(long eventId, String userId) {
+        if (eventApplications.containsKey(eventId)) {
+            List<String> applicants = eventApplications.get(eventId);
+            return applicants != null && applicants.contains(userId);
+        }
+        return false;
+    }
+
+    /**
+     * Adds a user to an event's application list.
+     */
+    public static void applyToEvent(long eventId, String userId) {
+        // Find or create the list for this event
+        if (!eventApplications.containsKey(eventId)) {
+            eventApplications.put(eventId, new ArrayList<>());
+        }
+        List<String> applicants = eventApplications.get(eventId);
+        // Add user if they are not already in the list
+        if (applicants != null && !applicants.contains(userId)) {
+            applicants.add(userId);
+        }
+    }
+
+    /**
+     * Removes a user from an event's application list.
+     */
+    public static void withdrawFromEvent(long eventId, String userId) {
+        if (eventApplications.containsKey(eventId)) {
+            List<String> applicants = eventApplications.get(eventId);
+            if (applicants != null) {
+                applicants.remove(userId);
+            }
+        }
     }
 }
