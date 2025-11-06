@@ -1,24 +1,52 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
-
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import com.example.ballerevents.databinding.EntrantMainBinding;
 
 public class MainActivity extends AppCompatActivity {
+
+    private EntrantMainBinding binding;
+    private TrendingEventAdapter trendingAdapter;
+    private NearEventAdapter nearAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        binding = EntrantMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        setupTrendingRecyclerView();
+        setupNearRecyclerView();
+    }
+
+    private void setupTrendingRecyclerView() {
+        // Create the click handler using a lambda
+        trendingAdapter = new TrendingEventAdapter(event -> launchDetailsActivity(event));
+
+        binding.rvTrending.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvTrending.setAdapter(trendingAdapter);
+
+        // Load data
+        trendingAdapter.submitList(EventRepository.getTrendingEvents());
+    }
+
+    private void setupNearRecyclerView() {
+        // Create the click handler
+        nearAdapter = new NearEventAdapter(event -> launchDetailsActivity(event));
+
+        binding.rvNearYou.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvNearYou.setAdapter(nearAdapter);
+
+        // Load data
+        nearAdapter.submitList(EventRepository.getEventsNearYou());
+    }
+
+    private void launchDetailsActivity(Event event) {
+        Intent intent = new Intent(this, DetailsActivity.class);
+        intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
+        startActivity(intent);
     }
 }
