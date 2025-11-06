@@ -13,9 +13,10 @@
         android:layout_height="250dp"
         android:scaleType="centerCrop"
         android:src="@drawable/placeholder_event_image"
+        android:contentDescription="Event Banner"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- Gradient overlay -->
     <View
@@ -32,11 +33,13 @@
         android:id="@+id/backButton"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        android:layout_margin="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
         android:background="@android:color/transparent"
         android:src="@drawable/ic_back"
+        android:contentDescription="back"
         app:layout_constraintTop_toTopOf="@id/eventImage"
-        app:layout_constraintStart_toStartOf="parent"/>
+        app:layout_constraintStart_toStartOf="parent" />
     <!-- Event Details Text -->
     <TextView
         android:id="@+id/eventFormTitle"
@@ -52,12 +55,13 @@
         app:layout_constraintBottom_toBottomOf="@id/backButton"/>
     <!-- Favourite Button -->
     <ImageButton
-        android:id="@+id/bookmarkButton"
+        android:id="@+id/favButton"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:layout_marginEnd="16dp"
         android:background="@drawable/header_icon_bg"
         android:src="@drawable/ic_fav"
+        android:contentDescription="favourite"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/backButton"
         app:layout_constraintBottom_toBottomOf="@id/backButton"
@@ -76,10 +80,10 @@
         >
         <TextView
             android:id="@+id/titleText"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="International Band Music Concert "
+            android:text="International Band Music Concert"
             android:textColor="#120D26"
             android:textSize="28sp"
             android:textStyle="bold"
@@ -90,6 +94,7 @@
             android:layout_height="wrap_content"
             android:src="@drawable/ic_edit"
             android:background="@android:color/transparent"
+            android:contentDescription="edit"
             app:tint="#000000"
             android:layout_marginEnd="24dp"
             android:layout_gravity="center"/>
@@ -110,7 +115,9 @@
             android:layout_height="40dp"
             android:padding="8dp"
             android:src="@drawable/ic_calendar"
-            android:background="@drawable/rounded_rect_bg"/>
+            android:background="@drawable/rounded_rect_bg"
+            android:contentDescription="calendar"
+            android:clickable="true"/>
         <ImageButton
             android:id="@+id/editDate"
             android:layout_width="wrap_content"
@@ -119,6 +126,7 @@
             android:layout_marginStart="-10dp"
             android:src="@drawable/ic_edit"
             android:background="@android:color/transparent"
+            android:contentDescription="edit"
             app:tint="#000000" />
         <LinearLayout
             android:layout_width="wrap_content"
@@ -158,7 +166,9 @@
             android:layout_height="40dp"
             android:padding="8dp"
             android:src="@drawable/ic_location"
-            android:background="@drawable/rounded_rect_bg"/>
+            android:background="@drawable/rounded_rect_bg"
+            android:contentDescription="location"
+            android:clickable="true"/>
         <ImageButton
             android:id="@+id/editLocation"
             android:layout_width="wrap_content"
@@ -167,7 +177,7 @@
             android:layout_marginStart="-10dp"
             android:src="@drawable/ic_edit"
             android:background="@android:color/transparent"
-            app:tint="#000000" />
+            android:contentDescription="edit" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -229,6 +239,7 @@
                 android:layout_marginTop="8sp"
                 android:src="@drawable/ic_edit"
                 android:background="@android:color/transparent"
+                android:contentDescription="edit"
                 app:tint="#000000" />
         </LinearLayout>
     </LinearLayout>
@@ -258,7 +269,7 @@
             android:orientation="horizontal">
             <TextView
                 android:id="@+id/aboutText"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginTop="4dp"
@@ -272,6 +283,7 @@
                 android:layout_marginTop="8sp"
                 android:src="@drawable/ic_edit"
                 android:background="@android:color/transparent"
+                android:contentDescription="edit"
                 app:tint="#000000" />
         </LinearLayout>
 
