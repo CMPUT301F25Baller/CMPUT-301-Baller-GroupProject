@@ -39,6 +39,7 @@
         app:layout_constraintStart_toStartOf="parent"/>
     <!-- Event Details Text -->
     <TextView
+        android:id="@+id/eventFormTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Event Details"
@@ -88,7 +89,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_edit"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@android:color/transparent"
             app:tint="#000000"
             android:layout_marginEnd="24dp"
             android:layout_gravity="center"/>
@@ -117,7 +118,7 @@
             android:layout_marginTop="28dp"
             android:layout_marginStart="-10dp"
             android:src="@drawable/ic_edit"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@android:color/transparent"
             app:tint="#000000" />
         <LinearLayout
             android:layout_width="wrap_content"
@@ -165,7 +166,7 @@
             android:layout_marginTop="28dp"
             android:layout_marginStart="-10dp"
             android:src="@drawable/ic_edit"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@android:color/transparent"
             app:tint="#000000" />
 
         <LinearLayout
@@ -227,7 +228,7 @@
                 android:layout_marginStart="5sp"
                 android:layout_marginTop="8sp"
                 android:src="@drawable/ic_edit"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 app:tint="#000000" />
         </LinearLayout>
     </LinearLayout>
@@ -270,28 +271,39 @@
                 android:layout_marginStart="5sp"
                 android:layout_marginTop="8sp"
                 android:src="@drawable/ic_edit"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@android:color/transparent"
                 app:tint="#000000" />
         </LinearLayout>
 
     </LinearLayout>
 
     <!-- Publish Button -->
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/publishButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
         android:layout_marginBottom="24dp"
-        android:backgroundTint="#5669FF"
+        android:layout_marginStart="75dp"
+        android:layout_marginEnd="75dp"
+        android:paddingStart="30dp"
+        android:paddingEnd="10dp"
         android:text="Publish Event"
-        android:textColor="@android:color/white"
         android:textAllCaps="true"
+        android:textColor="@color/white"
+        android:textAlignment="center"
         android:gravity="center"
-        android:drawableEnd="@drawable/ic_publish"
-        android:paddingLeft="32dp"
-        android:paddingRight="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:cornerRadius="8dp"
+        app:iconPadding="8dp"
+        app:iconGravity="end"
+        app:icon="@drawable/ic_publish"
+        app:iconSize="24dp"
+        app:iconTint="@null"
+        app:backgroundTint="#5669FF"
+        app:rippleColor="@android:color/transparent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

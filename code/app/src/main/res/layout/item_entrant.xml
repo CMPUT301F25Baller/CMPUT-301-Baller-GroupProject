@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="72dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="12dp">
+
+    <!-- Avatar (45x45) -->
+    <com.google.android.material.imageview.ShapeableImageView
+        android:id="@+id/imgAvatar"
+        android:layout_width="45dp"
+        android:layout_height="45dp"
+        android:scaleType="centerCrop"
+        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.Material3.Corner.Full"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@drawable/placeholder_avatar_joan" />
+
+    <!-- Name + status (may wrap to 2 lines like "Invite pending") -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/tvNameStatus"
+        android:layout_marginStart="12dp"
+        app:layout_constraintStart_toEndOf="@id/imgAvatar"
+        app:layout_constraintTop_toTopOf="@id/imgAvatar"
+        app:layout_constraintEnd_toStartOf="@id/tvTime"
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:text="Joan Baker"
+            android:textSize="14sp"
+            android:textColor="#060518"/>
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Declined Invitation"
+            android:textColor="#060518"/>
+
+    </LinearLayout>
+
+    <!-- Time (right aligned) -->
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#3C3E56"
+        app:layout_constraintTop_toTopOf="@id/tvNameStatus"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:text="20 min ago" />
+
+    <!-- Action buttons row: Ignore (outlined) + Replace (filled) -->
+    <LinearLayout
+        android:id="@+id/actions"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="12dp"
+        android:gravity="end"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/tvNameStatus"
+        app:layout_constraintStart_toEndOf="@id/imgAvatar">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnIgnore"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ignore"
+            android:textSize="14sp"
+            android:textColor="#706D6D"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            app:cornerRadius="8dp"
+            app:strokeColor="#EEEEEE"
+            app:strokeWidth="2dp"
+            app:rippleColor="@android:color/transparent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReplace"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="Replace"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="#5669FF"
+            app:rippleColor="@android:color/transparent" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
