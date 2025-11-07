@@ -17,6 +17,18 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+/**
+ * Activity that displays the organizer's profile dashboard.
+ * <p>
+ * This screen hosts three main tabs:
+ * <ul>
+ *     <li><b>About</b> – Personal organizer information</li>
+ *     <li><b>Event</b> – Events hosted by the organizer</li>
+ *     <li><b>Following</b> – Users or interests the organizer follows</li>
+ * </ul>
+ * It loads the organizer’s profile header (name + profile picture), sets up
+ * ViewPager with tabs, and provides access to event creation and messaging.
+ */
 public class OrganizerActivity extends AppCompatActivity {
 
     private static final String TAG = "OrganizerActivity";
@@ -28,6 +40,12 @@ public class OrganizerActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private String currentUserId;
 
+    /**
+     * Initializes the activity, sets up ViewBinding, configures tabs,
+     * and loads the organizer header (profile name + avatar).
+     *
+     * @param savedInstanceState saved state bundle, if any
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
