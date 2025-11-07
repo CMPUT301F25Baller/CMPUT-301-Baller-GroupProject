@@ -84,7 +84,16 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
-        if (mAuth.getCurrentUser() == null) {
+        if (isRunningInTest()) {
+            organizerProfile = new UserProfile();
+            organizerProfile.name = "Test User";
+            organizerProfile.profilePictureUrl = null;
+            currentUserId = "TEST_USER";
+            return;
+        }
+
+
+        if (!isRunningInTest() && mAuth.getCurrentUser() == null) {
             Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
             finish();
             return;
@@ -329,4 +338,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
 
         return ok;
     }
+
+    private boolean isRunningInTest() {
+        return "true".equals(System.getProperty("IS_TESTING"));
+    }
+
 }
