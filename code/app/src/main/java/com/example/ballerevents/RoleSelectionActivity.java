@@ -3,7 +3,7 @@ package com.example.ballerevents;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
-
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class RoleSelectionActivity extends AppCompatActivity {
@@ -13,23 +13,20 @@ public class RoleSelectionActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_role_selection);
 
-        Button btnEntrant = findViewById(R.id.btnEntrant);
         Button btnOrganizer = findViewById(R.id.btnOrganizer);
-        Button btnAdmin = findViewById(R.id.btnAdmin);
+        Button btnEntrant   = findViewById(R.id.btnEntrant);
+        Button btnAdmin     = findViewById(R.id.btnAdmin);
 
-        btnEntrant.setOnClickListener(v -> {
-            Intent i = new Intent(this, EntrantMainActivity.class);
-            startActivity(i);
-        });
+        btnOrganizer.setOnClickListener(v ->
+                startActivity(new Intent(RoleSelectionActivity.this, OrganizerActivity.class))
+        );
 
-        btnOrganizer.setOnClickListener(v -> {
-            Intent i = new Intent(this, OrganizerProfileActivity.class);
-            startActivity(i);
-        });
+        btnEntrant.setOnClickListener(v ->
+                Toast.makeText(this, "Entrant prototype not wired yet.", Toast.LENGTH_SHORT).show()
+        );
 
-        btnAdmin.setOnClickListener(v -> {
-            Intent i = new Intent(this, AdminMainActivity.class);
-            startActivity(i);
-        });
+        btnAdmin.setOnClickListener(v ->
+                Toast.makeText(this, "Admin prototype not wired yet.", Toast.LENGTH_SHORT).show()
+        );
     }
 }

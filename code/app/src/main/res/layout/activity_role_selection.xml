@@ -41,8 +41,8 @@
         android:layout_height="wrap_content"
         android:text="Continue as Organizer"
         android:layout_marginBottom="16dp"
-        android:backgroundTint="@android:color/white"
-        android:textColor="#5669FF"
+        android:backgroundTint="#5669FF"
+        android:textColor="@android:color/white"
         android:textAllCaps="false" />
 
     <Button
@@ -50,8 +50,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Continue as Admin"
-        android:backgroundTint="@android:color/white"
-        android:textColor="#5669FF"
+        android:backgroundTint="#5669FF"
+        android:textColor="@android:color/white"
         android:textAllCaps="false" />
 
 </LinearLayout>
