@@ -43,6 +43,12 @@
             android:label="Profiles"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
         <activity android:name=".ProfileDetailsActivity" />
+        <activity
+            android:name=".NotificationLogsActivity"
+            android:label="Notifications"
+            android:exported="false" />
+
+
 
     </application>
 
