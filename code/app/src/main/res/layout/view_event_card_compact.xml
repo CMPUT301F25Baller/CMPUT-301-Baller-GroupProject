@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="112dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/ivThumb"
+            android:layout_width="79dp"
+            android:layout_height="92dp"
+            android:background="@drawable/bg_rounded_10"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_event_image_placeholder" />
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/ivThumb"
+            android:layout_marginStart="16dp"
+            android:text="1st May - Sat - 2:00 PM"
+            android:textAllCaps="true"
+            android:textColor="#5669FF"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvTime"
+            android:layout_toEndOf="@id/ivThumb"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="6dp"
+            android:text="A virtual evening of smooth jazz"
+            android:textColor="#120D26"
+            android:textSize="18sp" />
+    </RelativeLayout>
+</androidx.cardview.widget.CardView>
