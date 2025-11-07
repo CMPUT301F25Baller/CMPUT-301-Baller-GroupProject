@@ -11,6 +11,8 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+// The binding class name must match your layout file name.
+// Your file is 'activity_main.xml', so this is correct.
 import com.example.ballerevents.databinding.EntrantMainBinding;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -23,6 +25,7 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     private static final String TAG = "EntrantMainActivity";
 
+    // This binding class is generated from 'activity_main.xml'
     private EntrantMainBinding binding;
     private TrendingEventAdapter trendingAdapter;
     private NearEventAdapter nearAdapter;
@@ -31,11 +34,13 @@ public class EntrantMainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private List<Event> allEvents = new ArrayList<>(); // Cache all events for searching
     private List<String> selectedTags = new ArrayList<>();
-    private static String s(String v) { return v == null ? "" : v; }
+
+    // Removed the unused s() method
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Use the correct binding class
         binding = EntrantMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -82,8 +87,9 @@ public class EntrantMainActivity extends AppCompatActivity {
                         Event event = doc.toObject(Event.class);
                         if (event == null) continue;
 
-                        // Make sure ID is set even if @DocumentId doesn’t populate
-                        event.setId(doc.getId());
+                        // This is now handled in the Event model by @DocumentId
+                        // but it's safe to leave as a fallback.
+                        // event.setId(doc.getId());
 
                         allEvents.add(event);
                         if (event.isTrending()) trending.add(event); else near.add(event);
@@ -123,6 +129,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     private void setupChipListener(Chip chip) {
+        // Use setOnCheckedChangeListener for filter chips
         chip.setOnCheckedChangeListener((button, isChecked) -> {
             String tag = chip.getText().toString();
             if (isChecked) {
@@ -136,7 +143,8 @@ public class EntrantMainActivity extends AppCompatActivity {
 
 
     private void performSearchAndFilter() {
-        String query = binding.etSearch.getText().toString().toLowerCase().trim();
+        // Get the raw query. The filter class will normalize it.
+        String query = binding.etSearch.getText().toString();
 
         // If query and tags are empty, show original content
         if (query.isEmpty() && selectedTags.isEmpty()) {
@@ -149,40 +157,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         binding.originalContentLayout.setVisibility(View.GONE);
         binding.searchResultsLayout.setVisibility(View.VISIBLE);
 
-        List<Event> filteredResults = new ArrayList<>();
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            filteredResults = allEvents.stream()
-                    .filter(event -> {
-                        // Match Search Query
-                        boolean matchesQuery = query.isEmpty() ||
-                                event.getTitle().toLowerCase().contains(query) ||
-                                event.getDescription().toLowerCase().contains(query) ||
-                                event.getOrganizer().toLowerCase().contains(query);
-
-                        // Match Tags
-                        boolean matchesTags = selectedTags.isEmpty() ||
-                                (event.getTags() != null && event.getTags().containsAll(selectedTags));
-
-                        return matchesQuery && matchesTags;
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-        } else {
-            // Fallback for older Android
-            for (Event event : allEvents) {
-                boolean matchesQuery = query.isEmpty() ||
-                        event.getTitle().toLowerCase().contains(query) ||
-                        event.getDescription().toLowerCase().contains(query) ||
-                        event.getOrganizer().toLowerCase().contains(query);
-
-                boolean matchesTags = selectedTags.isEmpty() ||
-                        (event.getTags() != null && event.getTags().containsAll(selectedTags));
-
-                if (matchesQuery && matchesTags) {
-                    filteredResults.add(event);
-                }
-            }
-        }
+        // --- REFACTORED PART ---
+        // Call the static helper method from our testable class
+        List<Event> filteredResults = EventFilter.performSearchAndFilter(allEvents, query, selectedTags);
+        // --- END OF REFACTOR ---
 
         searchAdapter.submitList(filteredResults);
 
