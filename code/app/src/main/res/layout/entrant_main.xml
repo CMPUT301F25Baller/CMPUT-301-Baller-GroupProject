@@ -156,9 +156,7 @@
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
 
-            <!-- ============================================== -->
-            <!-- ==  NEW: ORIGINAL CONTENT (TRENDING/NEAR)   == -->
-            <!-- ============================================== -->
+            <!-- This layout will be hidden when searching -->
             <LinearLayout
                 android:id="@+id/original_content_layout"
                 android:layout_width="match_parent"
@@ -232,23 +230,22 @@
                     android:clipToPadding="false"
                     tools:listitem="@layout/item_event_near"
                     tools:itemCount="2"/>
+
             </LinearLayout>
 
-            <!-- ============================================== -->
-            <!-- ==         NEW: SEARCH RESULTS LAYOUT       == -->
-            <!-- ============================================== -->
+            <!-- This layout will be SHOWN when searching -->
             <LinearLayout
                 android:id="@+id/search_results_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:layout_marginTop="24dp"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"> <!-- 'tools:visibility' lets you see it in the preview -->
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
                     android:text="Search Results"
                     android:textSize="20sp"
                     android:textColor="@android:color/black"
