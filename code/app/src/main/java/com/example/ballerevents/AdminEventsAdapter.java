@@ -17,6 +17,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 
+/**
+ * RecyclerView adapter for admin event rows. Binds title/date/location and
+ * loads the poster image via Glide. Overflow menu actions (e.g., delete)
+ * are forwarded to {@link OnEventActionListener}.
+ */
+
 public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.EventViewHolder> {
 
     public interface OnEventActionListener {

@@ -18,6 +18,17 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
+/**
+ * Admin list of user profiles. Loads users from Firestore into
+ * {@link AdminProfilesAdapter}, supports opening a profile for actions,
+ * and provides a delete flow that removes the user document and reloads the list.
+ *
+ * UI:
+ *  - Toolbar back
+ *  - RecyclerView of profiles
+ *  - Progress indicator while loading
+ */
+
 
 public class AdminProfilesActivity extends AppCompatActivity {
 

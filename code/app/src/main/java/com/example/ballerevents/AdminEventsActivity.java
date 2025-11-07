@@ -18,6 +18,11 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+/**
+ * Admin list of events. Loads all events from Firestore into an
+ * {@link AdminEventsAdapter} and supports a case-insensitive title filter.
+ * Delete is confirmed via dialog and performed against Firestore.
+ */
 
 public class AdminEventsActivity extends AppCompatActivity implements AdminEventsAdapter.OnEventActionListener {
 

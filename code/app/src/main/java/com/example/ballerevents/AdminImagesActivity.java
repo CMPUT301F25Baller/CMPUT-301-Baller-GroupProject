@@ -19,6 +19,12 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
+/**
+ * Grid gallery of event posters. Loads events from Firestore and displays
+ * their poster URLs as thumbnails. Tap to preview; long-press prompts
+ * to clear the poster URL (does not delete the event).
+ */
+
 
 public class AdminImagesActivity extends AppCompatActivity implements AdminImagesAdapter.ImageActions {
 

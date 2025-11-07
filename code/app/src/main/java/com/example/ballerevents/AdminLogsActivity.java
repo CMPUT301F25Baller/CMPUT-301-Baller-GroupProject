@@ -14,6 +14,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+/**
+ * Simple notification log screen used as a placeholder for admin logs.
+ * Displays sample rows and allows toggling between "New" and "All" via chips.
+ */
+
 
 public class AdminLogsActivity extends AppCompatActivity {
 
