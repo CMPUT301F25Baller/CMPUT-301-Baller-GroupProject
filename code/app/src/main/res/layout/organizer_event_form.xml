@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -66,6 +73,18 @@
         app:layout_constraintTop_toTopOf="@id/backButton"
         app:layout_constraintBottom_toBottomOf="@id/backButton"
         app:tint="@android:color/white" />
+
+    <!-- Edit Event Poster Button -->
+    <ImageButton
+        android:id = "@+id/editPosterButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/header_icon_bg"
+        android:src="@drawable/ic_edit_white"
+        android:contentDescription="Edit Event Poster"
+        app:layout_constraintTop_toBottomOf="@id/gradientOverlay"
+        app:layout_constraintEnd_toEndOf="parent"/>
 
     <!-- Title -->
     <LinearLayout
@@ -206,7 +225,7 @@
     <!-- Event Requirements -->
     <LinearLayout
         android:id="@+id/requirementsLayout"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:orientation="vertical"
@@ -221,34 +240,19 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textColor="#120D26"/>
-        <LinearLayout
-            android:id="@+id/editRequirementsLayout"
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/geolocationCheckBox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <TextView
-                android:id="@+id/requirementsText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Event requirements"
-                android:textSize="14sp"/>
-            <ImageButton
-                android:id="@+id/editRequirementsButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5sp"
-                android:layout_marginTop="8sp"
-                android:src="@drawable/ic_edit"
-                android:background="@android:color/transparent"
-                android:contentDescription="edit"
-                app:tint="#000000" />
-        </LinearLayout>
+            android:text="Geolocation:"
+            android:textSize="14sp"
+            android:layoutDirection="rtl"/>
+
     </LinearLayout>
 
     <!-- About Event -->
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:id="@+id/eventLayout"
@@ -283,6 +287,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5sp"
                 android:layout_marginTop="8sp"
+                android:layout_marginEnd="6sp"
                 android:src="@drawable/ic_edit"
                 android:background="@android:color/transparent"
                 android:contentDescription="edit"
@@ -321,3 +326,4 @@
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
