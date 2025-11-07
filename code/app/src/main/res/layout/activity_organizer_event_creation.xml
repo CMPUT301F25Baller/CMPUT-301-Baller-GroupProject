@@ -2,9 +2,11 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="#FFFFFF"
+    tools:context=".OrganizerEventCreationActivity">
 
     <!-- Banner -->
     <ImageView
@@ -32,39 +34,44 @@
     <LinearLayout
         android:id="@+id/toolbarOverlay"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="?attr/actionBarSize"
         android:orientation="horizontal"
-        android:padding="16dp"
         android:gravity="center_vertical"
-        app:layout_constraintTop_toTopOf="@id/bannerOverlay"
-        app:layout_constraintBottom_toBottomOf="@id/bannerOverlay"
-        app:layout_constraintStart_toStartOf="@id/bannerOverlay"
-        app:layout_constraintEnd_toEndOf="@id/bannerOverlay">
+        android:paddingStart="8dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="24dp">
 
-        <ImageView
-            android:id="@+id/toolbarBack"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_arrow_back_24"
-            android:tint="#FFFFFF"
-            android:contentDescription="@null"/>
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_arrow_back"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@android:color/white"
+            android:contentDescription="Back"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Event Details"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"/>
+            android:text="Create New Event"
+            android:textColor="@android:color/white"
+            android:textSize="20sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 
-    <!-- Scrollable content under banner -->
+    <!-- Scrollable content -->
     <ScrollView
-        android:id="@+id/scroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/banner"
-        app:layout_constraintBottom_toTopOf="@id/btnPublish"
+        android:layout_marginTop="16dp"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp"
+        app:layout_constraintTop_toBottomOf="@id/bannerOverlay"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -72,152 +79,100 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:paddingTop="24dp"
-            android:paddingBottom="32dp">
+            android:padding="24dp">
 
-            <!-- Title row -->
+            <!-- Title -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-
                 <TextView
                     android:id="@+id/tvTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="28sp"
-                    android:textColor="#120D26"/>
-
-                <ImageView
-                    android:id="@+id/editTitle"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_edit_24"
-                    android:contentDescription="Edit title"
+                    android:layout_toStartOf="@id/btnEditTitle"
+                    android:text="International Band Music Concert"
+                    android:textSize="22sp"
+                    android:textColor="#120D26"
+                    android:fontFamily="sans-serif-bold"/>
+                <ImageButton
+                    android:id="@+id/btnEditTitle"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#8A2BE2"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"/>
             </RelativeLayout>
 
-            <!-- Date / Time row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <!-- Calendar icon -->
-                <TextView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:gravity="center"
-                    android:text="📅"
-                    android:textSize="20sp"
-                    android:background="#1A5669FF"
-                    android:backgroundTint="#1A5669FF"
-                    android:contentDescription="@null"/>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="16dp">
-
-                    <TextView
-                        android:id="@+id/tvDate"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textColor="#120D26"/>
-
-                    <TextView
-                        android:id="@+id/tvTime"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="14sp"
-                        android:textColor="#120D26"/>
-                </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/editDateTime"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_edit_24"
-                    android:contentDescription="Edit date and time"/>
-            </LinearLayout>
-
-            <!-- Location row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <!-- Location icon -->
-                <TextView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:gravity="center"
-                    android:text="📍"
-                    android:textSize="20sp"
-                    android:background="#1A5669FF"
-                    android:backgroundTint="#1A5669FF"
-                    android:contentDescription="@null"/>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="16dp">
-
-                    <TextView
-                        android:id="@+id/tvVenue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textColor="#120D26"/>
-
-                    <TextView
-                        android:id="@+id/tvAddress"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textSize="14sp"
-                        android:textColor="#120D26"/>
-                </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/editLocation"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_edit_24"
-                    android:contentDescription="Edit location"/>
-            </LinearLayout>
-
-            <!-- Event Requirements -->
+            <!-- Date & Time -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp">
+                android:layout_marginTop="16dp">
+                <TextView
+                    android:id="@+id/tvDateTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/btnEditDateTime"
+                    android:text="14 December, 2021, Tuesday, 4:00PM - 9:00PM"
+                    android:textSize="16sp"
+                    android:textColor="#747688"/>
+                <ImageButton
+                    android:id="@+id/btnEditDateTime"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#8A2BE2"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"/>
+            </RelativeLayout>
 
+            <!-- Location -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp">
+                <TextView
+                    android:id="@+id/tvLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toStartOf="@id/btnEditLocation"
+                    android:text="Gala Convention Center, 36 Guild Street London, UK"
+                    android:textSize="16sp"
+                    android:textColor="#747688"/>
+                <ImageButton
+                    android:id="@+id/btnEditLocation"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#8A2BE2"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"/>
+            </RelativeLayout>
+
+            <!-- Requirements -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Event Requirements"
+                    android:text="Requirements"
+                    android:textSize="18sp"
                     android:textColor="#120D26"
-                    android:textSize="18sp"/>
-
-                <ImageView
-                    android:id="@+id/editRequirements"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_edit_24"
-                    android:contentDescription="Edit requirements"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_centerVertical="true"/>
+                <ImageButton
+                    android:id="@+id/btnEditRequirements"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#8A2BE2"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"/>
             </RelativeLayout>
@@ -227,28 +182,30 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:text="Event requirements"
                 android:textSize="16sp"
                 android:textColor="#747688"/>
 
-            <!-- About Event -->
+            <!-- Description -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp">
-
+                android:layout_marginTop="16dp">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="About Event"
+                    android:text="Description"
+                    android:textSize="18sp"
                     android:textColor="#120D26"
-                    android:textSize="18sp"/>
-
-                <ImageView
-                    android:id="@+id/editDescription"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_edit_24"
-                    android:contentDescription="Edit description"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_centerVertical="true"/>
+                <ImageButton
+                    android:id="@+id/btnEditDescription"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="#8A2BE2"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"/>
             </RelativeLayout>
@@ -258,15 +215,66 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:text="Add description"
                 android:textSize="16sp"
                 android:textColor="#747688"/>
+
+            <!-- ============================================== -->
+            <!-- ==         NEW: ADDED INPUT FIELDS          == -->
+            <!-- ============================================== -->
+
+            <!-- Event Poster URL -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:hint="Event Poster URL"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_event_poster_url"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textUri"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Price -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Price (e.g., $25 or 'Free')"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_price"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Tags -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Tags (comma separated, e.g., Music, Pop)"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_tags"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
     </ScrollView>
 
     <!-- Fixed Publish button at bottom -->
+    <!-- ID CHANGED from btnPublish to btn_save_event -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnPublish"
+        android:id="@+id/btn_save_event"
         android:layout_width="0dp"
         android:layout_height="56dp"
         android:layout_marginStart="24dp"
@@ -276,10 +284,11 @@
         android:textAllCaps="true"
         android:textColor="#FFFFFF"
         android:fontFamily="sans-serif-medium"
-        android:insetTop="10dp"
-        android:insetBottom="10dp"
-        android:background="@drawable/bg_publish_button"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:backgroundTint="#5A00FF"
         android:elevation="8dp"
+        app:cornerRadius="16dp"
         app:icon="@drawable/ic_arrow_forward_24"
         app:iconTint="#FFFFFF"
         app:iconGravity="textEnd"

@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.annotationProcessor
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -56,4 +58,10 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("com.google.android.material:material:1.12.0")
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
 }}
+dependencies {
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+}
