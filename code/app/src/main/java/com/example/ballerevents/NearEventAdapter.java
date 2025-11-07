@@ -6,17 +6,17 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide; // <-- IMPORT GLIDE
 import com.example.ballerevents.databinding.ItemEventNearBinding;
 
 public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventViewHolder> {
 
-    // Simple interface for click handling
+    // ... (Interface and constructor) ...
     public interface OnEventClickListener {
         void onEventClick(Event event);
     }
-
     private final OnEventClickListener onClickListener;
-
     public NearEventAdapter(OnEventClickListener onClickListener) {
         super(EventDiffCallback);
         this.onClickListener = onClickListener;
@@ -46,26 +46,34 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
         }
 
         public void bind(Event event, OnEventClickListener onClickListener) {
-            binding.ivEventImage.setImageResource(event.getEventPosterResId());
+            // --- UPDATED BINDING ---
             binding.tvEventTitle.setText(event.getTitle());
             binding.tvEventLocation.setText(event.getLocationName());
             binding.tvEventDate.setText(event.getDate());
             binding.tvEventPrice.setText(event.getPrice());
 
+            // Load image using Glide
+            Glide.with(binding.getRoot().getContext())
+                    .load(event.getEventPosterUrl())
+                    .placeholder(R.drawable.placeholder_image) // You must add this drawable
+                    .error(R.drawable.placeholder_image)       // for placeholders
+                    .into(binding.ivEventImage);
+            // --- END OF UPDATE ---
+
             binding.getRoot().setOnClickListener(v -> onClickListener.onEventClick(event));
         }
     }
 
-    // DiffUtil.ItemCallback
+    // ... (DiffUtil) ...
     private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
         @Override
         public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId() == newItem.getId();
+            return oldItem.getId().equals(newItem.getId()); // Compare String IDs
         }
 
         @Override
         public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId() == newItem.getId();
+            return oldItem.getId().equals(newItem.getId());
         }
     };
 }

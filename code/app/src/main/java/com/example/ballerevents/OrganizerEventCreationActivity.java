@@ -5,6 +5,7 @@ import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -13,19 +14,36 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+// Import ViewBinding and other necessary classes
+import com.example.ballerevents.databinding.ActivityOrganizerEventCreationBinding;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public class OrganizerEventCreationActivity extends AppCompatActivity {
 
-    private TextView tvTitle, tvDate, tvTime, tvVenue, tvAddress, tvRequirements, tvDescription;
+    private static final String TAG = "EventCreationActivity";
 
+    // Use ViewBinding
+    private ActivityOrganizerEventCreationBinding binding;
+
+    private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
+    private String currentUserId;
+    private UserProfile organizerProfile; // To store organizer's info
+
+    // --- All your data fields ---
     private String title = "International Band Music Concert";
     private String dateStr = "14 December, 2021";
     private String dayStr = "Tuesday";
@@ -43,71 +61,138 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_organizer_event_creation);
+        // Inflate layout with ViewBinding
+        binding = ActivityOrganizerEventCreationBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        findViewById(R.id.toolbarBack).setOnClickListener(v -> onBackPressed());
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
-        tvTitle = findViewById(R.id.tvTitle);
-        tvDate = findViewById(R.id.tvDate);
-        tvTime = findViewById(R.id.tvTime);
-        tvVenue = findViewById(R.id.tvVenue);
-        tvAddress = findViewById(R.id.tvAddress);
-        tvRequirements = findViewById(R.id.tvRequirements);
-        tvDescription = findViewById(R.id.tvDescription);
-
-        // Initialize calendars with default values
-        try {
-            Date date = new SimpleDateFormat("dd MMMM, yyyy", Locale.ENGLISH).parse(dateStr);
-            if (date != null) eventDate.setTime(date);
-        } catch (ParseException e) {
-            // Ignore, use current
+        if (mAuth.getCurrentUser() == null) {
+            Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
         }
-        try {
-            Date from = DateFormat.getTimeInstance(DateFormat.SHORT).parse(fromTime);
-            if (from != null) {
-                fromCal.set(Calendar.HOUR_OF_DAY, from.getHours());
-                fromCal.set(Calendar.MINUTE, from.getMinutes());
-            }
-            Date to = DateFormat.getTimeInstance(DateFormat.SHORT).parse(toTime);
-            if (to != null) {
-                toCal.set(Calendar.HOUR_OF_DAY, to.getHours());
-                toCal.set(Calendar.MINUTE, to.getMinutes());
-            }
-        } catch (ParseException e) {
-            // Ignore
-        }
+        currentUserId = mAuth.getCurrentUser().getUid();
 
-        updateDisplays();
+        // Load the organizer's profile to get their name/icon
+        loadOrganizerProfile();
 
-        // Edit listeners
-        findViewById(R.id.editTitle).setOnClickListener(v -> editTitle());
-        findViewById(R.id.editDateTime).setOnClickListener(v -> editDateTime());
-        findViewById(R.id.editLocation).setOnClickListener(v -> editLocation());
-        findViewById(R.id.editRequirements).setOnClickListener(v -> editMultiline("Event Requirements", requirements, newValue -> {
+        // --- Wire up all click listeners ---
+        binding.btnBack.setOnClickListener(v -> finish());
+        binding.btnSaveEvent.setOnClickListener(v -> saveEventToFirestore());
+
+        binding.tvTitle.setOnClickListener(v -> editTitle());
+        binding.tvDateTime.setOnClickListener(v -> editDateTime());
+        binding.tvLocation.setOnClickListener(v -> editLocation());
+
+        binding.tvRequirements.setOnClickListener(v -> editMultiline("Requirements", requirements, newValue -> {
             requirements = newValue;
-            tvRequirements.setText(TextUtils.isEmpty(newValue) ? "Event requirements" : newValue);
-        }));
-        findViewById(R.id.editDescription).setOnClickListener(v -> editMultiline("About Event", description, newValue -> {
-            description = newValue;
-            tvDescription.setText(TextUtils.isEmpty(newValue) ? "Add description" : newValue);
+            updateDisplays();
         }));
 
-        ((MaterialButton) findViewById(R.id.btnPublish)).setOnClickListener(v -> {
-            if (validate()) {
-                Toast.makeText(this, "Event published (prototype)", Toast.LENGTH_SHORT).show();
-                finish();
+        binding.tvDescription.setOnClickListener(v -> editMultiline("Description", description, newValue -> {
+            description = newValue;
+            updateDisplays();
+        }));
+
+        updateDisplays(); // Set initial text
+    }
+
+    /**
+     * Fetches the current user's (organizer's) profile from Firestore.
+     */
+    private void loadOrganizerProfile() {
+        DocumentReference userRef = db.collection("users").document(currentUserId);
+        userRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                organizerProfile = documentSnapshot.toObject(UserProfile.class);
+            } else {
+                Toast.makeText(this, "Could not find organizer profile.", Toast.LENGTH_SHORT).show();
+                Log.w(TAG, "Organizer profile not found for ID: " + currentUserId);
             }
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "Error fetching organizer data.", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Error fetching user profile", e);
         });
     }
 
+    /**
+     * Validates and saves the new event to the "events" collection in Firestore.
+     */
+    private void saveEventToFirestore() {
+        if (!validate() || currentUserId == null) {
+            if (currentUserId == null) Toast.makeText(this, "Error: Not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (organizerProfile == null) {
+            Toast.makeText(this, "Error: Organizer profile not loaded. Try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // --- Get data from the new EditText fields ---
+        // (These IDs are assumed to be in your XML layout)
+        String eventPosterUrl = binding.etEventPosterUrl.getText().toString().trim();
+        String price = binding.etPrice.getText().toString().trim();
+        String tagsString = binding.etTags.getText().toString().trim();
+
+        // Convert comma-separated string to a List
+        List<String> tagsList;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            tagsList = Arrays.stream(tagsString.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
+        } else {
+            tagsList = new java.util.ArrayList<>();
+            for (String s : tagsString.split(",")) {
+                String trimmed = s.trim();
+                if (!trimmed.isEmpty()) {
+                    tagsList.add(trimmed);
+                }
+            }
+        }
+
+        // --- Create a new Event object using the Firebase-ready model ---
+        Event newEvent = new Event();
+        newEvent.title = this.title;
+        newEvent.date = this.dateStr;
+        newEvent.time = this.fromTime + " - " + this.toTime;
+        newEvent.locationName = this.venue;
+        newEvent.locationAddress = this.address;
+        newEvent.description = this.description;
+
+        // Add new fields
+        newEvent.price = price;
+        newEvent.tags = tagsList;
+        newEvent.eventPosterUrl = eventPosterUrl;
+
+        // Add organizer info from their profile
+        newEvent.organizerId = this.currentUserId;
+        newEvent.organizer = organizerProfile.getName();
+        newEvent.organizerIconUrl = organizerProfile.getProfilePictureUrl();
+        newEvent.isTrending = false; // Default for new events
+
+        db.collection("events")
+                .add(newEvent)
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Event saved with ID: " + documentReference.getId());
+                    finish(); // Go back to the previous activity
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error creating event.", Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "Error adding document", e);
+                });
+    }
+
     private void updateDisplays() {
-        tvTitle.setText(title);
-        tvDate.setText(dateStr);
-        tvTime.setText(String.format("%s, %s - %s", dayStr, fromTime, toTime));
-        tvVenue.setText(venue);
-        tvAddress.setText(address);
-        tvRequirements.setText(TextUtils.isEmpty(requirements) ? "Event requirements" : requirements);
-        tvDescription.setText(TextUtils.isEmpty(description) ? "Add description" : description);
+        binding.tvTitle.setText(title);
+        binding.tvDateTime.setText(String.format("%s, %s, %s - %s", dateStr, dayStr, fromTime, toTime));
+        binding.tvLocation.setText(String.format("%s, %s", venue, address));
+        binding.tvRequirements.setText(TextUtils.isEmpty(requirements) ? "Event requirements" : requirements);
+        binding.tvDescription.setText(TextUtils.isEmpty(description) ? "Add description" : description);
     }
 
     private void editTitle() {
@@ -118,7 +203,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         builder.setView(input);
         builder.setPositiveButton("OK", (dialog, which) -> {
             title = input.getText().toString().trim();
-            tvTitle.setText(title);
+            binding.tvTitle.setText(title);
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
@@ -152,16 +237,15 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Edit Location");
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_location, null);
-        EditText etVenue = view.findViewById(R.id.etVenue);
-        EditText etAddress = view.findViewById(R.id.etAddress);
+        EditText etVenue = view.findViewById(R.id.etVenue); // Assuming this ID is in dialog_edit_location.xml
+        EditText etAddress = view.findViewById(R.id.etAddress); // Assuming this ID is in dialog_edit_location.xml
         etVenue.setText(venue);
         etAddress.setText(address);
         builder.setView(view);
         builder.setPositiveButton("OK", (dialog, which) -> {
             venue = etVenue.getText().toString().trim();
             address = etAddress.getText().toString().trim();
-            tvVenue.setText(venue);
-            tvAddress.setText(address);
+            updateDisplays();
         });
         builder.setNegativeButton("Cancel", null);
         builder.show();
@@ -194,6 +278,11 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(fromTime)) { Toast.makeText(this, "From time required", Toast.LENGTH_SHORT).show(); ok = false; }
         if (TextUtils.isEmpty(toTime)) { Toast.makeText(this, "To time required", Toast.LENGTH_SHORT).show(); ok = false; }
         if (TextUtils.isEmpty(venue)) { Toast.makeText(this, "Venue required", Toast.LENGTH_SHORT).show(); ok = false; }
+
+        // --- Add validation for new fields ---
+        if (TextUtils.isEmpty(binding.etEventPosterUrl.getText())) { Toast.makeText(this, "Event Poster URL required", Toast.LENGTH_SHORT).show(); ok = false; }
+        if (TextUtils.isEmpty(binding.etPrice.getText())) { Toast.makeText(this, "Price required", Toast.LENGTH_SHORT).show(); ok = false; }
+
         return ok;
     }
 }

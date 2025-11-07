@@ -16,12 +16,14 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <!-- This LinearLayout is the main container -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
+            <!-- Top Bar: Menu and Notifications -->
             <RelativeLayout
                 android:id="@+id/top_bar"
                 android:layout_width="match_parent"
@@ -45,6 +47,7 @@
                     android:contentDescription="Notifications" />
             </RelativeLayout>
 
+            <!-- Header Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -62,6 +65,7 @@
                 android:textColor="#8A2BE2"
                 android:fontFamily="sans-serif-bold"/>
 
+            <!-- Search Bar -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -97,6 +101,7 @@
                     android:contentDescription="Filter" />
             </RelativeLayout>
 
+            <!-- Filter Chips -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -109,110 +114,174 @@
                     app:singleLine="true">
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_music"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Music Concert"
                         app:chipBackgroundColor="#E6E0FF"
                         android:textColor="#8A2BE2"
-                        style="@style/Widget.MaterialComponents.Chip.Action" />
+                        android:checkable="true"
+                        style="@style/Widget.MaterialComponents.Chip.Filter" />
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_exhibition"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Exhibition"
                         app:chipBackgroundColor="#FFF8E1"
                         android:textColor="#FFA000"
-                        style="@style/Widget.MaterialComponents.Chip.Action" />
+                        android:checkable="true"
+                        style="@style/Widget.MaterialComponents.Chip.Filter" />
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_stand_up"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Stand Up Show"
                         app:chipBackgroundColor="#FFE0E6"
                         android:textColor="#D81B60"
-                        style="@style/Widget.MaterialComponents.Chip.Action" />
+                        android:checkable="true"
+                        style="@style/Widget.MaterialComponents.Chip.Filter" />
 
                     <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_theater"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Theater"
                         app:chipBackgroundColor="#E0F7FA"
                         android:textColor="#00838F"
-                        style="@style/Widget.MaterialComponents.Chip.Action" />
+                        android:checkable="true"
+                        style="@style/Widget.MaterialComponents.Chip.Filter" />
 
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
 
-            <RelativeLayout
+            <!-- ============================================== -->
+            <!-- ==  NEW: ORIGINAL CONTENT (TRENDING/NEAR)   == -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/original_content_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp">
+                android:orientation="vertical">
+
+                <!-- Trending Events Section -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Trending Events"
+                        android:textSize="20sp"
+                        android:textColor="@android:color/black"
+                        android:fontFamily="sans-serif-bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="See all"
+                        android:textSize="16sp"
+                        android:textColor="#8A2BE2"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"/>
+                </RelativeLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_trending"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
+                    android:clipToPadding="false"
+                    tools:listitem="@layout/item_event_trending"
+                    tools:itemCount="2" />
+
+                <!-- Events Near You Section -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Events Near You"
+                        android:textSize="20sp"
+                        android:textColor="@android:color/black"
+                        android:fontFamily="sans-serif-bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="See all"
+                        android:textSize="16sp"
+                        android:textColor="#8A2BE2"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"/>
+                </RelativeLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_near_you"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
+                    android:clipToPadding="false"
+                    tools:listitem="@layout/item_event_near"
+                    tools:itemCount="2"/>
+            </LinearLayout>
+
+            <!-- ============================================== -->
+            <!-- ==         NEW: SEARCH RESULTS LAYOUT       == -->
+            <!-- ============================================== -->
+            <LinearLayout
+                android:id="@+id/search_results_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp"
+                android:visibility="gone"
+                tools:visibility="visible">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trending Events"
+                    android:text="Search Results"
                     android:textSize="20sp"
                     android:textColor="@android:color/black"
                     android:fontFamily="sans-serif-bold"/>
 
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_search_results"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:clipToPadding="false"
+                    tools:listitem="@layout/item_event_trending"
+                    tools:itemCount="1" />
+
                 <TextView
+                    android:id="@+id/tv_no_results"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="See all"
+                    android:text="No results found."
                     android:textSize="16sp"
-                    android:textColor="#8A2BE2"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"/>
-            </RelativeLayout>
+                    android:textColor="@android:color/darker_gray"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="32dp"
+                    android:visibility="gone"
+                    tools:visibility="visible"/>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_trending"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp"
-                android:clipToPadding="false"
-                tools:listitem="@layout/item_event_trending"
-                tools:itemCount="2" />
-
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Events Near You"
-                    android:textSize="20sp"
-                    android:textColor="@android:color/black"
-                    android:fontFamily="sans-serif-bold"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="See all"
-                    android:textSize="16sp"
-                    android:textColor="#8A2BE2"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"/>
-            </RelativeLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_near_you"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="16dp"
-                android:clipToPadding="false"
-                tools:listitem="@layout/item_event_near"
-                tools:itemCount="2"/>
+            </LinearLayout>
 
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Floating QR Code Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_qr"
         android:layout_width="wrap_content"
