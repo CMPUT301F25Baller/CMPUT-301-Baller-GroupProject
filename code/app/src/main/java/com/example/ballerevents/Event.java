@@ -99,5 +99,6 @@ public class Event implements Parcelable {
     public String getDescription() { return description; }
     public String getEventPosterUrl() { return eventPosterUrl; }
     public String getOrganizerIconUrl() { return organizerIconUrl; }
+    public void setId(String id) { this.id = id; }
     public boolean isTrending() { return isTrending; }
 }

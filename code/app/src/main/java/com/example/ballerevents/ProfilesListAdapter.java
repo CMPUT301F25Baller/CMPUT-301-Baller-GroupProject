@@ -1,21 +1,17 @@
 package com.example.ballerevents;
 
 import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import com.example.ballerevents.databinding.ItemAdminProfileBinding;
 
-public class ProfilesListAdapter extends ListAdapter<Profile, ProfilesListAdapter.VH> {
+public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAdapter.VH> {
 
-    interface OnProfileClick {
-        void onClick(Profile p);
-    }
+    public interface OnProfileClick { void onClick(UserProfile p); }
 
     private final OnProfileClick onClick;
 
@@ -25,58 +21,54 @@ public class ProfilesListAdapter extends ListAdapter<Profile, ProfilesListAdapte
         setHasStableIds(true);
     }
 
-    private static final DiffUtil.ItemCallback<Profile> DIFF =
-            new DiffUtil.ItemCallback<Profile>() {
+    private static final DiffUtil.ItemCallback<UserProfile> DIFF =
+            new DiffUtil.ItemCallback<UserProfile>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull Profile oldItem, @NonNull Profile newItem) {
-                    return oldItem.id.equals(newItem.id);
+                public boolean areItemsTheSame(@NonNull UserProfile o, @NonNull UserProfile n) {
+                    return safe(o.getId()).equals(safe(n.getId()));
                 }
-
                 @Override
-                public boolean areContentsTheSame(@NonNull Profile oldItem, @NonNull Profile newItem) {
-                    // Simple compare; adjust if you add more fields
-                    return oldItem.id.equals(newItem.id)
-                            && oldItem.name.equals(newItem.name)
-                            && oldItem.avatarResId == newItem.avatarResId;
+                public boolean areContentsTheSame(@NonNull UserProfile o, @NonNull UserProfile n) {
+                    return safe(o.getId()).equals(safe(n.getId()))
+                            && safe(o.getName()).equals(safe(n.getName()))
+                            && safe(o.getProfilePictureUrl()).equals(safe(n.getProfilePictureUrl()));
                 }
+                private String safe(String s){ return s==null? "": s; }
             };
 
-    @Override
-    public long getItemId(int position) {
-        return getItem(position).id.hashCode();
+    @Override public long getItemId(int position) {
+        String id = getItem(position).getId();
+        return id == null ? position : id.hashCode();
     }
 
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_admin_profile, parent, false);
-        return new VH(v);
+        ItemAdminProfileBinding b = ItemAdminProfileBinding.inflate(
+                LayoutInflater.from(parent.getContext()), parent, false);
+        return new VH(b);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
-        Profile p = getItem(position);
-
-        String name = p.name != null ? p.name : p.id;
-        h.tvName.setText(name);
-
-        if (p.avatarResId != 0) {
-            h.ivAvatar.setImageResource(p.avatarResId);
-        } else {
-            h.ivAvatar.setImageResource(android.R.color.darker_gray);
-        }
-
-        h.itemView.setOnClickListener(v -> onClick.onClick(p));
+        UserProfile p = getItem(position);
+        h.bind(p, onClick);
     }
 
     static class VH extends RecyclerView.ViewHolder {
-        ImageView ivAvatar;
-        TextView tvName;
-        VH(@NonNull View itemView) {
-            super(itemView);
-            ivAvatar = itemView.findViewById(R.id.ivAvatar);
-            tvName = itemView.findViewById(R.id.tvName);
+        private final ItemAdminProfileBinding b;
+        VH(@NonNull ItemAdminProfileBinding binding) {
+            super(binding.getRoot());
+            this.b = binding;
+        }
+        void bind(UserProfile p, OnProfileClick onClick){
+            b.tvName.setText(p.getName() == null ? "User" : p.getName());
+            Glide.with(b.getRoot().getContext())
+                    .load(p.getProfilePictureUrl())
+                    .placeholder(R.drawable.placeholder_avatar1)
+                    .error(R.drawable.placeholder_avatar1)
+                    .into(b.ivAvatar);
+            b.getRoot().setOnClickListener(v -> onClick.onClick(p));
         }
     }
 }

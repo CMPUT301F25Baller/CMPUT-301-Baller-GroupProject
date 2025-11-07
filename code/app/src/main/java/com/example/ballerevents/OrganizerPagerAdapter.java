@@ -6,23 +6,17 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 public class OrganizerPagerAdapter extends FragmentStateAdapter {
-
-    public OrganizerPagerAdapter(@NonNull FragmentActivity fa) {
+    private final String organizerId;
+    public OrganizerPagerAdapter(@NonNull FragmentActivity fa, @NonNull String organizerId) {
         super(fa);
+        this.organizerId = organizerId;
     }
-
-    @NonNull
-    @Override
-    public Fragment createFragment(int position) {
+    @NonNull @Override public Fragment createFragment(int position) {
         switch (position) {
-            case 0: return new OrganizerAboutFragment();
-            case 1: return new OrganizerEventFragment();
-            default: return new OrganizerFollowingFragment();
+            case 0: return OrganizerAboutFragment.newInstance(organizerId);
+            case 1: return OrganizerEventFragment.newInstance(organizerId);
+            default: return OrganizerFollowingFragment.newInstance(organizerId);
         }
     }
-
-    @Override
-    public int getItemCount() {
-        return 3;
-    }
+    @Override public int getItemCount() { return 3; }
 }

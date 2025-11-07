@@ -53,53 +53,83 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void loginUser() {
-        // Access views via binding object
         String email = binding.etEmail.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
-
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Email and password cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        setAuthUiEnabled(false); // disable buttons during auth
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        Log.d(TAG, "signInWithEmail:success");
-                        goToRoleSelection();
+                        FirebaseUser user = mAuth.getCurrentUser();
+                        if (user == null) { // super edge case
+                            Toast.makeText(this, "Login error. Try again.", Toast.LENGTH_SHORT).show();
+                            setAuthUiEnabled(true);
+                            return;
+                        }
+
+                        // Ensure user doc exists
+                        db.collection("users").document(user.getUid())
+                                .get()
+                                .addOnSuccessListener(doc -> {
+                                    if (!doc.exists()) {
+                                        // Create a minimal profile so the rest of the app can rely on it
+                                        createNewUserDocument(user);
+                                    } else {
+                                        goToRoleSelection();
+                                    }
+                                })
+                                .addOnFailureListener(e -> {
+                                    Toast.makeText(this, "Failed to load profile.", Toast.LENGTH_SHORT).show();
+                                    setAuthUiEnabled(true);
+                                });
+
                     } else {
                         Log.w(TAG, "signInWithEmail:failure", task.getException());
-                        Toast.makeText(LoginActivity.this, "Authentication failed.",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
+                        setAuthUiEnabled(true);
                     }
                 });
     }
 
+    private void setAuthUiEnabled(boolean enabled) {
+        binding.btnLogin.setEnabled(enabled);
+        binding.btnRegister.setEnabled(enabled);
+        binding.etEmail.setEnabled(enabled);
+        binding.etPassword.setEnabled(enabled);
+    }
+
     private void registerUser() {
-        // Access views via binding object
         String email = binding.etEmail.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
-
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Email and password cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        setAuthUiEnabled(false);
+
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        Log.d(TAG, "createUserWithEmail:success");
                         FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null) {
-                            createNewUserDocument(user);
+                        if (user != null) createNewUserDocument(user);
+                        else {
+                            Toast.makeText(this, "Registration error.", Toast.LENGTH_SHORT).show();
+                            setAuthUiEnabled(true);
                         }
                     } else {
                         Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                        Toast.makeText(LoginActivity.this, "Registration failed.",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(LoginActivity.this, "Registration failed.", Toast.LENGTH_SHORT).show();
+                        setAuthUiEnabled(true);
                     }
                 });
     }
+
 
     private void createNewUserDocument(FirebaseUser firebaseUser) {
         // Create a new user profile document in Firestore
@@ -130,7 +160,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private void goToRoleSelection() {
         Intent intent = new Intent(LoginActivity.this, RoleSelectionActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        finish(); // Prevent user from going back to login
+        finish();
     }
 }

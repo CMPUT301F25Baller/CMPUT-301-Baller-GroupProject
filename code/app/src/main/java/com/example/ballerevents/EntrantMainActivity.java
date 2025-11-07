@@ -31,6 +31,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private List<Event> allEvents = new ArrayList<>(); // Cache all events for searching
     private List<String> selectedTags = new ArrayList<>();
+    private static String s(String v) { return v == null ? "" : v; }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,30 +66,37 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     private void loadAllEvents() {
         db.collection("events")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .orderBy("title", Query.Direction.ASCENDING) // stable order for UI
+                .addSnapshotListener((snap, e) -> {
+                    if (e != null || snap == null) {
+                        Log.w(TAG, "Error loading events", e);
+                        Toast.makeText(this, "Error loading events", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
                     allEvents.clear();
                     List<Event> trending = new ArrayList<>();
                     List<Event> near = new ArrayList<>();
 
-                    for (Event event : queryDocumentSnapshots.toObjects(Event.class)) {
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+                        Event event = doc.toObject(Event.class);
+                        if (event == null) continue;
+
+                        // Make sure ID is set even if @DocumentId doesn’t populate
+                        event.setId(doc.getId());
+
                         allEvents.add(event);
-                        if (event.isTrending()) {
-                            trending.add(event);
-                        } else {
-                            near.add(event);
-                        }
+                        if (event.isTrending()) trending.add(event); else near.add(event);
                     }
 
-                    trendingAdapter.submitList(trending);
-                    nearAdapter.submitList(near);
+                    // Submit copies to avoid accidental adapter list mutation issues
+                    trendingAdapter.submitList(new ArrayList<>(trending));
+                    nearAdapter.submitList(new ArrayList<>(near));
+
                     Log.d(TAG, "Loaded " + allEvents.size() + " total events.");
-                })
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Error loading events", e);
-                    Toast.makeText(this, "Error loading events", Toast.LENGTH_SHORT).show();
                 });
     }
+
 
     private void setupListeners() {
         binding.btnMenu.setOnClickListener(v -> {
@@ -115,16 +123,17 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     private void setupChipListener(Chip chip) {
-        chip.setOnClickListener(v -> {
+        chip.setOnCheckedChangeListener((button, isChecked) -> {
             String tag = chip.getText().toString();
-            if (chip.isChecked()) {
-                selectedTags.add(tag);
+            if (isChecked) {
+                if (!selectedTags.contains(tag)) selectedTags.add(tag);
             } else {
                 selectedTags.remove(tag);
             }
             performSearchAndFilter();
         });
     }
+
 
     private void performSearchAndFilter() {
         String query = binding.etSearch.getText().toString().toLowerCase().trim();

@@ -2,20 +2,30 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-
+    <!-- fragment_organizer_about.xml -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
+        <!-- About text -->
         <TextView
-            android:id="@+id/tvBio"
+            android:id="@+id/tvAboutMe"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Retired philosopher just trying to make the most of my time on this Planet! I’m very flexible and happy to meet new people."
-            android:textColor="#120D26"
+            android:textColor="@android:color/black"
             android:textSize="16sp"
-            android:lineSpacingExtra="2dp"/>
+            android:lineSpacingExtra="4dp"
+            android:text="" />
+
+        <!-- Interests chips -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupInterests"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:isClickable="false"
+            android:isFocusable="false" />
     </LinearLayout>
 </ScrollView>

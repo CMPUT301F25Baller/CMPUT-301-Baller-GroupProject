@@ -21,11 +21,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Entrant main screen (not launcher for now) -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="false" />
-
         <!-- Entrant details page -->
         <activity
             android:name=".AdminEventsActivity"
@@ -67,4 +62,5 @@
             android:exported="false" />
     </application>
 
+    <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>

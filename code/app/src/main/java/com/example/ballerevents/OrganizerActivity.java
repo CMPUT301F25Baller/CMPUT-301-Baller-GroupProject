@@ -1,5 +1,6 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager2.widget.ViewPager2;
@@ -10,6 +11,7 @@ import com.google.android.material.tabs.TabLayoutMediator;
 public class OrganizerActivity extends AppCompatActivity {
 
     private static final String[] TAB_TITLES = {"About", "Event", "Following"};
+    public static final String EXTRA_ORGANIZER_ID = "ORGANIZER_ID";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,16 +24,20 @@ public class OrganizerActivity extends AppCompatActivity {
         TabLayout tabLayout = findViewById(R.id.tabLayout);
         ViewPager2 viewPager = findViewById(R.id.viewPager);
 
-        viewPager.setAdapter(new OrganizerPagerAdapter(this));
-        viewPager.setOffscreenPageLimit(2);
+        String organizerId = getIntent() != null
+                ? getIntent().getStringExtra(EXTRA_ORGANIZER_ID) : null;
+        if (organizerId == null) {
+            organizerId = com.google.firebase.auth.FirebaseAuth.getInstance().getUid();
+        }
 
-        // Default to Event tab (index 1)
+        viewPager.setAdapter(new OrganizerPagerAdapter(this, organizerId));
+        viewPager.setOffscreenPageLimit(2);
         viewPager.setCurrentItem(1, false);
 
         new TabLayoutMediator(tabLayout, viewPager,
-                (tab, position) -> tab.setText(TAB_TITLES[position])
-
+                (tab, pos) -> tab.setText(TAB_TITLES[pos])
         ).attach();
+
         findViewById(R.id.btnNewEvent).setOnClickListener(v ->
                 startActivity(new android.content.Intent(this, OrganizerEventCreationActivity.class))
         );
@@ -39,6 +45,5 @@ public class OrganizerActivity extends AppCompatActivity {
         findViewById(R.id.btnMessage).setOnClickListener(v ->
                 android.widget.Toast.makeText(this, "Messaging prototype coming soon.", android.widget.Toast.LENGTH_SHORT).show()
         );
-
     }
 }
