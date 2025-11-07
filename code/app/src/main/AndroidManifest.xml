@@ -21,6 +21,32 @@
             </intent-filter>
         </activity>
 
+        <!-- Entrant main screen (not launcher for now) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- Entrant details page -->
+        <activity
+            android:name=".AdminEventsActivity"
+            android:exported="false"
+            android:label="Events"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"/>
+        <activity
+            android:name=".AdminProfilesActivity"
+            android:exported="false"
+            android:label="Profiles"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+        <activity android:name=".ProfileDetailsActivity" />
+        <activity
+            android:name=".NotificationLogsActivity"
+            android:label="Notifications"
+            android:exported="false" />
+        <activity
+            android:name=".AdminImagesActivity"
+            android:exported="false"
+            android:label="Event Posters"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
         <activity
             android:name=".RoleSelectionActivity"
             android:exported="false" />

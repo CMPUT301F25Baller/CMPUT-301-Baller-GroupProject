@@ -9,6 +9,13 @@ plugins {
 android {
     namespace = "com.example.ballerevents"
     compileSdk = 36
+    buildFeatures {
+        viewBinding = true
+    }
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
 
     defaultConfig {
         applicationId = "com.example.ballerevents"
@@ -54,14 +61,17 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
+    testImplementation("junit:junit:4.13.2")
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
     annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
-}}
-dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
 }
