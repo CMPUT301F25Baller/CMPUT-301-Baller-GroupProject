@@ -30,9 +30,14 @@
         <activity
             android:name=".EditProfileActivity"
             android:exported="false" />
-
         <activity
             android:name=".OrganizerEventCreationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EntrantMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".OrganizerHomeActivity"
             android:exported="false" />
     </application>
 

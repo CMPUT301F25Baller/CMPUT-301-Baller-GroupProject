@@ -22,7 +22,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
         );
 
         btnEntrant.setOnClickListener(v ->
-                Toast.makeText(this, "Entrant prototype not wired yet.", Toast.LENGTH_SHORT).show()
+                startActivity(new Intent(RoleSelectionActivity.this, EntrantMainActivity.class))
         );
 
         btnAdmin.setOnClickListener(v ->
