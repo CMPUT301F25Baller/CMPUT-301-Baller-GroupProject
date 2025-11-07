@@ -4,18 +4,16 @@
 
     <application
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BallerEvents"
-        tools:targetApi="31">
+        android:theme="@style/Theme.BallerEvents">
 
-        <!-- Admin Dashboard is the launcher while you develop/admin-test -->
         <activity
-            android:name=".AdminDashboardActivity"
+            android:name=".OrganizerActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,9 +27,6 @@
             android:exported="false" />
 
         <!-- Entrant details page -->
-        <activity
-            android:name=".DetailsActivity"
-            android:exported="true" />
         <activity
             android:name=".AdminEventsActivity"
             android:exported="false"
@@ -52,10 +47,24 @@
             android:exported="false"
             android:label="Event Posters"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
-
-
-
-
+        <activity
+            android:name=".RoleSelectionActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DetailsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EditProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".OrganizerEventCreationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".EntrantMainActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

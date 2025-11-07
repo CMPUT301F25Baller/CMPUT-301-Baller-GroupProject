@@ -4,4 +4,11 @@
     <color name="white">#FFFFFFFF</color>
     <color name="purple_500">#5A00FF</color>
     <color name="dark_gray">#555555</color>
+    <color name="brand_primary">#5669FF</color>
+    <color name="text_primary">#120D26</color>
+    <color name="text_secondary">#747688</color>
+    <color name="text_muted">#3C3E56</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="line_soft">#DDDDDD</color>
+    <color name="chip_bg">#FFCD6C</color>
 </resources>
