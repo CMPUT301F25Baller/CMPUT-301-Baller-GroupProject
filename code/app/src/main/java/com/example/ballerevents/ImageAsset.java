@@ -1,12 +1,13 @@
 package com.example.ballerevents;
 
-/** Model for a poster / image asset (Half-Way stub). */
 public class ImageAsset {
-    public String id;
-    public String url;
+    public final String id;
+    public final String label;
+    public final int drawableResId;
 
-    public ImageAsset() {}
-    public ImageAsset(String id, String url) {
-        this.id = id; this.url = url;
+    public ImageAsset(String id, String label, int drawableResId) {
+        this.id = id;
+        this.label = label;
+        this.drawableResId = drawableResId;
     }
 }

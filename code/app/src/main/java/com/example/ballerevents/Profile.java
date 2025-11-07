@@ -1,12 +1,13 @@
 package com.example.ballerevents;
 
-/** Model for a user Profile (Half-Way stub). */
 public class Profile {
-    public String id;
-    public String name;
+    public final String id;
+    public final String name;
+    public final int avatarResId;
 
-    public Profile() {}
-    public Profile(String id, String name) {
-        this.id = id; this.name = name;
+    public Profile(String id, String name, int avatarResId) {
+        this.id = id;
+        this.name = name;
+        this.avatarResId = avatarResId;
     }
 }

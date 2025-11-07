@@ -9,6 +9,9 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    defaultConfig {
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
 
     defaultConfig {
@@ -58,6 +61,7 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
     testImplementation("junit:junit:4.13.2")
 
 }

@@ -10,11 +10,12 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BallerEvents">
+        android:theme="@style/Theme.BallerEvents"
+        tools:targetApi="31">
 
-        <!-- Launcher (main entry point) -->
+        <!-- Admin Dashboard is the launcher while you develop/admin-test -->
         <activity
-            android:name=".MainActivity"
+            android:name=".AdminDashboardActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -22,16 +23,15 @@
             </intent-filter>
         </activity>
 
-        <!-- Admin Dashboard (yours) -->
+        <!-- Entrant main screen (not launcher for now) -->
         <activity
-            android:name=".AdminDashboardActivity"
+            android:name=".MainActivity"
             android:exported="false" />
 
-        <!-- Details screen (theirs) -->
+        <!-- Entrant details page -->
         <activity
             android:name=".DetailsActivity"
             android:exported="true" />
     </application>
-
 
 </manifest>
