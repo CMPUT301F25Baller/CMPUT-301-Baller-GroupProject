@@ -1,5 +1,27 @@
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#DDDDDD"/>
-    <size android:width="24dp" android:height="24dp"/>
-    <corners android:radius="4dp"/>
-</shape>
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="17dp"
+    android:viewportWidth="17"
+    android:viewportHeight="17">
+
+    <path
+        android:fillColor="#2D264B"
+        android:pathData="M 1,1 H 6 V 6 H 1 Z M 2,2 H 5 V 5 H 2 Z"
+        android:fillType="evenOdd"/>
+
+    <path
+        android:fillColor="#2D264B"
+        android:pathData="M 11,1 H 16 V 6 H 11 Z M 12,2 H 15 V 5 H 12 Z"
+        android:fillType="evenOdd"/>
+
+    <path
+        android:fillColor="#2D264B"
+        android:pathData="M 1,11 H 6 V 16 H 1 Z M 2,12 H 5 V 15 H 2 Z"
+        android:fillType="evenOdd"/>
+
+    <path
+        android:fillColor="#2D264B"
+        android:pathData="M 8,2 H 9 V 3 H 8 Z M 10,2 H 11 V 3 H 10 Z M 13,7 H 14 V 8 H 13 Z M 8,14 H 9 V 15 H 8 Z M 10,14 H 11 V 15 H 10 Z M 13,9 H 14 V 10 H 13 Z M 8,7 H 9 V 8 H 8 Z M 10,7 H 11 V 8 H 10 Z M 13,11 H 14 V 12 H 13 Z" />
+
+</vector>
