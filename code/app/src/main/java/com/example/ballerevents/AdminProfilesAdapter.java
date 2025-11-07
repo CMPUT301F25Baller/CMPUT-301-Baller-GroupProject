@@ -9,6 +9,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemAdminProfileBinding;
+/**
+ * RecyclerView adapter for admin profile cards. Shows avatar, name, and email,
+ * and invokes the provided click listener when a row is tapped.
+ */
 
 public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfilesAdapter.VH> {
 

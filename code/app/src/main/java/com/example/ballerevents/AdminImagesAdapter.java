@@ -12,6 +12,13 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+/**
+ * RecyclerView adapter for the Admin Images screen.
+ * Shows poster thumbnails with a text label.
+ * Tap: preview the image. Long-press: ask to delete.
+ * Use submitList(...) to replace the data and refresh the UI.
+ */
+
 
 public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH> {
 

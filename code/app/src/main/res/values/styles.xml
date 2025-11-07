@@ -1,42 +1,33 @@
 <resources>
-    <style name="Text.DisplayName">
-        <item name="android:textSize">24sp</item>
-        <item name="android:textColor">@color/text_primary</item>
+
+    <!-- Base stubs so any legacy references don't crash linking -->
+    <style name="ShapeAppearance"/>
+    <style name="ShapeAppearanceOverlay"/>
+
+    <!-- Circle variants (overlay & non-overlay) so either name compiles -->
+    <style name="ShapeAppearance.CircleImage" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
-    <style name="Text.EventTime">
-        <item name="android:textSize">12sp</item>
-        <item name="android:textColor">@color/brand_primary</item>
-        <item name="android:textAllCaps">true</item>
+
+    <style name="ShapeAppearanceOverlay.CircleImage" parent="ShapeAppearanceOverlay">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
     </style>
-    <style name="Text.EventTitle">
-        <item name="android:textSize">18sp</item>
-        <item name="android:textColor">@color/text_primary</item>
+
+    <!-- Top-only rounded corners (used in item_event_near.xml) -->
+    <style name="RoundedTopCorners" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">16dp</item>
+        <item name="cornerSizeTopRight">16dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
     </style>
-    <style name="Text.Meta">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text_secondary</item>
+
+    <!-- Small rounded shape (used in entrant_main.xml for FAB) -->
+    <style name="FabCutoutShape" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
     </style>
-    <style name="Text.Count">
-        <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-    <style name="Widget.Toolbar.Transparent" parent="Widget.Material3.Toolbar">
-        <item name="android:background">@android:color/transparent</item>
-        <item name="titleCentered">true</item>
-    </style>
-    <style name="Card.Elevated">
-        <item name="cardUseCompatPadding">true</item>
-        <item name="cardCornerRadius">@dimen/card_radius</item>
-        <item name="cardElevation">8dp</item>
-    </style>
-    <style name="Card" parent="Card.Elevated" />
-    <style name="Text">
-        <item name="android:textSize">14sp</item>
-        <item name="android:textColor">@color/text_primary</item>
-    </style>
-    <style name="FabCutoutShape" />
-    <style name="RoundedTopCorners">
-        <item name="cardUseCompatPadding">true</item>
-        <item name="cardCornerRadius">16dp</item>
-    </style>
+
 </resources>

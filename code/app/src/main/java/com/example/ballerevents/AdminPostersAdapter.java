@@ -9,6 +9,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemAdminPosterBinding;
+/**
+ * RecyclerView adapter for poster thumbnails on the dashboard/images screen.
+ * Binds the event title and poster image (Glide) and invokes a poster click
+ * callback provided to the adapter.
+ */
+
 
 public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.VH> {
 

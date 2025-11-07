@@ -13,9 +13,17 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
 import java.util.List;
+/**
+ * Admin landing screen that shows horizontally scrolling lists for
+ * recent events, profiles, and posters. Data is loaded from Firestore
+ * and adapters are wired for navigation to the full list screens.
+ *
+ * Navigation targets: {@link AdminEventsActivity}, {@link AdminProfilesActivity},
+ * {@link AdminImagesActivity} and a stubbed logs chip.
+ */
+
 
 public class AdminDashboardActivity extends AppCompatActivity {
-
     private static final String TAG = "AdminDashboard";
     private AdminDashboardBinding binding;
     private FirebaseFirestore db;
@@ -82,7 +90,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error loading recent events", e));
 
-        // Load recent 10 profiles
         db.collection("users")
                 .limit(10)
                 .get()
