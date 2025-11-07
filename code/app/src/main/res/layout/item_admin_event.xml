@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
+    app:cardUseCompatPadding="true">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/ivPoster"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_alignParentStart="true"
+            android:background="@android:color/transparent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/placeholder_poster"
+            android:contentDescription="@string/event_poster"
+            android:layout_marginEnd="12dp" />
+
+        <TextView
+            android:id="@+id/tvDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/ivPoster"
+            android:textAllCaps="true"
+            android:textColor="@color/purple_500"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvDate"
+            android:layout_toEndOf="@id/ivPoster"
+            android:layout_marginTop="6dp"
+            android:textColor="@android:color/black"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvTitle"
+            android:layout_toEndOf="@id/ivPoster"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/dark_gray"
+            android:textSize="13sp"
+            android:text="See details" />
+
+        <ImageView
+            android:id="@+id/ivMenu"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@drawable/ic_more_vert"
+            android:contentDescription="@string/menu_icon" />
+    </RelativeLayout>
+</com.google.android.material.card.MaterialCardView>

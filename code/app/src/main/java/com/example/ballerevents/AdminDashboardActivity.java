@@ -2,7 +2,6 @@ package com.example.ballerevents;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -24,12 +23,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding = AdminDashboardBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Horizontal lists
-        binding.rvEvents.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        binding.rvProfiles.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-        binding.rvImages.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        // === RecyclerView setups ===
+        binding.rvEvents.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvProfiles.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvImages.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
 
-        // Adapters
+        // === Adapters ===
         eventsAdapter = new TrendingEventAdapter(event -> {
             Intent i = new Intent(this, DetailsActivity.class);
             i.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
@@ -42,19 +44,36 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.rvProfiles.setAdapter(profilesAdapter);
         binding.rvImages.setAdapter(postersAdapter);
 
-        // Load data from stub “database”
-        repo.getRecentEvents(events -> eventsAdapter.submitList(events));
-        repo.getRecentProfiles(profiles -> profilesAdapter.submitList(profiles));
-        repo.getRecentImages(images -> postersAdapter.submitList(images));
+        // === Load mock data from StubAdminRepository ===
+        repo.getRecentEvents(eventsAdapter::submitList);
+        repo.getRecentProfiles(profilesAdapter::submitList);
+        repo.getRecentImages(postersAdapter::submitList);
 
-        // Chips & See all (still stubs)
-        binding.chipEvents.setOnClickListener(v -> Toast.makeText(this, "Open: Admin Events list", Toast.LENGTH_SHORT).show());
-        binding.chipPeople.setOnClickListener(v -> Toast.makeText(this, "Open: Admin Profiles list", Toast.LENGTH_SHORT).show());
-        binding.chipImages.setOnClickListener(v -> Toast.makeText(this, "Open: Admin Images list", Toast.LENGTH_SHORT).show());
-        binding.chipLogs.setOnClickListener(v -> Toast.makeText(this, "Open: Notification Logs (later)", Toast.LENGTH_SHORT).show());
+        // === Navigation: open the Admin Events list screen ===
+        binding.chipEvents.setOnClickListener(v ->
+                startActivity(new Intent(AdminDashboardActivity.this, AdminEventsActivity.class)));
 
-        binding.btnSeeAllEvents.setOnClickListener(v -> Toast.makeText(this, "See all events", Toast.LENGTH_SHORT).show());
-        binding.btnSeeAllProfiles.setOnClickListener(v -> Toast.makeText(this, "See all profiles", Toast.LENGTH_SHORT).show());
-        binding.btnSeeAllImages.setOnClickListener(v -> Toast.makeText(this, "See all images", Toast.LENGTH_SHORT).show());
+        binding.btnSeeAllEvents.setOnClickListener(v ->
+                startActivity(new Intent(AdminDashboardActivity.this, AdminEventsActivity.class)));
+
+        // === Keep these as stubs until their pages exist ===
+        binding.chipPeople.setOnClickListener(v -> {
+            startActivity(new Intent(this, AdminProfilesActivity.class));
+        });
+
+        binding.chipImages.setOnClickListener(v -> {
+            // TODO: Open Admin Images list
+        });
+
+        binding.chipLogs.setOnClickListener(v -> {
+            // TODO: Open Logs screen
+        });
+
+        binding.btnSeeAllProfiles.setOnClickListener(v ->
+                startActivity(new Intent(AdminDashboardActivity.this, AdminProfilesActivity.class)));
+
+        binding.btnSeeAllImages.setOnClickListener(v -> {
+            // TODO: Open full images list
+        });
     }
 }

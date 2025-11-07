@@ -32,6 +32,18 @@
         <activity
             android:name=".DetailsActivity"
             android:exported="true" />
+        <activity
+            android:name=".AdminEventsActivity"
+            android:exported="false"
+            android:label="Events"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar"/>
+        <activity
+            android:name=".AdminProfilesActivity"
+            android:exported="false"
+            android:label="Profiles"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+        <activity android:name=".ProfileDetailsActivity" />
+
     </application>
 
 </manifest>
