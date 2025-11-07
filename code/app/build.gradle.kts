@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation("de.hdodenhof:circleimageview:3.1.0")
     implementation(libs.core.ktx)
+    implementation(libs.filament.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
