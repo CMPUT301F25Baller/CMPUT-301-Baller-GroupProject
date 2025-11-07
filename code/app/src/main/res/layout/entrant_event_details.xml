@@ -17,56 +17,8 @@
         android:src="@drawable/placeholder_coldplay_banner"
         android:contentDescription="Event Banner" />
 
-    <!-- 2. Top Toolbar (Back & Bookmark) -->
-    <RelativeLayout
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:layout_marginTop="24dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@android:color/white"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_centerVertical="true"
-            android:contentDescription="Back" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Event Details"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-medium"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"/>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            app:cardCornerRadius="10dp"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true">
-
-            <ImageButton
-                android:id="@+id/btn_bookmark"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:src="@drawable/ic_bookmark"
-                app:tint="#8A2BE2"
-                android:background="?attr/selectableItemBackground"
-                android:contentDescription="Bookmark" />
-        </com.google.android.material.card.MaterialCardView>
-
-    </RelativeLayout>
-
     <!-- 3. Scrollable Content Area -->
+    <!-- This is moved BEFORE the toolbar -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -337,5 +289,55 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- 2. Top Toolbar (Back & Bookmark) -->
+    <!-- This is NOW THE LAST CHILD, so it's drawn ON TOP -->
+    <RelativeLayout
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="24dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@android:color/white"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Event Details"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="10dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true">
+
+            <ImageButton
+                android:id="@+id/btn_bookmark"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_bookmark"
+                app:tint="#8A2BE2"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="Bookmark" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </RelativeLayout>
 
 </RelativeLayout>
