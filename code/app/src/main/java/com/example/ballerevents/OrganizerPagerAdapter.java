@@ -7,6 +7,9 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 public class OrganizerPagerAdapter extends FragmentStateAdapter {
 
+    // The organizerId is no longer needed here,
+    // as the fragments will get it from FirebaseAuth.
+
     public OrganizerPagerAdapter(@NonNull FragmentActivity fa) {
         super(fa);
     }
@@ -14,6 +17,8 @@ public class OrganizerPagerAdapter extends FragmentStateAdapter {
     @NonNull
     @Override
     public Fragment createFragment(int position) {
+        // We no longer call newInstance(organizerId)
+        // Just create new instances.
         switch (position) {
             case 0: return new OrganizerAboutFragment();
             case 1: return new OrganizerEventFragment();
@@ -23,6 +28,6 @@ public class OrganizerPagerAdapter extends FragmentStateAdapter {
 
     @Override
     public int getItemCount() {
-        return 3;
+        return 3; // "About", "Event", "Following"
     }
 }

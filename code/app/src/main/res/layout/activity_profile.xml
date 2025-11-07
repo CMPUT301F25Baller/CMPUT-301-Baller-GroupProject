@@ -11,38 +11,56 @@
     <!-- Top Toolbar -->
     <RelativeLayout
         android:id="@+id/toolbar_profile"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
         android:paddingHorizontal="16dp"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageButton
             android:id="@+id/btn_back_profile"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@android:color/black"
-            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_centerVertical="true"
-            android:contentDescription="Back" />
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@android:color/black" />
 
         <TextView
+            android:id="@+id/tv_toolbar_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Profile"
-            android:textColor="@android:color/black"
-            android:textSize="20sp"
-            android:fontFamily="sans-serif-medium"
-            android:layout_toEndOf="@id/btn_back_profile"
             android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"/>
+            android:layout_marginStart="16dp"
+            android:layout_toEndOf="@id/btn_back_profile"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/profile"
+            android:textColor="@android:color/black"
+            android:textSize="20sp" />
+
+        <!-- Optional: Notification Logs button -->
+        <ImageButton
+            android:id="@+id/btn_notification_logs"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/notifications"
+            android:src="@drawable/ic_bell"
+            app:tint="@android:color/black" />
     </RelativeLayout>
 
     <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
+        android:id="@+id/profile_scroll"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar_profile"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -56,9 +74,10 @@
                 android:layout_width="96dp"
                 android:layout_height="96dp"
                 android:layout_gravity="center_horizontal"
+                android:contentDescription="@string/profile_picture"
                 android:src="@drawable/placeholder_avatar1"
-                app:civ_border_width="2dp"
-                app:civ_border_color="#5A00FF"/>
+                app:civ_border_color="#5A00FF"
+                app:civ_border_width="2dp" />
 
             <TextView
                 android:id="@+id/tv_profile_name"
@@ -70,6 +89,17 @@
                 android:textColor="@android:color/black"
                 android:textSize="24sp"
                 tools:text="David Silbia" />
+
+            <!-- Email (added for binding) -->
+            <TextView
+                android:id="@+id/tv_profile_email"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="4dp"
+                android:textColor="@android:color/darker_gray"
+                android:textSize="14sp"
+                tools:text="david@example.com" />
 
             <!-- Follower Info -->
             <LinearLayout
@@ -95,10 +125,11 @@
                         android:textColor="@android:color/black"
                         android:textSize="18sp"
                         tools:text="350" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Following"
+                        android:text="@string/following"
                         android:textColor="@android:color/darker_gray" />
                 </LinearLayout>
 
@@ -122,13 +153,13 @@
                         android:textColor="@android:color/black"
                         android:textSize="18sp"
                         tools:text="346" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Followers"
+                        android:text="@string/followers"
                         android:textColor="@android:color/darker_gray" />
                 </LinearLayout>
-
             </LinearLayout>
 
             <!-- Edit Profile Button -->
@@ -139,11 +170,11 @@
                 android:layout_height="50dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
-                android:text="Edit Profile"
+                android:text="@string/edit_profile"
                 android:textColor="#5A00FF"
+                app:cornerRadius="10dp"
                 app:icon="@drawable/ic_edit"
                 app:iconTint="#5A00FF"
-                app:cornerRadius="10dp"
                 app:strokeColor="#5A00FF" />
 
             <!-- About Me -->
@@ -152,7 +183,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:fontFamily="sans-serif-bold"
-                android:text="About Me"
+                android:text="@string/about_me"
                 android:textColor="@android:color/black"
                 android:textSize="20sp" />
 
@@ -172,7 +203,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-bold"
-                android:text="Interests"
+                android:text="@string/interests"
                 android:textColor="@android:color/black"
                 android:textSize="20sp" />
 
@@ -188,7 +219,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:fontFamily="sans-serif-bold"
-                android:text="Joined Events"
+                android:text="@string/joined_events"
                 android:textColor="@android:color/black"
                 android:textSize="20sp" />
 
@@ -200,7 +231,6 @@
                 android:clipToPadding="false"
                 tools:itemCount="1"
                 tools:listitem="@layout/item_event_trending" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

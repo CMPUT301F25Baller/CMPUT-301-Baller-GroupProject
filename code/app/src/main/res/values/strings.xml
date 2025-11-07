@@ -2,4 +2,15 @@
     <string name="app_name">BallerEvents</string>
     <string name="event_poster">Event poster image</string>
     <string name="menu_icon">Options menu icon</string>
+    <string name="back">Back</string>
+    <string name="profile">Profile</string>
+    <string name="notifications">Notifications</string>
+    <string name="profile_picture">Profile picture</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="about_me">About Me</string>
+    <string name="interests">Interests</string>
+    <string name="joined_events">Joined Events</string>
+    <string name="followers">Followers</string>
+    <string name="following">Following</string>
+
 </resources>

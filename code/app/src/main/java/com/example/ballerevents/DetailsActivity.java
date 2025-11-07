@@ -37,6 +37,7 @@ public class DetailsActivity extends AppCompatActivity {
     // Listeners to detach onStop
     private ListenerRegistration eventListener;
     private ListenerRegistration userListener;
+    private static String s(String v) { return v == null ? "" : v; }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,13 +75,12 @@ public class DetailsActivity extends AppCompatActivity {
 
         // Listen for real-time updates to the event
         eventListener = eventRef.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "Event listen failed.", e);
-                return;
-            }
+            if (e != null) { Log.w(TAG, "Event listen failed.", e); return; }
             if (snapshot != null && snapshot.exists()) {
                 mEvent = snapshot.toObject(Event.class);
                 if (mEvent != null) {
+                    // Ensure the model has its Firestore ID
+                    mEvent.setId(snapshot.getId());
                     populateStaticUi(mEvent);
                 }
             } else {
@@ -90,17 +90,16 @@ public class DetailsActivity extends AppCompatActivity {
             }
         });
 
+
         // Listen for real-time updates to the user's profile
         userListener = userRef.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "User listen failed.", e);
-                return;
-            }
+            if (e != null) { Log.w(TAG, "User listen failed.", e); return; }
             if (snapshot != null && snapshot.exists()) {
                 mUserProfile = snapshot.toObject(UserProfile.class);
-                if (mUserProfile != null) {
-                    updateButtonAndCountUI();
-                }
+                if (mUserProfile != null) updateButtonAndCountUI();
+            } else {
+                // Create a minimal stub so arrayUnion/arrayRemove won't fail later
+                userRef.set(new UserProfile(), com.google.firebase.firestore.SetOptions.merge());
             }
         });
     }
@@ -121,27 +120,25 @@ public class DetailsActivity extends AppCompatActivity {
      * Populates the UI with static event data (title, description, etc.)
      */
     private void populateStaticUi(Event event) {
-        // Load image with Glide from URL
         Glide.with(this)
-                .load(event.getEventPosterUrl()) // Use URL getter
+                .load(s(event.getEventPosterUrl()))
                 .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
                 .into(binding.ivEventBanner);
 
-        // Load organizer icon with Glide from URL
         Glide.with(this)
-                .load(event.getOrganizerIconUrl()) // Use URL getter
+                .load(s(event.getOrganizerIconUrl()))
                 .placeholder(R.drawable.placeholder_avatar1)
                 .error(R.drawable.placeholder_avatar1)
                 .into(binding.ivOrganizer);
 
-        binding.tvEventTitle.setText(event.getTitle());
-        binding.tvEventDate.setText(event.getDate());
-        binding.tvEventTime.setText(event.getTime());
-        binding.tvEventLocationName.setText(event.getLocationName());
-        binding.tvEventLocationAddress.setText(event.getLocationAddress());
-        binding.tvOrganizerName.setText(event.getOrganizer());
-        binding.tvAboutEventDescription.setText(event.getDescription());
+        binding.tvEventTitle.setText(s(event.getTitle()));
+        binding.tvEventDate.setText(s(event.getDate()));
+        binding.tvEventTime.setText(s(event.getTime()));
+        binding.tvEventLocationName.setText(s(event.getLocationName()));
+        binding.tvEventLocationAddress.setText(s(event.getLocationAddress()));
+        binding.tvOrganizerName.setText(s(event.getOrganizer()));
+        binding.tvAboutEventDescription.setText(s(event.getDescription()));
     }
 
     /**
@@ -176,28 +173,24 @@ public class DetailsActivity extends AppCompatActivity {
      * Handles the logic for joining or withdrawing from the waitlist.
      */
     private void handleWaitlistClick() {
-        binding.btnJoinWaitlist.setEnabled(false); // Disable button
+        binding.btnJoinWaitlist.setEnabled(false);
+
+        if (mEvent == null) {
+            Toast.makeText(this, "Event not loaded yet.", Toast.LENGTH_SHORT).show();
+            binding.btnJoinWaitlist.setEnabled(true);
+            return;
+        }
 
         if (mIsUserApplied) {
-            // User wants to WITHDRAW
-            // This updates the "appliedEventIds" array in the "users" collection
             userRef.update("appliedEventIds", FieldValue.arrayRemove(eventId))
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Withdrawn from " + mEvent.getTitle(), Toast.LENGTH_SHORT).show();
-                        // UI will update automatically from listener
-                    })
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Withdrawn from " + mEvent.getTitle(), Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e -> {
                         Toast.makeText(this, "Withdrawal failed. Try again.", Toast.LENGTH_SHORT).show();
                         binding.btnJoinWaitlist.setEnabled(true);
                     });
         } else {
-            // User wants to APPLY
-            // This updates the "appliedEventIds" array in the "users" collection
             userRef.update("appliedEventIds", FieldValue.arrayUnion(eventId))
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Applied to lottery for " + mEvent.getTitle(), Toast.LENGTH_SHORT).show();
-                        // UI will update automatically from listener
-                    })
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Applied to lottery for " + mEvent.getTitle(), Toast.LENGTH_SHORT).show())
                     .addOnFailureListener(e -> {
                         Toast.makeText(this, "Application failed. Try again.", Toast.LENGTH_SHORT).show();
                         binding.btnJoinWaitlist.setEnabled(true);

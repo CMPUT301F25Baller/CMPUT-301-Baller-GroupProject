@@ -2,6 +2,7 @@ package com.example.ballerevents;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
@@ -12,36 +13,40 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AdminImagesActivity extends AppCompatActivity implements AdminImagesAdapter.ImageActions {
 
+    private static final String TAG = "AdminImagesActivity";
     private RecyclerView recycler;
     private View progress;
     private AdminImagesAdapter adapter;
+    private FirebaseFirestore db;
 
-    // Use your existing stub repo (same pattern as elsewhere in your code)
-    private final AdminRepository repo = new StubAdminRepository();
-    private final List<ImageAsset> allImages = new ArrayList<>();
+    private final List<Event> allEvents = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_images);
 
+        db = FirebaseFirestore.getInstance();
+
         MaterialToolbar top = findViewById(R.id.topAppBar);
         if (top != null) {
             top.setTitle("Event Posters");
-            top.setSubtitle("Tap to preview • Hold to delete"); // hint requested
+            top.setSubtitle("Tap to preview • Long press to delete");
             top.setNavigationOnClickListener(v -> finish());
         }
 
         progress = findViewById(R.id.progress);
         recycler = findViewById(R.id.recycler);
-        recycler.setLayoutManager(new GridLayoutManager(this, 2));
+        recycler.setLayoutManager(new GridLayoutManager(this, 3));
 
         adapter = new AdminImagesAdapter(this);
         recycler.setAdapter(adapter);
@@ -51,21 +56,31 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
 
     private void loadImages() {
         progress.setVisibility(View.VISIBLE);
-        repo.getRecentImages(list -> {
-            progress.setVisibility(View.GONE);
-            allImages.clear();
-            if (list != null) allImages.addAll(list);
-            adapter.submitList(new ArrayList<>(allImages));
-        });
+        db.collection("events")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    progress.setVisibility(View.GONE);
+                    allEvents.clear();
+                    allEvents.addAll(queryDocumentSnapshots.toObjects(Event.class));
+                    adapter.submitList(new ArrayList<>(allEvents));
+                })
+                .addOnFailureListener(e -> {
+                    progress.setVisibility(View.GONE);
+                    Log.w(TAG, "Error loading events for images", e);
+                });
     }
 
     // === ImageActions ===
 
     @Override
-    public void onPreview(ImageAsset img) {
+    public void onPreview(Event event) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null, false);
         ImageView iv = dialogView.findViewById(R.id.ivPreview);
-        iv.setImageResource(img.drawableResId);
+
+        Glide.with(this)
+                .load(event.getEventPosterUrl())
+                .error(R.drawable.placeholder_image)
+                .into(iv);
 
         new AlertDialog.Builder(this)
                 .setView(dialogView)
@@ -74,16 +89,27 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
     }
 
     @Override
-    public void onDelete(ImageAsset img) {
+    public void onDelete(Event event) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete poster?")
-                .setMessage("This removes the poster from the current list (MVP).")
-                .setPositiveButton("Delete", (d, w) -> {
-                    allImages.remove(img);
-                    adapter.submitList(new ArrayList<>(allImages));
-                    Toast.makeText(this, "Poster deleted", Toast.LENGTH_SHORT).show();
+                .setMessage("This will clear the event poster URL for '" + event.getTitle() + "'. It will not delete the event itself.")
+                .setPositiveButton("Clear URL", (d, w) -> {
+                    deletePosterFromEvent(event);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void deletePosterFromEvent(Event event) {
+        db.collection("events").document(event.getId())
+                .update("eventPosterUrl", "") // Set the URL to an empty string
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Poster URL cleared", Toast.LENGTH_SHORT).show();
+                    loadImages(); // Reload the list
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error clearing URL", Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "Error updating event poster URL", e);
+                });
     }
 }

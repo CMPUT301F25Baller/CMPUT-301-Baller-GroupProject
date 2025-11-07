@@ -27,42 +27,55 @@ public class EditProfileActivity extends AppCompatActivity {
         binding = ActivityEditProfileBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        db = FirebaseFirestore.getInstance();
-        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        userRef = db.collection("users").document(currentUserId);
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null) {
+            Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show();
+            finish(); // or startActivity(new Intent(this, LoginActivity.class));
+            return;
+        }
+        String currentUserId = auth.getCurrentUser().getUid();
+        userRef = FirebaseFirestore.getInstance().collection("users").document(currentUserId);
 
         loadCurrentData();
         setupListeners();
     }
 
     private void loadCurrentData() {
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                UserProfile userProfile = documentSnapshot.toObject(UserProfile.class);
-                if (userProfile != null) {
-                    binding.etAboutMe.setText(userProfile.getAboutMe());
-
-                    if (userProfile.getInterests() != null) {
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                            String interests = String.join(", ", userProfile.getInterests());
-                            binding.etInterests.setText(interests);
-                        } else {
-                            StringBuilder interestsBuilder = new StringBuilder();
-                            for (String interest : userProfile.getInterests()) {
-                                if (interestsBuilder.length() > 0) {
-                                    interestsBuilder.append(", ");
-                                }
-                                interestsBuilder.append(interest);
+        userRef.get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        UserProfile p = doc.toObject(UserProfile.class);
+                        if (p != null) {
+                            binding.etAboutMe.setText(p.getAboutMe() == null ? "" : p.getAboutMe());
+                            if (p.getInterests() != null && !p.getInterests().isEmpty()) {
+                                String interests = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
+                                        ? String.join(", ", p.getInterests())
+                                        : joinComma(p.getInterests());
+                                binding.etInterests.setText(interests);
                             }
-                            binding.etInterests.setText(interestsBuilder.toString());
                         }
+                    } else {
+                        // Create a stub so updates won’t fail
+                        Map<String, Object> stub = new HashMap<>();
+                        stub.put("aboutMe", "");
+                        stub.put("interests", new java.util.ArrayList<String>());
+                        userRef.set(stub, com.google.firebase.firestore.SetOptions.merge());
                     }
-                }
-            } else {
-                Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show();
-            }
-        });
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to load profile.", Toast.LENGTH_SHORT).show()
+                );
     }
+
+    private String joinComma(List<String> items) {
+        StringBuilder sb = new StringBuilder();
+        for (String it : items) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(it);
+        }
+        return sb.toString();
+    }
+
 
     private void setupListeners() {
         binding.btnBackEdit.setOnClickListener(v -> finish());
@@ -70,38 +83,32 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void saveProfileData() {
-        String newAboutMe = binding.etAboutMe.getText().toString();
-        String newInterestsString = binding.etInterests.getText().toString();
+        String newAboutMe = String.valueOf(binding.etAboutMe.getText()).trim();
+        String newInterestsString = String.valueOf(binding.etInterests.getText());
 
         List<String> newInterests;
-
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            newInterests = Arrays.stream(newInterestsString.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toList());
+            newInterests = java.util.Arrays.stream(newInterestsString.split(","))
+                    .map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
         } else {
             newInterests = new java.util.ArrayList<>();
             for (String s : newInterestsString.split(",")) {
-                String trimmed = s.trim();
-                if (!trimmed.isEmpty()) {
-                    newInterests.add(trimmed);
-                }
+                String t = s.trim();
+                if (!t.isEmpty()) newInterests.add(t);
             }
         }
 
-        // Update the repository
         Map<String, Object> updates = new HashMap<>();
         updates.put("aboutMe", newAboutMe);
         updates.put("interests", newInterests);
 
-        userRef.update(updates)
+        userRef.set(updates, com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Profile Updated!", Toast.LENGTH_SHORT).show();
-                    finish(); // Go back to ProfileActivity
+                    finish();
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error saving profile.", Toast.LENGTH_SHORT).show();
-                });
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error saving profile.", Toast.LENGTH_SHORT).show()
+                );
     }
 }

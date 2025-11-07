@@ -1,26 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal"
     android:padding="12dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical">
 
-    <ImageView
+    <!-- === UPDATED TO CircleImageView === -->
+    <de.hdodenhof.circleimageview.CircleImageView
         android:id="@+id/ivAvatar"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:scaleType="centerCrop"
-        android:src="@android:color/darker_gray"
-        android:background="#DDDDDD"/>
+        android:src="@drawable/placeholder_avatar1"
+        app:civ_border_width="1dp"
+        app:civ_border_color="#DDDDDD"/>
 
-    <TextView
-        android:id="@+id/tvName"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
         android:layout_weight="1"
-        android:text="Name"
-        android:textSize="16sp"
-        android:textColor="#120D26"/>
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:textColor="#120D26"
+            tools:text="User Name"/>
+
+        <!-- === ADDED EMAIL TEXTVIEW === -->
+        <!-- This is the TextView AdminProfilesAdapter is looking for -->
+        <TextView
+            android:id="@+id/tvEmail"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@android:color/darker_gray"
+            tools:text="user.email@example.com"/>
+
+    </LinearLayout>
+
 </LinearLayout>
