@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
         android:layout_marginTop="12dp"
-        android:text="Invited"
+        android:text="All"
         android:textColor="#1D1B20"
         app:chipIcon="@drawable/ic_arrow_up"
         app:chipIconEnabled="true"

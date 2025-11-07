@@ -24,57 +24,42 @@ import java.util.Calendar;
 import java.util.Locale;
 
 public class EventFormActivity extends AppCompatActivity {
-    private ImageButton backButton;
-    private ImageButton favButton;
     private TextView titleText;
-    private ImageButton editTitleButton;
-    private ImageView calendarImg;
-    private ImageButton editCalendarButton;
     private TextView dateText;
     private TextView timeText;
-    private ImageView locationImg;
-    private ImageButton editLocationButton;
 
-    private TextView locationName;
-    private TextView locationDetails;
     private TextView aboutText;
-    private ImageButton editAboutButton;
     boolean geolocationRequired;
 
     private ActivityResultLauncher<String> pickImageLauncher;
     private ImageView eventImage;
-    private ImageButton editPosterButton;
-
-
-
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.organizer_event_form);
-        backButton = findViewById(R.id.backButton);
-        favButton = findViewById(R.id.favButton);
+        ImageButton backButton = findViewById(R.id.backButton);
+        ImageButton favButton = findViewById(R.id.favButton);
         eventImage = findViewById(R.id.eventImage);
-        editPosterButton = findViewById(R.id.editPosterButton);
+        ImageButton editPosterButton = findViewById(R.id.editPosterButton);
 
         titleText = findViewById(R.id.titleText);
-        editTitleButton = findViewById(R.id.editTitle);
+        ImageButton editTitleButton = findViewById(R.id.editTitle);
 
-        calendarImg = findViewById(R.id.calendar_img);
-        editCalendarButton = findViewById(R.id.editDate);
+        ImageView calendarImg = findViewById(R.id.calendar_img);
+        ImageButton editCalendarButton = findViewById(R.id.editDate);
         dateText = findViewById(R.id.dateText);
         timeText = findViewById(R.id.timeText);
 
-        locationImg = findViewById(R.id.location_img);
-        editLocationButton = findViewById(R.id.editLocation);
-        locationName = findViewById(R.id.locationNameText);
-        locationDetails = findViewById(R.id.locationDetailsText);
+        ImageView locationImg = findViewById(R.id.location_img);
+        ImageButton editLocationButton = findViewById(R.id.editLocation);
+        TextView locationName = findViewById(R.id.locationNameText);
+        TextView locationDetails = findViewById(R.id.locationDetailsText);
 
 
         aboutText = findViewById(R.id.aboutText);
-        editAboutButton = findViewById(R.id.editAboutButton);
+        ImageButton editAboutButton = findViewById(R.id.editAboutButton);
 
         pickImageLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
@@ -90,8 +75,8 @@ public class EventFormActivity extends AppCompatActivity {
         });
 
 
-        calendarImg.setOnClickListener( v ->dateTimePicker());
-        editCalendarButton.setOnClickListener( v ->dateTimePicker());
+        calendarImg.setOnClickListener(v ->dateTimePicker());
+        editCalendarButton.setOnClickListener(v ->dateTimePicker());
         editTitleButton.setOnClickListener(v ->inputDialog(titleText, "Edit Title"));
         editAboutButton.setOnClickListener(v ->inputDialog(aboutText, "Edit Description"));
         MaterialCheckBox materialCheckBox = findViewById(R.id.geolocationCheckBox);
