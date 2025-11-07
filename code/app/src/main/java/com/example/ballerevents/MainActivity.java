@@ -20,6 +20,12 @@ public class MainActivity extends AppCompatActivity {
 
         setupTrendingRecyclerView();
         setupNearRecyclerView();
+
+        // --- NEW: Add click listener for Menu Button ---
+        binding.btnMenu.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ProfileActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void setupTrendingRecyclerView() {

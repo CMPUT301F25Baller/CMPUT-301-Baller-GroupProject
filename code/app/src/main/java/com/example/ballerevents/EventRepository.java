@@ -1,21 +1,17 @@
 package com.example.ballerevents;
 
-import com.example.ballerevents.Event;
-
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.ArrayList;
 
 public class EventRepository {
 
-    // --- MOCK USER ---
-    // This represents the "currently logged in" user
+    // ... (MOCK_USER_ID and allEvents list remain the same) ...
     public static final String MOCK_USER_ID = "user_123_abc";
 
-    // Note: You must add these drawables to your res/drawable folder
     private static final List<Event> allEvents = Arrays.asList(
             new Event(
                     1L,
@@ -67,11 +63,9 @@ public class EventRepository {
             )
     );
 
-    // --- NEW: Mock Database for Event Applications ---
-    // Map<EventID, List<UserID>>
+    // ... (eventApplications map and static initializer remain the same) ...
     private static Map<Long, List<String>> eventApplications = new HashMap<>();
 
-    // Static initializer to pre-populate the application data
     static {
         // Event 1 (Coldplay) - Our mock user IS applied
         List<String> event1Applicants = new ArrayList<>();
@@ -96,16 +90,66 @@ public class EventRepository {
         eventApplications.put(3L, event3Applicants);
     }
 
+    // --- NEW: Mock User Profile Data ---
+    private static Map<String, UserProfile> userProfiles = new HashMap<>();
+
+    // Static initializer for the user profile
+    static {
+        UserProfile mockProfile = new UserProfile(
+                "David Silbia",
+                350,
+                346,
+                "I am a retired philosopher just trying to make the most of my time on this Planet! I’m very approachable and always willing to give a helping hand!",
+                new ArrayList<>(Arrays.asList("Online Games", "Concerts", "Music", "Art", "Movies")),
+                R.drawable.placeholder_avatar1 // Use your placeholder drawable
+        );
+        userProfiles.put(MOCK_USER_ID, mockProfile);
+    }
+
+    // --- NEW: Methods for User Profile ---
+    public static UserProfile getUserProfile(String userId) {
+        return userProfiles.get(userId);
+    }
+
+    public static void updateUserProfile(String userId, String newAboutMe, List<String> newInterests) {
+        UserProfile profile = userProfiles.get(userId);
+        if (profile != null) {
+            profile.setAboutMe(newAboutMe);
+            profile.setInterests(newInterests);
+        }
+    }
+
+
     public static List<Event> getTrendingEvents() {
-        return allEvents.stream()
-                .filter(Event::isTrending)
-                .collect(Collectors.toList());
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            return allEvents.stream()
+                    .filter(Event::isTrending)
+                    .collect(Collectors.toList());
+        } else {
+            List<Event> trendingEvents = new ArrayList<>();
+            for (Event event : allEvents) {
+                if (event.isTrending()) {
+                    trendingEvents.add(event);
+                }
+            }
+            return trendingEvents;
+        }
     }
 
     public static List<Event> getEventsNearYou() {
-        return allEvents.stream()
-                .filter(event -> !event.isTrending())
-                .collect(Collectors.toList());
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            return allEvents.stream()
+                    .filter(event -> !event.isTrending())
+                    .collect(Collectors.toList());
+        } else {
+            List<Event> nearEvents = new ArrayList<>();
+            for (Event event : allEvents) {
+                if (!event.isTrending()) {
+                    nearEvents.add(event);
+                }
+            }
+            return nearEvents;
+        }
     }
 
     public static Event getEventById(long id) {
@@ -115,11 +159,7 @@ public class EventRepository {
                 .orElse(null);
     }
 
-    // --- NEW: Methods to manage event applications ---
-
-    /**
-     * Gets the dynamic, real-time count of applicants for an event.
-     */
+    // ... (getDynamicWaitlistCount, isUserApplied, applyToEvent, withdrawFromEvent remain the same) ...
     public static int getDynamicWaitlistCount(long eventId) {
         if (eventApplications.containsKey(eventId)) {
             List<String> applicants = eventApplications.get(eventId);
@@ -130,9 +170,6 @@ public class EventRepository {
         return 0;
     }
 
-    /**
-     * Checks if a specific user is applied to a specific event.
-     */
     public static boolean isUserApplied(long eventId, String userId) {
         if (eventApplications.containsKey(eventId)) {
             List<String> applicants = eventApplications.get(eventId);
@@ -141,9 +178,6 @@ public class EventRepository {
         return false;
     }
 
-    /**
-     * Adds a user to an event's application list.
-     */
     public static void applyToEvent(long eventId, String userId) {
         // Find or create the list for this event
         if (!eventApplications.containsKey(eventId)) {
@@ -156,9 +190,6 @@ public class EventRepository {
         }
     }
 
-    /**
-     * Removes a user from an event's application list.
-     */
     public static void withdrawFromEvent(long eventId, String userId) {
         if (eventApplications.containsKey(eventId)) {
             List<String> applicants = eventApplications.get(eventId);
@@ -166,5 +197,35 @@ public class EventRepository {
                 applicants.remove(userId);
             }
         }
+    }
+
+    public static List<Event> getAppliedEvents(String userId) {
+        List<Event> appliedEvents = new ArrayList<>();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            for (Map.Entry<Long, List<String>> entry : eventApplications.entrySet()) {
+                if (entry.getValue() != null && entry.getValue().contains(userId)) {
+                    Event event = getEventById(entry.getKey());
+                    if (event != null) {
+                        appliedEvents.add(event);
+                    }
+                }
+            }
+        } else {
+            // Fallback for older Android versions
+            for (Map.Entry<Long, List<String>> entry : eventApplications.entrySet()) {
+                if (entry.getValue() != null) {
+                    for(String id : entry.getValue()){
+                        if(id.equals(userId)){
+                            Event event = getEventById(entry.getKey());
+                            if (event != null) {
+                                appliedEvents.add(event);
+                            }
+                            break; // User found for this event, move to next event
+                        }
+                    }
+                }
+            }
+        }
+        return appliedEvents;
     }
 }
