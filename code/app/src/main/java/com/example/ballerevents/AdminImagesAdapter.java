@@ -7,34 +7,29 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.bumptech.glide.Glide;
 
-public class AdminImagesAdapter extends RecyclerView.Adapter<AdminImagesAdapter.VH> {
+public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH> {
 
     interface ImageActions {
-        void onPreview(ImageAsset img);
-        void onDelete(ImageAsset img);
+        void onPreview(Event event);
+        void onDelete(Event event);
     }
 
-    private final List<ImageAsset> data = new ArrayList<>();
     private final ImageActions actions;
 
     public AdminImagesAdapter(ImageActions actions) {
+        super(EventDiffCallback);
         this.actions = actions;
         setHasStableIds(true);
     }
 
-    public void submitList(List<ImageAsset> list) {
-        data.clear();
-        if (list != null) data.addAll(list);
-        notifyDataSetChanged();
-    }
-
     @Override public long getItemId(int position) {
-        return data.get(position).id.hashCode();
+        return getItem(position).getId().hashCode();
     }
 
     static class VH extends RecyclerView.ViewHolder {
@@ -56,16 +51,33 @@ public class AdminImagesAdapter extends RecyclerView.Adapter<AdminImagesAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int pos) {
-        ImageAsset img = data.get(pos);
-        h.ivPoster.setImageResource(img.drawableResId);
-        h.tvLabel.setText(img.label != null ? img.label : img.id);
+        Event event = getItem(pos);
+        if (event == null) return;
 
-        h.itemView.setOnClickListener(v -> { if (actions != null) actions.onPreview(img); });
+        Glide.with(h.itemView.getContext())
+                .load(event.getEventPosterUrl())
+                .placeholder(R.drawable.placeholder_image)
+                .error(R.drawable.placeholder_image)
+                .into(h.ivPoster);
+
+        h.tvLabel.setText(event.getTitle());
+
+        h.itemView.setOnClickListener(v -> { if (actions != null) actions.onPreview(event); });
         h.itemView.setOnLongClickListener(v -> {
-            if (actions != null) actions.onDelete(img);
+            if (actions != null) actions.onDelete(event);
             return true;
         });
     }
 
-    @Override public int getItemCount() { return data.size(); }
+    private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+    };
 }

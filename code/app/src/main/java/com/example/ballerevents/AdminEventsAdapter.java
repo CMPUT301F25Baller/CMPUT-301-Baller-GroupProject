@@ -10,29 +10,24 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class AdminEventsAdapter extends RecyclerView.Adapter<AdminEventsAdapter.EventViewHolder> {
+public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.EventViewHolder> {
 
     public interface OnEventActionListener {
         void onDelete(Event event);
     }
 
-    private List<Event> events = new ArrayList<>();
     private final OnEventActionListener listener;
 
     public AdminEventsAdapter(OnEventActionListener listener) {
+        super(EventDiffCallback);
         this.listener = listener;
-    }
-
-    public void setEvents(List<Event> events) {
-        this.events = events != null ? events : new ArrayList<>();
-        notifyDataSetChanged();
     }
 
     @NonNull @Override
@@ -44,11 +39,19 @@ public class AdminEventsAdapter extends RecyclerView.Adapter<AdminEventsAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder h, int position) {
-        Event e = events.get(position);
-        h.tvDate.setText(e.getDate());
+        Event e = getItem(position);
+        if (e == null) return;
+
         h.tvTitle.setText(e.getTitle());
-        h.tvLocation.setText("See details");
-        h.ivPoster.setImageResource(R.drawable.placeholder_poster);
+        h.tvDate.setText(e.getDate());
+        h.tvLocation.setText(e.getLocationName());
+
+        // Load image from URL using Glide
+        Glide.with(h.itemView.getContext())
+                .load(e.getEventPosterUrl())
+                .placeholder(R.drawable.placeholder_image) // Use your placeholder
+                .error(R.drawable.placeholder_image)
+                .into(h.ivPoster);
 
         h.ivMenu.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(v.getContext(), v);
@@ -67,9 +70,6 @@ public class AdminEventsAdapter extends RecyclerView.Adapter<AdminEventsAdapter.
         return false;
     }
 
-    @Override
-    public int getItemCount() { return events.size(); }
-
     static class EventViewHolder extends RecyclerView.ViewHolder {
         MaterialCardView cardRoot;
         ImageView ivPoster, ivMenu;
@@ -85,4 +85,16 @@ public class AdminEventsAdapter extends RecyclerView.Adapter<AdminEventsAdapter.
             tvLocation = itemView.findViewById(R.id.tvLocation);
         }
     }
+
+    private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+    };
 }

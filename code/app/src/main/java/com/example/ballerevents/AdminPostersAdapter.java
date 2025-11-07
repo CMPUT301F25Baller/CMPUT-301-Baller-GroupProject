@@ -3,23 +3,39 @@ package com.example.ballerevents;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemAdminPosterBinding;
-import java.util.ArrayList;
-import java.util.List;
 
-public class AdminPostersAdapter extends RecyclerView.Adapter<AdminPostersAdapter.VH> {
-    private final List<ImageAsset> data = new ArrayList<>();
+public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.VH> {
 
-    public void submitList(List<ImageAsset> list) {
-        data.clear();
-        if (list != null) data.addAll(list);
-        notifyDataSetChanged();
+    public interface OnPosterClickListener {
+        void onPosterClick(Event event);
+    }
+
+    private final OnPosterClickListener clickListener;
+
+    public AdminPostersAdapter(OnPosterClickListener listener) {
+        super(EventDiffCallback);
+        this.clickListener = listener;
     }
 
     static class VH extends RecyclerView.ViewHolder {
         final ItemAdminPosterBinding b;
         VH(ItemAdminPosterBinding b) { super(b.getRoot()); this.b = b; }
+
+        void bind(Event event, OnPosterClickListener listener) {
+            b.tvLabel.setText(event.getTitle());
+            Glide.with(itemView.getContext())
+                    .load(event.getEventPosterUrl())
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.placeholder_image)
+                    .into(b.ivPoster);
+            itemView.setOnClickListener(v -> listener.onPosterClick(event));
+        }
     }
 
     @NonNull @Override
@@ -29,10 +45,21 @@ public class AdminPostersAdapter extends RecyclerView.Adapter<AdminPostersAdapte
     }
 
     @Override public void onBindViewHolder(@NonNull VH h, int pos) {
-        ImageAsset img = data.get(pos);
-        h.b.ivPoster.setImageResource(img.drawableResId);
-        h.b.tvLabel.setText(img.label);
+        Event event = getItem(pos);
+        if (event != null) {
+            h.bind(event, clickListener);
+        }
     }
 
-    @Override public int getItemCount() { return data.size(); }
+    private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+    };
 }

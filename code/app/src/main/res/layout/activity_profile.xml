@@ -49,7 +49,7 @@
             android:layout_centerVertical="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/notifications"
-            android:src="@drawable/ic_notifications"
+            android:src="@drawable/ic_bell"
             app:tint="@android:color/black" />
     </RelativeLayout>
 

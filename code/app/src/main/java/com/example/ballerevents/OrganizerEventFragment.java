@@ -1,119 +1,116 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
+// Import ViewBinding
+import com.example.ballerevents.databinding.FragmentOrganizerEventBinding;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class OrganizerEventFragment extends Fragment {
 
-    private static final String ARG_ORG_ID = "org_id";
+    private static final String TAG = "OrganizerEventFragment";
 
-    public static OrganizerEventFragment newInstance(@NonNull String organizerId) {
-        OrganizerEventFragment f = new OrganizerEventFragment();
-        Bundle b = new Bundle();
-        b.putString(ARG_ORG_ID, organizerId);
-        f.setArguments(b);
-        return f;
-    }
+    private FragmentOrganizerEventBinding binding;
+    private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
+    private TrendingEventAdapter adapter;
+    private String currentUserId;
 
-    private String organizerId;
-    private RecyclerView rv;
-    private EventsAdapter adapter = new EventsAdapter(new ArrayList<>());
-
-    @Override public void onCreate(@Nullable Bundle savedInstanceState) {
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        organizerId = getArguments() != null ? getArguments().getString(ARG_ORG_ID) : null;
+
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
+
+        if (mAuth.getCurrentUser() != null) {
+            currentUserId = mAuth.getCurrentUser().getUid();
+        }
     }
 
     @Nullable
-    @Override public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle state) {
-        View v = inflater.inflate(R.layout.fragment_organizer_event, container, false);
-        rv = v.findViewById(R.id.rvOrganizerEvents);
-        rv.setLayoutManager(new LinearLayoutManager(getContext()));
-        rv.setAdapter(adapter);
-        fetchMyEvents();
-        return v;
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Inflate the layout using ViewBinding
+        binding = FragmentOrganizerEventBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
-    private void fetchMyEvents() {
-        if (organizerId == null) return;
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        FirebaseFirestore.getInstance()
-                .collection("events")
-                .whereEqualTo("organizerId", organizerId)
-                .orderBy("title", Query.Direction.ASCENDING)
+        // Setup the RecyclerView
+        setupRecyclerView();
+
+        // Load this organizer's events from Firestore
+        if (currentUserId != null) {
+            loadOrganizerEvents();
+        } else {
+            Toast.makeText(getContext(), "Error: Not logged in.", Toast.LENGTH_SHORT).show();
+            binding.tvNoEvents.setText("Could not load events. Please log in again.");
+            binding.tvNoEvents.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void setupRecyclerView() {
+        // We can reuse TrendingEventAdapter since it's just a card
+        adapter = new TrendingEventAdapter(event -> {
+            // When an organizer clicks their own event, open DetailsActivity
+            Intent intent = new Intent(getActivity(), DetailsActivity.class);
+            intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
+            startActivity(intent);
+        });
+
+        binding.rvOrganizerEvents.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.rvOrganizerEvents.setAdapter(adapter);
+    }
+
+    private void loadOrganizerEvents() {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        binding.tvNoEvents.setVisibility(View.GONE);
+
+        db.collection("events")
+                .whereEqualTo("organizerId", currentUserId) // Query for this organizer's events
+                .orderBy("date", Query.Direction.DESCENDING) // Show newest first
                 .get()
-                .addOnSuccessListener(snap -> {
-                    List<Event> list = snap.toObjects(Event.class);
-                    adapter.submit(list);
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    List<Event> events = queryDocumentSnapshots.toObjects(Event.class);
+
+                    if (events.isEmpty()) {
+                        binding.tvNoEvents.setVisibility(View.VISIBLE);
+                    } else {
+                        adapter.submitList(events);
+                    }
+                    Log.d(TAG, "Loaded " + events.size() + " events for organizer " + currentUserId);
+                })
+                .addOnFailureListener(e -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    binding.tvNoEvents.setText("Error loading events.");
+                    binding.tvNoEvents.setVisibility(View.VISIBLE);
+                    Log.w(TAG, "Error loading organizer events", e);
                 });
     }
 
-    // --- Adapter that reuses your view_event_card_large layout ---
-    private static class EventsAdapter extends RecyclerView.Adapter<EventsAdapter.VH> {
-        private List<Event> data;
-        EventsAdapter(List<Event> d) { data = d; }
-        void submit(List<Event> d) { data = d; notifyDataSetChanged(); }
-
-        @NonNull @Override public VH onCreateViewHolder(@NonNull ViewGroup p, int vt) {
-            View row = LayoutInflater.from(p.getContext())
-                    .inflate(R.layout.view_event_card_large, p, false);
-            return new VH(row);
-        }
-
-        @Override public void onBindViewHolder(@NonNull VH h, int pos) { h.bind(data.get(pos)); }
-        @Override public int getItemCount() { return data.size(); }
-
-        static class VH extends RecyclerView.ViewHolder {
-            ImageView ivPoster, ivOrganizer;
-            TextView tvTitle, tvDate, tvTime, tvLocationName, tvLocationAddress, tvOrganizerName;
-            VH(@NonNull View v) {
-                super(v);
-                ivPoster = v.findViewById(R.id.ivEventPoster);
-                ivOrganizer = v.findViewById(R.id.ivOrganizer);
-                tvTitle = v.findViewById(R.id.tvEventTitle);
-                tvDate = v.findViewById(R.id.tvEventDate);
-                tvTime = v.findViewById(R.id.tvEventTime);
-                tvLocationName = v.findViewById(R.id.tvEventLocationName);
-                tvLocationAddress = v.findViewById(R.id.tvEventLocationAddress);
-                tvOrganizerName = v.findViewById(R.id.tvOrganizerName);
-            }
-            void bind(Event e) {
-                tvTitle.setText(e.getTitle());
-                tvDate.setText(e.getDate());
-                tvTime.setText(e.getTime());
-                tvLocationName.setText(e.getLocationName());
-                tvLocationAddress.setText(e.getLocationAddress());
-                tvOrganizerName.setText(e.getOrganizer());
-
-                Glide.with(itemView.getContext())
-                        .load(e.getEventPosterUrl())
-                        .placeholder(R.drawable.placeholder_image)
-                        .error(R.drawable.placeholder_image)
-                        .into(ivPoster);
-
-                Glide.with(itemView.getContext())
-                        .load(e.getOrganizerIconUrl())
-                        .placeholder(R.drawable.placeholder_avatar1)
-                        .error(R.drawable.placeholder_avatar1)
-                        .into(ivOrganizer);
-            }
-        }
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null; // Clear the binding reference
     }
 }

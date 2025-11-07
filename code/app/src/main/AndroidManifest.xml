@@ -60,6 +60,12 @@
         <activity
             android:name=".EntrantMainActivity"
             android:exported="false" />
+        <activity
+            android:name=".AdminMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".AdminDashboardActivity"
+            android:exported="false" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET"/>

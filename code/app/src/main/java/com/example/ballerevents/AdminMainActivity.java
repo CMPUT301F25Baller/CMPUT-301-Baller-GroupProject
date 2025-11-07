@@ -1,20 +1,24 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
-
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * Main entry point for the Admin role.
+ * This activity's only job is to launch the main Admin Dashboard.
+ */
 public class AdminMainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        TextView tv = new TextView(this);
-        tv.setText("Admin prototype screen (stub)");
-        tv.setTextSize(20f);
+        // Immediately launch the real dashboard
+        Intent intent = new Intent(this, AdminDashboardActivity.class);
+        startActivity(intent);
 
-        setContentView(tv);
+        // Finish this activity so the user can't navigate back to it
+        finish();
     }
 }
