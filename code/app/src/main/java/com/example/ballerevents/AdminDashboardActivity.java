@@ -61,18 +61,18 @@ public class AdminDashboardActivity extends AppCompatActivity {
             startActivity(new Intent(this, AdminProfilesActivity.class));
         });
 
-        binding.chipImages.setOnClickListener(v ->
-                startActivity(new Intent(this, AdminImagesActivity.class)));
-
+        binding.chipImages.setOnClickListener(v -> {
+            // TODO: Open Admin Images list
+        });
         binding.chipLogs.setOnClickListener(v ->
                 startActivity(new Intent(this, NotificationLogsActivity.class)));
-
 
 
         binding.btnSeeAllProfiles.setOnClickListener(v ->
                 startActivity(new Intent(AdminDashboardActivity.this, AdminProfilesActivity.class)));
 
-        binding.btnSeeAllImages.setOnClickListener(v ->
-                startActivity(new Intent(this, AdminImagesActivity.class)));
+        binding.btnSeeAllImages.setOnClickListener(v -> {
+            // TODO: Open full images list
+        });
     }
 }

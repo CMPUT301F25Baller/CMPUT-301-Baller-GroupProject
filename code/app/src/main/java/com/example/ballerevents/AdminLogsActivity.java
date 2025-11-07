@@ -3,6 +3,7 @@ package com.example.ballerevents;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -14,7 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class NotificationLogsActivity extends AppCompatActivity {
+public class AdminLogsActivity extends AppCompatActivity {
 
     private ActivityNotificationLogsBinding binding;
     private SimpleTextAdapter adapter;
@@ -22,46 +23,52 @@ public class NotificationLogsActivity extends AppCompatActivity {
     private final List<String> newItems = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Toolbar back
         setSupportActionBar(binding.topAppBar);
         binding.topAppBar.setNavigationOnClickListener(v -> finish());
 
+        // Sample data (replace with your repo later)
         allItems.addAll(Arrays.asList(
-                "David Silbia invited you • Just now",
+                "David Silbia invited you to Jo Malone London’s Mother’s… • Just now",
                 "Adnan Safi added you to waitlist • 5 min ago",
-                "Joan Baker – Smooth Jazz • 20 min ago",
-                "Ronald C. Kinch added you • 1 hr ago",
-                "Clara Tolson invited you • 9 hr ago",
+                "Joan Baker – Virtual Evening of Smooth Jazz • 20 min ago",
+                "Ronald C. Kinch added you to waitlist • 1 hr ago",
+                "Clara Tolson invited you to Gala Music Festival • 9 hr ago",
                 "Eric G. Prickett sent an invitation • Wed, 3:30 pm",
-                "Jennifer Fritz – Event cancelled • Tue, 5:10 pm"
+                "Jennifer Fritz – Kids Safe Event cancelled • Tue, 5:10 pm"
         ));
+        // Pretend “New” is the first two
         newItems.addAll(allItems.subList(0, Math.min(2, allItems.size())));
 
+        // Recycler
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
         adapter = new SimpleTextAdapter(allItems);
         binding.rvLogs.setAdapter(adapter);
 
-        Chip chipNew = binding.chipNew;
-        Chip chipAll = binding.chipAll;
+        // Chips
+        final Chip chipNew = binding.chipNew;
+        final Chip chipAll = binding.chipAll;
         chipAll.setChecked(true);
 
-        chipNew.setOnCheckedChangeListener((btn, checked) -> {
+        chipNew.setOnCheckedChangeListener((button, checked) -> {
             if (checked) {
                 adapter = new SimpleTextAdapter(new ArrayList<>(newItems));
                 binding.rvLogs.setAdapter(adapter);
             }
         });
-        chipAll.setOnCheckedChangeListener((btn, checked) -> {
+        chipAll.setOnCheckedChangeListener((button, checked) -> {
             if (checked) {
                 adapter = new SimpleTextAdapter(new ArrayList<>(allItems));
                 binding.rvLogs.setAdapter(adapter);
             }
         });
 
+        // Mark all as read
         binding.btnMarkAll.setOnClickListener(v -> {
             newItems.clear();
             Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show();
