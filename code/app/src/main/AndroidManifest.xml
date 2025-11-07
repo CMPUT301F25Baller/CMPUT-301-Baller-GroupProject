@@ -47,6 +47,12 @@
             android:name=".NotificationLogsActivity"
             android:label="Notifications"
             android:exported="false" />
+        <activity
+            android:name=".AdminImagesActivity"
+            android:exported="false"
+            android:label="Event Posters"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
 
 
 
