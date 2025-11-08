@@ -5,92 +5,70 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
-
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+/**
+ * Activity displayed after login where the user selects their primary role.
+ * This selection updates their user document in Firestore and navigates them
+ * to the appropriate main activity (Entrant, Organizer, or Admin).
+ */
 public class RoleSelectionActivity extends AppCompatActivity {
 
     private static final String TAG = "RoleSelectionActivity";
-
-    // Flip to true if you want users with an existing role to skip this screen.
-    private static final boolean AUTO_REDIRECT_IF_ROLE_SET = false;
-
-    private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private FirebaseAuth mAuth;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_role_selection);
 
-        mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
-        // 1) Require login first
         if (mAuth.getCurrentUser() == null) {
+            // No user logged in, go back to login
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
 
-        // 2) (Optional) If role is already set, skip selection
-        if (AUTO_REDIRECT_IF_ROLE_SET) {
-            String uid = mAuth.getCurrentUser().getUid();
-            db.collection("users").document(uid).get()
-                    .addOnSuccessListener(this::maybeAutoRoute)
-                    .addOnFailureListener(e -> Log.w(TAG, "Failed to read user for role check", e));
-        }
-
-        // 3) Wire up buttons
         Button btnOrganizer = findViewById(R.id.btnOrganizer);
-        Button btnEntrant   = findViewById(R.id.btnEntrant);
-        Button btnAdmin     = findViewById(R.id.btnAdmin);
+        Button btnEntrant = findViewById(R.id.btnEntrant);
+        Button btnAdmin = findViewById(R.id.btnAdmin);
 
-        btnOrganizer.setOnClickListener(v -> selectRole("organizer", OrganizerActivity.class));
-        btnEntrant.setOnClickListener(v -> selectRole("entrant", EntrantMainActivity.class));
-        btnAdmin.setOnClickListener(v -> selectRole("admin", AdminMainActivity.class));
+        btnOrganizer.setOnClickListener(v ->
+                selectRole("organizer", OrganizerActivity.class)
+        );
+
+        btnEntrant.setOnClickListener(v ->
+                selectRole("entrant", EntrantMainActivity.class)
+        );
+
+        btnAdmin.setOnClickListener(v ->
+                selectRole("admin", AdminMainActivity.class) // Updated to launch AdminMainActivity
+        );
     }
 
-    private void maybeAutoRoute(DocumentSnapshot doc) {
-        if (!AUTO_REDIRECT_IF_ROLE_SET) return;
-        if (!doc.exists()) return;
-
-        String role = doc.getString("role");
-        if (role == null || role.isEmpty()) return;
-
-        switch (role) {
-            case "organizer":
-                startActivity(new Intent(this, OrganizerActivity.class));
-                finish();
-                break;
-            case "entrant":
-                startActivity(new Intent(this, EntrantMainActivity.class));
-                finish();
-                break;
-            case "admin":
-                startActivity(new Intent(this, AdminMainActivity.class));
-                finish();
-                break;
-            default:
-                // Unknown role; stay on selection screen
-                break;
-        }
-    }
-
+    /**
+     * Updates the user's "role" field in their Firestore document and then
+     * navigates them to the corresponding main activity.
+     *
+     * @param role The role string to save (e.g., "entrant", "organizer").
+     * @param activityClass The .class of the Activity to navigate to.
+     */
     private void selectRole(String role, Class<?> activityClass) {
-        String uid = mAuth.getCurrentUser().getUid();
+        String userId = mAuth.getCurrentUser().getUid();
 
-        db.collection("users").document(uid)
+        db.collection("users").document(userId)
                 .update("role", role)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "Role set: " + role);
+                    Log.d(TAG, "User role set to: " + role);
                     startActivity(new Intent(RoleSelectionActivity.this, activityClass));
-                    finish();
+                    finish(); // Optional: finish so they can't come back to role selection
                 })
                 .addOnFailureListener(e -> {
                     Log.w(TAG, "Error setting role", e);

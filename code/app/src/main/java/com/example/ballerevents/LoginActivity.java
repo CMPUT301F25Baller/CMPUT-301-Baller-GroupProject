@@ -20,6 +20,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * The launcher activity for the app.
+ * Handles user registration and sign-in using Firebase Authentication.
+ * If a user is already logged in, it skips this screen and navigates
+ * to the {@link RoleSelectionActivity}.
+ */
 public class LoginActivity extends AppCompatActivity {
 
     private static final String TAG = "LoginActivity";
@@ -27,7 +33,7 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
-    // Use ViewBinding
+    /** ViewBinding object for accessing layout views. */
     private ActivityLoginBinding binding;
 
     @Override
@@ -52,85 +58,80 @@ public class LoginActivity extends AppCompatActivity {
         binding.btnRegister.setOnClickListener(v -> registerUser());
     }
 
+    /**
+     * Reads email and password from the input fields and attempts to sign in
+     * an existing user with Firebase Authentication.
+     */
     private void loginUser() {
+        // Access views via binding object
         String email = binding.etEmail.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
+
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Email and password cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        setAuthUiEnabled(false); // disable buttons during auth
 
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        FirebaseUser user = mAuth.getCurrentUser();
-                        if (user == null) { // super edge case
-                            Toast.makeText(this, "Login error. Try again.", Toast.LENGTH_SHORT).show();
-                            setAuthUiEnabled(true);
-                            return;
-                        }
-
-                        // Ensure user doc exists
-                        db.collection("users").document(user.getUid())
-                                .get()
-                                .addOnSuccessListener(doc -> {
-                                    if (!doc.exists()) {
-                                        // Create a minimal profile so the rest of the app can rely on it
-                                        createNewUserDocument(user);
-                                    } else {
-                                        goToRoleSelection();
-                                    }
-                                })
-                                .addOnFailureListener(e -> {
-                                    Toast.makeText(this, "Failed to load profile.", Toast.LENGTH_SHORT).show();
-                                    setAuthUiEnabled(true);
-                                });
-
+                        Log.d(TAG, "signInWithEmail:success");
+                        goToRoleSelection();
                     } else {
                         Log.w(TAG, "signInWithEmail:failure", task.getException());
-                        Toast.makeText(LoginActivity.this, "Authentication failed.", Toast.LENGTH_SHORT).show();
-                        setAuthUiEnabled(true);
+                        Toast.makeText(LoginActivity.this, "Authentication failed.",
+                                Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 
-    private void setAuthUiEnabled(boolean enabled) {
-        binding.btnLogin.setEnabled(enabled);
-        binding.btnRegister.setEnabled(enabled);
-        binding.etEmail.setEnabled(enabled);
-        binding.etPassword.setEnabled(enabled);
-    }
-
+    /**
+     * Reads email and password and attempts to create a new user account
+     * with Firebase Authentication. On success, it calls
+     * {@link #createNewUserDocument(FirebaseUser)}.
+     */
     private void registerUser() {
+        // Access views via binding object
         String email = binding.etEmail.getText().toString().trim();
         String password = binding.etPassword.getText().toString().trim();
+
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Email and password cannot be empty", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        setAuthUiEnabled(false);
-
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
+                        Log.d(TAG, "createUserWithEmail:success");
                         FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null) createNewUserDocument(user);
-                        else {
-                            Toast.makeText(this, "Registration error.", Toast.LENGTH_SHORT).show();
-                            setAuthUiEnabled(true);
+                        if (user != null) {
+                            createNewUserDocument(user);
                         }
                     } else {
+                        // --- START OF UPDATE ---
+                        // Show the *actual* error message from Firebase
+                        String errorMessage = "Registration failed.";
+                        if (task.getException() != null) {
+                            errorMessage = task.getException().getMessage();
+                        }
                         Log.w(TAG, "createUserWithEmail:failure", task.getException());
-                        Toast.makeText(LoginActivity.this, "Registration failed.", Toast.LENGTH_SHORT).show();
-                        setAuthUiEnabled(true);
+
+                        // Show the detailed error message in a LONG toast
+                        Toast.makeText(LoginActivity.this, errorMessage,
+                                Toast.LENGTH_LONG).show();
+                        // --- END OF UPDATE ---
                     }
                 });
     }
 
-
+    /**
+     * Creates a corresponding user document in the "users" collection in Firestore
+     * after a successful registration. This stores profile information
+     * associated with the new Firebase Auth user.
+     *
+     * @param firebaseUser The newly created FirebaseUser object from Auth.
+     */
     private void createNewUserDocument(FirebaseUser firebaseUser) {
         // Create a new user profile document in Firestore
         String userId = firebaseUser.getUid();
@@ -158,10 +159,13 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Navigates to the RoleSelectionActivity after a successful login or registration.
+     * Finishes the LoginActivity so the user cannot navigate back to it.
+     */
     private void goToRoleSelection() {
         Intent intent = new Intent(LoginActivity.this, RoleSelectionActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        finish();
+        finish(); // Prevent user from going back to login
     }
 }

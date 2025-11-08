@@ -15,6 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Allows the user to edit their "About Me" and "Interests" fields.
+ * Fetches the current profile data on load and saves it back to
+ * Firestore on button click.
+ */
 public class EditProfileActivity extends AppCompatActivity {
 
     private ActivityEditProfileBinding binding;
@@ -27,88 +32,103 @@ public class EditProfileActivity extends AppCompatActivity {
         binding = ActivityEditProfileBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        if (auth.getCurrentUser() == null) {
-            Toast.makeText(this, "Please log in again.", Toast.LENGTH_SHORT).show();
-            finish(); // or startActivity(new Intent(this, LoginActivity.class));
+        db = FirebaseFirestore.getInstance();
+
+        if(FirebaseAuth.getInstance().getCurrentUser() == null) {
+            Toast.makeText(this, "You must be logged in", Toast.LENGTH_SHORT).show();
+            finish();
             return;
         }
-        String currentUserId = auth.getCurrentUser().getUid();
-        userRef = FirebaseFirestore.getInstance().collection("users").document(currentUserId);
+
+        String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        userRef = db.collection("users").document(currentUserId);
 
         loadCurrentData();
         setupListeners();
     }
 
+    /**
+     * Fetches the current user's profile data from Firestore to populate
+     * the "About Me" and "Interests" text fields.
+     */
     private void loadCurrentData() {
-        userRef.get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        UserProfile p = doc.toObject(UserProfile.class);
-                        if (p != null) {
-                            binding.etAboutMe.setText(p.getAboutMe() == null ? "" : p.getAboutMe());
-                            if (p.getInterests() != null && !p.getInterests().isEmpty()) {
-                                String interests = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N
-                                        ? String.join(", ", p.getInterests())
-                                        : joinComma(p.getInterests());
-                                binding.etInterests.setText(interests);
+        userRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                UserProfile userProfile = documentSnapshot.toObject(UserProfile.class);
+                if (userProfile != null) {
+                    binding.etAboutMe.setText(userProfile.getAboutMe());
+
+                    if (userProfile.getInterests() != null) {
+                        // Convert List<String> to a single comma-separated string
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                            String interests = String.join(", ", userProfile.getInterests());
+                            binding.etInterests.setText(interests);
+                        } else {
+                            // Fallback for older Android versions
+                            StringBuilder interestsBuilder = new StringBuilder();
+                            for (String interest : userProfile.getInterests()) {
+                                if (interestsBuilder.length() > 0) {
+                                    interestsBuilder.append(", ");
+                                }
+                                interestsBuilder.append(interest);
                             }
+                            binding.etInterests.setText(interestsBuilder.toString());
                         }
-                    } else {
-                        // Create a stub so updates won’t fail
-                        Map<String, Object> stub = new HashMap<>();
-                        stub.put("aboutMe", "");
-                        stub.put("interests", new java.util.ArrayList<String>());
-                        userRef.set(stub, com.google.firebase.firestore.SetOptions.merge());
                     }
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to load profile.", Toast.LENGTH_SHORT).show()
-                );
+                }
+            } else {
+                Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private String joinComma(List<String> items) {
-        StringBuilder sb = new StringBuilder();
-        for (String it : items) {
-            if (sb.length() > 0) sb.append(", ");
-            sb.append(it);
-        }
-        return sb.toString();
-    }
-
-
+    /**
+     * Sets click listeners for the "Back" and "Save" buttons.
+     */
     private void setupListeners() {
         binding.btnBackEdit.setOnClickListener(v -> finish());
         binding.btnSave.setOnClickListener(v -> saveProfileData());
     }
 
+    /**
+     * Reads the new data from the text fields, converts the interests
+     * string back into a List, and saves the updated data to Firestore.
+     */
     private void saveProfileData() {
-        String newAboutMe = String.valueOf(binding.etAboutMe.getText()).trim();
-        String newInterestsString = String.valueOf(binding.etInterests.getText());
+        String newAboutMe = binding.etAboutMe.getText().toString();
+        String newInterestsString = binding.etInterests.getText().toString();
 
         List<String> newInterests;
+
+        // Convert comma-separated string back to List<String>
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            newInterests = java.util.Arrays.stream(newInterestsString.split(","))
-                    .map(String::trim).filter(s -> !s.isEmpty()).collect(java.util.stream.Collectors.toList());
+            newInterests = Arrays.stream(newInterestsString.split(","))
+                    .map(String::trim) // Remove whitespace
+                    .filter(s -> !s.isEmpty()) // Remove empty strings
+                    .collect(Collectors.toList());
         } else {
+            // Fallback for older Android versions
             newInterests = new java.util.ArrayList<>();
             for (String s : newInterestsString.split(",")) {
-                String t = s.trim();
-                if (!t.isEmpty()) newInterests.add(t);
+                String trimmed = s.trim();
+                if (!trimmed.isEmpty()) {
+                    newInterests.add(trimmed);
+                }
             }
         }
 
+        // Use a Map to update only specific fields
         Map<String, Object> updates = new HashMap<>();
         updates.put("aboutMe", newAboutMe);
         updates.put("interests", newInterests);
 
-        userRef.set(updates, com.google.firebase.firestore.SetOptions.merge())
+        userRef.update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Profile Updated!", Toast.LENGTH_SHORT).show();
-                    finish();
+                    finish(); // Go back to ProfileActivity
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Error saving profile.", Toast.LENGTH_SHORT).show()
-                );
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error saving profile.", Toast.LENGTH_SHORT).show();
+                });
     }
 }

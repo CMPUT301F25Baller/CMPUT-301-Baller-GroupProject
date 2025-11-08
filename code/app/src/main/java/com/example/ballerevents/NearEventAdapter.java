@@ -10,13 +10,30 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide; // <-- IMPORT GLIDE
 import com.example.ballerevents.databinding.ItemEventNearBinding;
 
+/**
+ * A RecyclerView.Adapter for displaying {@link Event} objects in a vertical,
+ * compact card format (item_event_near.xml). Uses {@link ListAdapter}
+ * for efficient list management.
+ */
 public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventViewHolder> {
 
-    // ... (Interface and constructor) ...
+    /**
+     * A click listener interface to handle clicks on an event card.
+     */
     public interface OnEventClickListener {
+        /**
+         * Called when an event card is clicked.
+         * @param event The Event object that was clicked.
+         */
         void onEventClick(Event event);
     }
+
     private final OnEventClickListener onClickListener;
+
+    /**
+     * Constructs the adapter.
+     * @param onClickListener The listener to be notified of click events.
+     */
     public NearEventAdapter(OnEventClickListener onClickListener) {
         super(EventDiffCallback);
         this.onClickListener = onClickListener;
@@ -36,7 +53,9 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
         holder.bind(getItem(position), onClickListener);
     }
 
-    // ViewHolder class
+    /**
+     * ViewHolder for the "near you" event card.
+     */
     static class EventViewHolder extends RecyclerView.ViewHolder {
         private final ItemEventNearBinding binding;
 
@@ -45,6 +64,11 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
             this.binding = binding;
         }
 
+        /**
+         * Binds an Event object to the view holder's views.
+         * @param event The event data to display.
+         * @param onClickListener The listener to attach to the card.
+         */
         public void bind(Event event, OnEventClickListener onClickListener) {
             // --- UPDATED BINDING ---
             binding.tvEventTitle.setText(event.getTitle());
@@ -64,7 +88,10 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
         }
     }
 
-    // ... (DiffUtil) ...
+    /**
+     * DiffUtil.ItemCallback for calculating list differences efficiently.
+     * Compares events based on their unique Firestore document ID.
+     */
     private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
         @Override
         public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {

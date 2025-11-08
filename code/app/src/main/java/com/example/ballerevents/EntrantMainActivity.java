@@ -17,15 +17,22 @@ import com.example.ballerevents.databinding.EntrantMainBinding;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.ListenerRegistration; // Import for listener
+import com.google.firebase.firestore.FirebaseFirestoreException; // Import for listener
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The main home screen for users with the "entrant" role.
+ * Displays lists of trending and near-you events, and allows users
+ * to search and filter all events.
+ */
 public class EntrantMainActivity extends AppCompatActivity {
 
     private static final String TAG = "EntrantMainActivity";
 
-    // This binding class is generated from 'activity_main.xml'
+    /** This binding class is generated from 'activity_main.xml' */
     private EntrantMainBinding binding;
     private TrendingEventAdapter trendingAdapter;
     private NearEventAdapter nearAdapter;
@@ -35,7 +42,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     private List<Event> allEvents = new ArrayList<>(); // Cache all events for searching
     private List<String> selectedTags = new ArrayList<>();
 
-    // Removed the unused s() method
+    private ListenerRegistration allEventsListener; // Listener registration
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,10 +55,25 @@ public class EntrantMainActivity extends AppCompatActivity {
 
         setupRecyclerViews();
         setupListeners();
-
-        loadAllEvents(); // Load all events into cache
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        loadAllEvents(); // Attach listener in onStart
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (allEventsListener != null) {
+            allEventsListener.remove(); // Detach listener in onStop
+        }
+    }
+
+    /**
+     * Initializes the RecyclerViews for trending, near-you, and search results.
+     */
     private void setupRecyclerViews() {
         // Trending
         trendingAdapter = new TrendingEventAdapter(this::launchDetailsActivity);
@@ -69,8 +91,17 @@ public class EntrantMainActivity extends AppCompatActivity {
         binding.rvSearchResults.setAdapter(searchAdapter);
     }
 
+    /**
+     * Attaches a snapshot listener to the "events" collection in Firestore.
+     * The list of all events, trending events, and near-you events will
+     * update in real-time.
+     */
     private void loadAllEvents() {
-        db.collection("events")
+        if (allEventsListener != null) {
+            allEventsListener.remove();
+        }
+
+        allEventsListener = db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING) // stable order for UI
                 .addSnapshotListener((snap, e) -> {
                     if (e != null || snap == null) {
@@ -87,10 +118,6 @@ public class EntrantMainActivity extends AppCompatActivity {
                         Event event = doc.toObject(Event.class);
                         if (event == null) continue;
 
-                        // This is now handled in the Event model by @DocumentId
-                        // but it's safe to leave as a fallback.
-                        // event.setId(doc.getId());
-
                         allEvents.add(event);
                         if (event.isTrending()) trending.add(event); else near.add(event);
                     }
@@ -99,11 +126,16 @@ public class EntrantMainActivity extends AppCompatActivity {
                     trendingAdapter.submitList(new ArrayList<>(trending));
                     nearAdapter.submitList(new ArrayList<>(near));
 
+                    // Re-apply filter in case data changed while searching
+                    performSearchAndFilter();
+
                     Log.d(TAG, "Loaded " + allEvents.size() + " total events.");
                 });
     }
 
-
+    /**
+     * Sets up click listeners for the profile menu, search bar, and filter chips.
+     */
     private void setupListeners() {
         binding.btnMenu.setOnClickListener(v -> {
             startActivity(new Intent(this, ProfileActivity.class));
@@ -128,6 +160,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         setupChipListener(binding.chipTheater);
     }
 
+    /**
+     * Helper method to add a checked-change listener to a filter chip.
+     * @param chip The Chip to attach the listener to.
+     */
     private void setupChipListener(Chip chip) {
         // Use setOnCheckedChangeListener for filter chips
         chip.setOnCheckedChangeListener((button, isChecked) -> {
@@ -141,7 +177,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         });
     }
 
-
+    /**
+     * Toggles view visibility and applies the current search query and tag filters
+     * using the {@link EventFilter} helper class.
+     */
     private void performSearchAndFilter() {
         // Get the raw query. The filter class will normalize it.
         String query = binding.etSearch.getText().toString();
@@ -172,6 +211,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Navigates to the DetailsActivity for a specific event.
+     * @param event The Event object to display details for.
+     */
     private void launchDetailsActivity(Event event) {
         Intent intent = new Intent(this, DetailsActivity.class);
         intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId()); // Pass String ID
