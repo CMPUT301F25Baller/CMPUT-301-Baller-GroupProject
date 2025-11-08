@@ -1,0 +1,33 @@
+<resources>
+
+    <!-- Base stubs so any legacy references don't crash linking -->
+    <style name="ShapeAppearance"/>
+    <style name="ShapeAppearanceOverlay"/>
+
+    <!-- Circle variants (overlay & non-overlay) so either name compiles -->
+    <style name="ShapeAppearance.CircleImage" parent="ShapeAppearance">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.CircleImage" parent="ShapeAppearanceOverlay">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Top-only rounded corners (used in item_event_near.xml) -->
+    <style name="RoundedTopCorners" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">16dp</item>
+        <item name="cornerSizeTopRight">16dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <!-- Small rounded shape (used in entrant_main.xml for FAB) -->
+    <style name="FabCutoutShape" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+</resources>

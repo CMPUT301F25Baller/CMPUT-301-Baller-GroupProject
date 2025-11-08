@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    tools:context=".DetailsActivity">
+
+    <!-- 1. Background Event Image -->
+    <ImageView
+        android:id="@+id/iv_event_banner"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/placeholder_coldplay_banner"
+        android:contentDescription="Event Banner" />
+
+    <!-- 3. Scrollable Content Area -->
+    <!-- This is moved BEFORE the toolbar -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Spacer View -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:background="@android:color/transparent" />
+
+            <!-- White Content Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_top_card_bg"
+                android:padding="24dp">
+
+                <!-- Waitlist Section -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <!-- ... (Avatar stack remains the same) ... -->
+                    <LinearLayout
+                        android:id="@+id/avatar_stack"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_centerVertical="true">
+
+                        <de.hdodenhof.circleimageview.CircleImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/placeholder_avatar1"
+                            app:civ_border_width="2dp"
+                            app:civ_border_color="@android:color/white"/>
+                        <de.hdodenhof.circleimageview.CircleImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/placeholder_avatar2"
+                            app:civ_border_width="2dp"
+                            app:civ_border_color="@android:color/white"
+                            android:layout_marginStart="-12dp"/>
+                        <de.hdodenhof.circleimageview.CircleImageView
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:src="@drawable/placeholder_avatar3"
+                            app:civ_border_width="2dp"
+                            app:civ_border_color="@android:color/white"
+                            android:layout_marginStart="-12dp"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_waitlist_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+20 On Waitlist"
+                        android:textColor="@android:color/darker_gray"
+                        android:layout_toEndOf="@id/avatar_stack"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="8dp"
+                        tools:text="+132 On Waitlist" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_invite"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Invite"
+                        android:backgroundTint="#5A00FF"
+                        app:cornerRadius="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:textAllCaps="false"/>
+
+                </RelativeLayout>
+
+                <!-- Event Title -->
+                <TextView
+                    android:id="@+id/tv_event_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="Coldplay: Music at the sphere"
+                    android:textSize="32sp"
+                    android:textColor="@android:color/black"
+                    android:fontFamily="sans-serif-bold"
+                    android:layout_marginTop="24dp"
+                    android:lineSpacingMultiplier="1.1"/>
+
+                <!-- Info Section -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="24dp"
+                    android:gravity="center_vertical">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/rounded_icon_background">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_calendar"
+                            android:layout_gravity="center"
+                            app:tint="#5A00FF"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
+                        <TextView
+                            android:id="@+id/tv_event_date"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="14 December, 2021"
+                            android:textColor="@android:color/black"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"/>
+                        <TextView
+                            android:id="@+id/tv_event_time"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="Tuesday, 4:00PM - 9:00PM"
+                            android:textColor="@android:color/darker_gray"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/rounded_icon_background">
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_location"
+                            android:layout_gravity="center"
+                            app:tint="#5A00FF"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginStart="16dp">
+                        <TextView
+                            android:id="@+id/tv_event_location_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="Gala Convention Center"
+                            android:textColor="@android:color/black"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"/>
+                        <TextView
+                            android:id="@+id/tv_event_location_address"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="36 Guild Street London, UK"
+                            android:textColor="@android:color/darker_gray"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Organizer Section -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp">
+
+                    <de.hdodenhof.circleimageview.CircleImageView
+                        android:id="@+id/iv_organizer"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/placeholder_organizer_icon"
+                        android:layout_centerVertical="true"/>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_toEndOf="@id/iv_organizer"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="16dp">
+                        <TextView
+                            android:id="@+id/tv_organizer_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            tools:text="Coldplay"
+                            android:textColor="@android:color/black"
+                            android:textSize="16sp"
+                            android:fontFamily="sans-serif-medium"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Organizer"
+                            android:textColor="@android:color/darker_gray"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_follow"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Follow"
+                        android:textColor="#5A00FF"
+                        app:backgroundTint="#F0F0F8"
+                        app:cornerRadius="10dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:textAllCaps="false"/>
+
+                </RelativeLayout>
+
+                <!-- About Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="About Event"
+                    android:textColor="@android:color/black"
+                    android:textSize="20sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:layout_marginTop="32dp"/>
+
+                <TextView
+                    android:id="@+id/tv_about_event_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="Enjoy your favorite dishes and a lovely time with your friends and family for a great experience! Food from local food trucks will be available for purchase. Read More.."
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="16sp"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingMultiplier="1.3"/>
+
+                <!-- Join Waitlist Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_join_waitlist"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:text="Join Waitlist"
+                    android:backgroundTint="#5A00FF"
+                    app:cornerRadius="16dp"
+                    android:textSize="16sp"
+                    app:icon="@drawable/ic_arrow_back"
+                    app:iconGravity="textEnd"
+                    android:layout_marginTop="32dp"
+                    android:layout_marginBottom="16dp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- 2. Top Toolbar (Back & Bookmark) -->
+    <!-- This is NOW THE LAST CHILD, so it's drawn ON TOP -->
+    <RelativeLayout
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="24dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@android:color/white"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Event Details"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="10dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true">
+
+            <ImageButton
+                android:id="@+id/btn_bookmark"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_bookmark"
+                app:tint="#8A2BE2"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="Bookmark" />
+        </com.google.android.material.card.MaterialCardView>
+
+    </RelativeLayout>
+
+</RelativeLayout>
