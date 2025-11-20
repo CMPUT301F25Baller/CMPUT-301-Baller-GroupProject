@@ -31,45 +31,69 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * Activity that allows organizers to create NEW events or EDIT existing ones.
+ * Activity allowing organizers to create a new event or edit an existing one.
  * <p>
- * If an EXTRA_EVENT_ID is passed in the intent, this activity enters "Edit Mode":
- * - Loads the existing event data.
- * - Populates all input fields.
- * - Updates the existing Firestore document on save.
- * <p>
- * Otherwise, it enters "Create Mode" (default behavior).
+ * Behavior depends on whether {@link #EXTRA_EVENT_ID} is included in the launching intent:
+ * <ul>
+ *     <li><b>Create Mode:</b> No existing event ID is passed. All fields start blank.</li>
+ *     <li><b>Edit Mode:</b> An event ID is provided. The activity loads the existing
+ *         event from Firestore and pre-populates all fields for editing.</li>
+ * </ul>
+ *
+ * <p>The activity manages:
+ * <ul>
+ *     <li>Date selection</li>
+ *     <li>Time selection</li>
+ *     <li>Location input</li>
+ *     <li>Tag parsing</li>
+ *     <li>Poster and banner image picking</li>
+ *     <li>Save/Update operations to Firestore</li>
+ * </ul>
+ * </p>
  */
 public class OrganizerEventCreationActivity extends AppCompatActivity {
 
+    /** Logging tag. */
     private static final String TAG = "EventCreationActivity";
-    public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID"; // Key for Intent
 
+    /** Intent key for passing an event ID for edit mode. */
+    public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
+
+    /** ViewBinding for all views in the layout. */
     private ActivityOrganizerEventCreationBinding binding;
+
+    /** Firestore reference. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth for retrieving the current user. */
     private FirebaseAuth mAuth;
+
+    /** ID of currently authenticated organizer. */
     private String currentUserId;
+
+    /** Organizer profile loaded from Firestore. */
     private UserProfile organizerProfile;
 
-    // If this is not null, we are in "Edit Mode"
+    /** If non-null, the activity is editing an existing event. */
     private String eventIdToEdit = null;
 
-    // Data fields
+    // Cached form values
     private String dateStr = "";
     private String fromTime = "";
     private String toTime = "";
     private String venue = "";
     private String address = "";
 
-    // Image URIs (stored as strings)
+    /** URIs for banner or poster images (stored as strings). */
     private String bannerUriString = "";
     private String posterUriString = "";
 
+    /** Calendar instances for date/time picking. */
     private Calendar eventDate = Calendar.getInstance();
     private Calendar fromCal = Calendar.getInstance();
     private Calendar toCal = Calendar.getInstance();
 
-    // Image Pickers
+    /** ActivityResultLaunchers for picking images. */
     private ActivityResultLauncher<String> bannerPickerLauncher;
     private ActivityResultLauncher<String> posterPickerLauncher;
 
@@ -82,6 +106,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
+        // Ensure user is authenticated
         if (mAuth.getCurrentUser() == null) {
             Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
             finish();
@@ -89,12 +114,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
-        // Check if we are editing an existing event
+        // Check edit/create mode
         if (getIntent().hasExtra(EXTRA_EVENT_ID)) {
             eventIdToEdit = getIntent().getStringExtra(EXTRA_EVENT_ID);
-            binding.btnSaveEvent.setText("Update Event"); // Change button text
-            // We might also want to change the header text
-            // binding.tvHeaderTitle.setText("Edit Event");
+            binding.btnSaveEvent.setText("Update Event");
             loadEventData(eventIdToEdit);
         }
 
@@ -104,7 +127,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     }
 
     /**
-     * Loads existing event data from Firestore and populates the UI fields.
+     * Loads a Firestore event into the UI (only used in edit mode).
+     *
+     * @param eventId The ID of the event to load and edit.
      */
     private void loadEventData(String eventId) {
         db.collection("events").document(eventId).get()
@@ -116,7 +141,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                         binding.etDescription.setText(event.getDescription());
                         binding.etPrice.setText(event.getPrice());
 
-                        // Populate location
+                        // Location
                         venue = event.getLocationName();
                         address = event.getLocationAddress();
                         binding.tvLocationPicker.setText(venue);
@@ -125,45 +150,42 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                             binding.tvAddressPicker.setVisibility(View.VISIBLE);
                         }
 
-                        // Populate Date & Time
+                        // Date/Time
                         dateStr = event.getDate();
                         binding.tvDatePicker.setText(dateStr);
-                        // Time format in DB is "start - end". We populate the full string.
-                        // Splitting it back to fromTime/toTime is complex without stricter formatting,
-                        // so we'll just display it and let the user overwrite if they pick new times.
+
                         String fullTime = event.getTime();
                         binding.tvTimePicker.setText(fullTime);
-                        // Try to parse simple " - " split for state
                         if (fullTime != null && fullTime.contains(" - ")) {
                             String[] parts = fullTime.split(" - ");
                             fromTime = parts[0];
                             toTime = parts[1];
                         } else {
-                            fromTime = fullTime; // Fallback
+                            fromTime = fullTime;
                         }
 
-                        // Populate Tags
+                        // Tags
                         if (event.getTags() != null && !event.getTags().isEmpty()) {
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                 binding.etTags.setText(String.join(", ", event.getTags()));
                             } else {
                                 StringBuilder sb = new StringBuilder();
-                                for(String tag : event.getTags()) {
-                                    if(sb.length() > 0) sb.append(", ");
+                                for (String tag : event.getTags()) {
+                                    if (sb.length() > 0) sb.append(", ");
                                     sb.append(tag);
                                 }
                                 binding.etTags.setText(sb.toString());
                             }
                         }
 
-                        // Populate Images
+                        // Poster image
                         posterUriString = event.getEventPosterUrl();
                         if (!TextUtils.isEmpty(posterUriString)) {
                             binding.ivPosterImage.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
                             Glide.with(this).load(posterUriString).into(binding.ivPosterImage);
                         }
-                        // Banner URL is not currently in Event model (using poster for both in save logic)
-                        // If you added a bannerUrl field, load it here.
+
+                        // Header banner uses same poster for now
                         if (!TextUtils.isEmpty(posterUriString)) {
                             Glide.with(this).load(posterUriString).centerCrop().into(binding.ivEventBanner);
                         }
@@ -176,71 +198,123 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Registers ActivityResultLaunchers for picking the poster and banner images
+     * using the device's document picker.
+     */
     private void setupImagePickers() {
-        // Banner Picker
-        bannerPickerLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-            if (uri != null) {
-                bannerUriString = uri.toString();
-                Glide.with(this).load(uri).centerCrop().into(binding.ivEventBanner);
-            }
-        });
+        bannerPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(), uri -> {
+                    if (uri != null) {
+                        bannerUriString = uri.toString();
+                        Glide.with(this)
+                                .load(uri)
+                                .centerCrop()
+                                .into(binding.ivEventBanner);
+                    }
+                });
 
-        // Poster Picker
-        posterPickerLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-            if (uri != null) {
-                posterUriString = uri.toString();
-                binding.ivPosterImage.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-                Glide.with(this).load(uri).into(binding.ivPosterImage);
-            }
-        });
+        posterPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(), uri -> {
+                    if (uri != null) {
+                        posterUriString = uri.toString();
+                        binding.ivPosterImage.setScaleType(
+                                android.widget.ImageView.ScaleType.CENTER_CROP
+                        );
+                        Glide.with(this).load(uri).into(binding.ivPosterImage);
+                    }
+                });
     }
 
+    /**
+     * Sets up listeners for:
+     * <ul>
+     *     <li>Back button</li>
+     *     <li>Save button</li>
+     *     <li>Date/time pickers</li>
+     *     <li>Location selector dialog</li>
+     *     <li>Poster/banner image picking</li>
+     * </ul>
+     */
     private void setupClickListeners() {
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnSaveEvent.setOnClickListener(v -> saveEventToFirestore());
 
-        // Date & Time
         binding.tvDatePicker.setOnClickListener(v -> pickDate());
         binding.tvTimePicker.setOnClickListener(v -> pickTime());
-
-        // Location
         binding.tvLocationPicker.setOnClickListener(v -> pickLocation());
 
-        // Images
-        // Use the new view_banner_click_area because ivEventBanner is behind the scrollview
-        binding.viewBannerClickArea.setOnClickListener(v -> bannerPickerLauncher.launch("image/*"));
-        binding.ivPosterImage.setOnClickListener(v -> posterPickerLauncher.launch("image/*"));
+        // Banner image area (for easier tapping)
+        binding.viewBannerClickArea.setOnClickListener(
+                v -> bannerPickerLauncher.launch("image/*")
+        );
+
+        // Poster image
+        binding.ivPosterImage.setOnClickListener(
+                v -> posterPickerLauncher.launch("image/*")
+        );
     }
 
+    /**
+     * Opens a date picker dialog and updates {@link #dateStr} when selected.
+     */
     private void pickDate() {
-        new DatePickerDialog(this, (view, y, m, d) -> {
-            eventDate.set(y, m, d);
-            dateStr = new SimpleDateFormat("dd MMMM, yyyy", Locale.ENGLISH).format(eventDate.getTime());
-            binding.tvDatePicker.setText(dateStr);
-        }, eventDate.get(Calendar.YEAR), eventDate.get(Calendar.MONTH), eventDate.get(Calendar.DAY_OF_MONTH)).show();
+        new DatePickerDialog(
+                this,
+                (view, y, m, d) -> {
+                    eventDate.set(y, m, d);
+                    dateStr = new SimpleDateFormat("dd MMMM, yyyy", Locale.ENGLISH)
+                            .format(eventDate.getTime());
+                    binding.tvDatePicker.setText(dateStr);
+                },
+                eventDate.get(Calendar.YEAR),
+                eventDate.get(Calendar.MONTH),
+                eventDate.get(Calendar.DAY_OF_MONTH)
+        ).show();
     }
 
+    /**
+     * Shows two time pickers (start and end). Updates {@link #fromTime} and {@link #toTime}.
+     */
     private void pickTime() {
-        new TimePickerDialog(this, (v, h, min) -> {
-            fromCal.set(Calendar.HOUR_OF_DAY, h);
-            fromCal.set(Calendar.MINUTE, min);
-            fromTime = DateFormat.getTimeInstance(DateFormat.SHORT).format(fromCal.getTime());
+        new TimePickerDialog(
+                this,
+                (v, h, min) -> {
+                    fromCal.set(Calendar.HOUR_OF_DAY, h);
+                    fromCal.set(Calendar.MINUTE, min);
+                    fromTime = DateFormat.getTimeInstance(DateFormat.SHORT)
+                            .format(fromCal.getTime());
 
-            // Pick End Time immediately after
-            new TimePickerDialog(this, (vv, hh, mm) -> {
-                toCal.set(Calendar.HOUR_OF_DAY, hh);
-                toCal.set(Calendar.MINUTE, mm);
-                toTime = DateFormat.getTimeInstance(DateFormat.SHORT).format(toCal.getTime());
-                binding.tvTimePicker.setText(fromTime + " - " + toTime);
-            }, toCal.get(Calendar.HOUR_OF_DAY), toCal.get(Calendar.MINUTE), false).show();
-
-        }, fromCal.get(Calendar.HOUR_OF_DAY), fromCal.get(Calendar.MINUTE), false).show();
+                    // End time picker
+                    new TimePickerDialog(
+                            this,
+                            (vv, hh, mm) -> {
+                                toCal.set(Calendar.HOUR_OF_DAY, hh);
+                                toCal.set(Calendar.MINUTE, mm);
+                                toTime = DateFormat.getTimeInstance(DateFormat.SHORT)
+                                        .format(toCal.getTime());
+                                binding.tvTimePicker.setText(fromTime + " - " + toTime);
+                            },
+                            toCal.get(Calendar.HOUR_OF_DAY),
+                            toCal.get(Calendar.MINUTE),
+                            false
+                    ).show();
+                },
+                fromCal.get(Calendar.HOUR_OF_DAY),
+                fromCal.get(Calendar.MINUTE),
+                false
+        ).show();
     }
 
+    /**
+     * Shows a dialog allowing the user to input or edit the venue and full address.
+     */
     private void pickLocation() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Edit Location");
-        View view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_location, null);
+
+        View view = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_edit_location, null);
         EditText etVenue = view.findViewById(R.id.etVenue);
         EditText etAddress = view.findViewById(R.id.etAddress);
 
@@ -262,6 +336,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         builder.show();
     }
 
+    /**
+     * Loads the organizer's profile document from Firestore so the event can
+     * correctly store organizer name and profile picture.
+     */
     private void loadOrganizerProfile() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
         userRef.get().addOnSuccessListener(documentSnapshot -> {
@@ -271,22 +349,46 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Validates user input and writes the event to Firestore.
+     * <p>
+     * Depending on {@link #eventIdToEdit}:
+     * <ul>
+     *     <li>Creates a new event</li>
+     *     <li>OR updates an existing one</li>
+     * </ul>
+     * </p>
+     */
     private void saveEventToFirestore() {
         String title = binding.etEventTitle.getText().toString().trim();
         String description = binding.etDescription.getText().toString().trim();
         String price = binding.etPrice.getText().toString().trim();
         String tagsString = binding.etTags.getText().toString().trim();
 
-        if (TextUtils.isEmpty(title)) { Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show(); return; }
-        if (TextUtils.isEmpty(dateStr)) { Toast.makeText(this, "Date required", Toast.LENGTH_SHORT).show(); return; }
-        if (TextUtils.isEmpty(venue)) { Toast.makeText(this, "Venue required", Toast.LENGTH_SHORT).show(); return; }
-        if (TextUtils.isEmpty(price)) { Toast.makeText(this, "Price required", Toast.LENGTH_SHORT).show(); return; }
+        if (TextUtils.isEmpty(title)) {
+            Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (TextUtils.isEmpty(dateStr)) {
+            Toast.makeText(this, "Date required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (TextUtils.isEmpty(venue)) {
+            Toast.makeText(this, "Venue required", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (TextUtils.isEmpty(price)) {
+            Toast.makeText(this, "Price required", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        // Convert tags
+        // Tags parsing with Java 8 streams (API 24+) fallback for pre-N
         List<String> tagsList;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             tagsList = Arrays.stream(tagsString.split(","))
-                    .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toList());
         } else {
             tagsList = new java.util.ArrayList<>();
             for (String s : tagsString.split(",")) {
@@ -295,52 +397,53 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             }
         }
 
-        // Construct the Event object
+        // Build event model
         Event eventData = new Event();
         eventData.title = title;
         eventData.date = dateStr;
-        // Use entered times if available, else try to preserve existing
-        String timeString = (fromTime.isEmpty() || toTime.isEmpty()) ? binding.tvTimePicker.getText().toString() : (fromTime + " - " + toTime);
+
+        String timeString = (fromTime.isEmpty() || toTime.isEmpty())
+                ? binding.tvTimePicker.getText().toString()
+                : fromTime + " - " + toTime;
         eventData.time = timeString;
+
         eventData.locationName = venue;
         eventData.locationAddress = address;
         eventData.description = description;
         eventData.price = price;
         eventData.tags = tagsList;
 
-        // Handle images: use new URI if picked, otherwise keep existing (if editing)
-        // NOTE: In a real app, you upload the new URI to Storage here.
+        // Poster/banner image
         if (!posterUriString.isEmpty()) {
             eventData.eventPosterUrl = posterUriString;
         }
-        // If editing, we want to preserve the old image if user didn't pick a new one.
-        // But since we populated posterUriString in loadEventData, it should hold the old URL if not changed.
 
         eventData.organizerId = currentUserId;
         if (organizerProfile != null) {
             eventData.organizer = organizerProfile.getName();
             eventData.organizerIconUrl = organizerProfile.getProfilePictureUrl();
         }
-        eventData.isTrending = false; // Or keep existing if editing
 
-        // SAVE or UPDATE based on mode
+        eventData.isTrending = false;
+
+        // Update or Create
         if (eventIdToEdit != null) {
-            // --- UPDATE EXISTING ---
             db.collection("events").document(eventIdToEdit)
-                    .set(eventData) // .set() overwrites. Use .update() for partial, but we want full overwrite here with new data.
+                    .set(eventData)
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "Event Updated!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
-                    .addOnFailureListener(e -> Toast.makeText(this, "Error updating event", Toast.LENGTH_SHORT).show());
+                    .addOnFailureListener(e ->
+                            Toast.makeText(this, "Error updating event", Toast.LENGTH_SHORT).show());
         } else {
-            // --- CREATE NEW ---
             db.collection("events").add(eventData)
                     .addOnSuccessListener(documentReference -> {
                         Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
-                    .addOnFailureListener(e -> Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
+                    .addOnFailureListener(e ->
+                            Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
         }
     }
 }

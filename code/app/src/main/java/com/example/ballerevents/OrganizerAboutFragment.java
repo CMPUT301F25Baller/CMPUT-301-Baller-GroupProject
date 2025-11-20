@@ -21,20 +21,33 @@ import com.google.firebase.firestore.ListenerRegistration;
 import java.util.List;
 
 /**
- * Fragment responsible for displaying the organizer's "About Me" information.
+ * Fragment that displays the authenticated organizer’s profile information,
+ * including the "About Me" section and a dynamic list of interest chips.
  * <p>
- * This fragment listens to the currently authenticated user’s Firestore document
- * and updates UI elements (About Me text and interests chip group) in real time.
- * It also provides a button to launch the EditProfileActivity.
+ * This fragment attaches a real-time Firestore listener to the user's
+ * document, keeping the profile information updated automatically. A button
+ * is provided to navigate to {@link EditProfileActivity} for editing profile
+ * details.
+ * </p>
  */
 public class OrganizerAboutFragment extends Fragment {
 
+    /** Logging tag for debugging Firestore updates. */
     private static final String TAG = "OrganizerAboutFragment";
 
+    /** ViewBinding for interacting with fragment UI elements. */
     private FragmentOrganizerAboutBinding binding;
+
+    /** Firestore instance for reading profile data. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth used to retrieve the currently authenticated user. */
     private FirebaseAuth mAuth;
+
+    /** UID of the currently authenticated user (organizer). */
     private String currentUserId;
+
+    /** Active listener registration for the user document. */
     private ListenerRegistration userListener;
 
     @Override
@@ -51,17 +64,24 @@ public class OrganizerAboutFragment extends Fragment {
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container,
+            @Nullable Bundle savedInstanceState
+    ) {
         // Inflate the layout using ViewBinding
         binding = FragmentOrganizerAboutBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(
+            @NonNull View view,
+            @Nullable Bundle savedInstanceState
+    ) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Set up the edit button
+        // Edit Profile button opens EditProfileActivity
         binding.btnEditProfile.setOnClickListener(v -> {
             Intent intent = new Intent(getActivity(), EditProfileActivity.class);
             startActivity(intent);
@@ -71,7 +91,8 @@ public class OrganizerAboutFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        // Attach listener in onStart
+
+        // Attach Firestore listener when fragment becomes visible
         if (currentUserId != null) {
             loadOrganizerInfo();
         } else {
@@ -82,12 +103,17 @@ public class OrganizerAboutFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        // Detach listener in onStop
+
+        // Detach Firestore listener to avoid memory leaks
         if (userListener != null) {
             userListener.remove();
         }
     }
 
+    /**
+     * Attaches a real-time listener to the organizer's Firestore document and
+     * updates the UI whenever profile data changes.
+     */
     private void loadOrganizerInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -100,13 +126,15 @@ public class OrganizerAboutFragment extends Fragment {
 
             if (snapshot != null && snapshot.exists()) {
                 UserProfile userProfile = snapshot.toObject(UserProfile.class);
+
                 if (userProfile != null && binding != null) {
-                    // Set About Me text
+                    // Update About Me
                     binding.tvAboutMe.setText(userProfile.getAboutMe());
 
-                    // Populate Interests
-                    binding.chipGroupInterests.removeAllViews(); // Clear old chips
+                    // Update Interests chip group
+                    binding.chipGroupInterests.removeAllViews();
                     List<String> interests = userProfile.getInterests();
+
                     if (interests != null) {
                         for (String interest : interests) {
                             Chip chip = new Chip(getContext());
@@ -125,6 +153,7 @@ public class OrganizerAboutFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // Clear the binding reference
+        // Avoid memory leaks by clearing binding reference
+        binding = null;
     }
 }

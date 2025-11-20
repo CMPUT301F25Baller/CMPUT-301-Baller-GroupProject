@@ -11,14 +11,27 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
- * Activity displayed after login where the user selects their primary role.
- * This selection updates their user document in Firestore and navigates them
- * to the appropriate main activity (Entrant, Organizer, or Admin).
+ * Activity displayed immediately after a successful login where the user selects
+ * their primary role in the app.
+ * <p>
+ * The selected role is written to the user's Firestore document (field
+ * {@code "role"} in the {@code users} collection) and the user is then
+ * navigated to the appropriate main activity:
+ * <ul>
+ *     <li>Entrant → {@link EntrantMainActivity}</li>
+ *     <li>Organizer → {@link OrganizerActivity}</li>
+ *     <li>Admin → {@link AdminMainActivity}</li>
+ * </ul>
  */
 public class RoleSelectionActivity extends AppCompatActivity {
 
+    /** Logging tag for role selection flow. */
     private static final String TAG = "RoleSelectionActivity";
+
+    /** Firestore instance used to update the user's role. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth instance for retrieving the current user ID. */
     private FirebaseAuth mAuth;
 
     @Override
@@ -29,8 +42,8 @@ public class RoleSelectionActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
+        // If no authenticated user is present, return to the login screen.
         if (mAuth.getCurrentUser() == null) {
-            // No user logged in, go back to login
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
@@ -54,11 +67,11 @@ public class RoleSelectionActivity extends AppCompatActivity {
     }
 
     /**
-     * Updates the user's "role" field in their Firestore document and then
-     * navigates them to the corresponding main activity.
+     * Persists the chosen role in the current user's Firestore document and
+     * then starts the given activity.
      *
-     * @param role The role string to save (e.g., "entrant", "organizer").
-     * @param activityClass The .class of the Activity to navigate to.
+     * @param role          Role string to be stored (e.g., {@code "entrant"}, {@code "organizer"}, {@code "admin"}).
+     * @param activityClass Target activity class to navigate to after the role is set.
      */
     private void selectRole(String role, Class<?> activityClass) {
         String userId = mAuth.getCurrentUser().getUid();
@@ -68,7 +81,8 @@ public class RoleSelectionActivity extends AppCompatActivity {
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "User role set to: " + role);
                     startActivity(new Intent(RoleSelectionActivity.this, activityClass));
-                    finish(); // Optional: finish so they can't come back to role selection
+                    // Prevent navigating back to role selection
+                    finish();
                 })
                 .addOnFailureListener(e -> {
                     Log.w(TAG, "Error setting role", e);

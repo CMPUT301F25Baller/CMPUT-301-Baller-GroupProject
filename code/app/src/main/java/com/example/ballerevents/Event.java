@@ -6,63 +6,82 @@ import com.google.firebase.firestore.DocumentId;
 import java.util.List;
 
 /**
- * Represents a single event document from the Firestore "events" collection.
- * This class is a "POJO" (Plain Old Java Object) used by Firestore for
- * serializing and deserializing data. It also implements Parcelable to be
- * passed between Android activities via Intents, although only the ID is
- * typically passed.
+ * Represents a single event document from the Firestore {@code "events"} collection.
+ * <p>
+ * This class is a standard POJO used by Firestore for serialization and
+ * deserialization. It also implements {@link Parcelable} so that event objects
+ * can be passed between Android activities when needed.
+ * </p>
  */
 public class Event implements Parcelable {
+
     /**
-     * The unique Firestore document ID.
-     * This field is automatically populated by Firestore when
-     * the object is deserialized.
+     * Unique Firestore document ID for this event.
+     * <p>
+     * This value is automatically populated by Firestore when the object is
+     * deserialized through {@code @DocumentId}.
+     * </p>
      */
     @DocumentId
-    private String id; // Changed to String and added @DocumentId
+    private String id;
 
-    // Fields are public for direct serialization by Firestore.
+    // -------------------------------------------------------------------------
+    // Public fields used directly by Firestore during serialization.
+    // -------------------------------------------------------------------------
+
     /** The main title of the event. */
     public String title;
+
     /** The date of the event (e.g., "November 15 2023"). */
     public String date;
-    /** The time of the event (e.g., "8:00PM - 11:00PM"). */
+
+    /** The scheduled time range of the event (e.g., "8:00PM - 11:00PM"). */
     public String time;
-    /** The name of the venue (e.g., "Gala Convention Center"). */
+
+    /** The display name of the event venue. */
     public String locationName;
-    /** The full address of the venue. */
+
+    /** The full street address of the venue. */
     public String locationAddress;
-    /** The price of the event (e.g., "$25" or "Free"). */
+
+    /** The ticket price or entry cost for the event. */
     public String price;
-    /** A list of tags for filtering (e.g., "Music", "Pop"). */
+
+    /** A list of classification tags for filtering and search. */
     public List<String> tags;
-    /** The display name of the event organizer. */
+
+    /** The display name of the organizer hosting the event. */
     public String organizer;
-    /** The Firestore document ID of the organizer (links to the "users" collection). */
+
+    /** Firestore document ID of the organizer (from the {@code users} collection). */
     public String organizerId;
-    /** A detailed description of the event. */
+
+    /** A descriptive summary or detailed information about the event. */
     public String description;
-    /** A URL (e.g., in Firebase Storage) for the event's main poster. */
+
+    /** URL pointing to the event’s main poster image. */
     public String eventPosterUrl;
-    /** A URL for the organizer's profile picture. */
+
+    /** URL for the organizer's profile image or icon. */
     public String organizerIconUrl;
-    /** A boolean flag to determine if the event appears in the "Trending" list. */
+
+    /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
 
+    // -------------------------------------------------------------------------
+    // Constructors
+    // -------------------------------------------------------------------------
+
     /**
-     * Empty constructor required for Firestore deserialization.
-     * Do not use this directly.
+     * Empty constructor required for Firestore automatic deserialization.
+     * <p>Do not remove or modify.</p>
      */
-    // --- Empty constructor REQUIRED for Firestore ---
     public Event() {}
 
-    // --- Parcelable Implementation ---
-    // (This is only needed if you pass the *entire* object between activities)
-    // (We pass the ID, but good to keep this)
-
     /**
-     * Constructor for recreating an Event from a Parcel.
-     * @param in The Parcel to read event data from.
+     * Reconstructs an Event from a Parcel.
+     *
+     * @param in Parcel containing serialized event data
      */
     protected Event(Parcel in) {
         id = in.readString();
@@ -80,6 +99,10 @@ public class Event implements Parcelable {
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
     }
+
+    // -------------------------------------------------------------------------
+    // Parcelable Implementation
+    // -------------------------------------------------------------------------
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
@@ -104,6 +127,7 @@ public class Event implements Parcelable {
         return 0;
     }
 
+    /** Parcelable creator for generating Event instances from a Parcel. */
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
         public Event createFromParcel(Parcel in) {
@@ -116,35 +140,56 @@ public class Event implements Parcelable {
         }
     };
 
-    // --- Getters ---
-    // (Firestore uses public fields or getters)
-    /** @return The event's unique Firestore document ID. */
+    // -------------------------------------------------------------------------
+    // Getters
+    // -------------------------------------------------------------------------
+
+    /** @return the Firestore document ID of this event. */
     public String getId() { return id; }
-    /** @return The main title of the event. */
+
+    /** @return the event title. */
     public String getTitle() { return title; }
-    /** @return The date of the event (e.g., "November 15 2023"). */
+
+    /** @return the event date. */
     public String getDate() { return date; }
-    /** @return The time of the event (e.g., "8:00PM - 11:00PM"). */
+
+    /** @return the event time or time range. */
     public String getTime() { return time; }
-    /** @return The name of the venue (e.g., "Gala Convention Center"). */
+
+    /** @return the display name of the event venue. */
     public String getLocationName() { return locationName; }
-    /** @return The full address of the venue. */
+
+    /** @return the full venue address. */
     public String getLocationAddress() { return locationAddress; }
-    /** @return The price of the event (e.g., "$25" or "Free"). */
+
+    /** @return the event price text. */
     public String getPrice() { return price; }
-    /** @return A list of tags for filtering (e.g., "Music", "Pop"). */
+
+    /** @return list of tag labels associated with the event. */
     public List<String> getTags() { return tags; }
-    /** @return The display name of the event organizer. */
+
+    /** @return display name of the event organizer. */
     public String getOrganizer() { return organizer; }
-    /** @return The Firestore document ID of the organizer (links to the "users" collection). */
+
+    /** @return Firestore ID referencing the organizer in the users collection. */
     public String getOrganizerId() { return organizerId; }
-    /** @return A detailed description of the event. */
+
+    /** @return full event description. */
     public String getDescription() { return description; }
-    /** @return A URL for the event's main poster. */
+
+    /** @return URL for the event poster image. */
     public String getEventPosterUrl() { return eventPosterUrl; }
-    /** @return A URL for the organizer's profile picture. */
+
+    /** @return URL for the organizer avatar/icon. */
     public String getOrganizerIconUrl() { return organizerIconUrl; }
+
+    /**
+     * Sets the Firestore document ID for this event.
+     *
+     * @param id new Firestore ID value
+     */
     public void setId(String id) { this.id = id; }
-    /** @return True if the event is a "Trending" event, false otherwise. */
+
+    /** @return true if the event is marked as trending. */
     public boolean isTrending() { return isTrending; }
 }

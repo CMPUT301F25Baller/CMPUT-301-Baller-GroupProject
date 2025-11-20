@@ -6,9 +6,10 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 /**
- * Pager adapter used by {@link OrganizerActivity} to manage the three main
- * organizer-related fragments displayed inside a ViewPager2:
+ * Adapter for supplying organizer-related fragments to the ViewPager2
+ * in {@link OrganizerActivity}.
  *
+ * <p>The pager displays three fragments:</p>
  * <ul>
  *     <li><b>About</b> – {@link OrganizerAboutFragment}</li>
  *     <li><b>Event</b> – {@link OrganizerEventFragment}</li>
@@ -16,47 +17,48 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
  * </ul>
  *
  * <p>
- * The adapter does not pass arguments to fragments because they independently
- * obtain the current organizer ID from FirebaseAuth. This keeps the pager
- * simple and avoids unnecessary coupling.
+ * Fragments do not receive arguments through this adapter. Each fragment
+ * independently queries FirebaseAuth to obtain the current organizer ID,
+ * keeping this adapter simple and minimally coupled.
+ * </p>
  */
 public class OrganizerPagerAdapter extends FragmentStateAdapter {
 
-    // The organizerId is no longer needed here,
-    // as the fragments will get it from FirebaseAuth.
-
     /**
-     * Creates a new adapter for the organizer ViewPager.
+     * Constructs the adapter used by the organizer ViewPager.
      *
-     * @param fa the hosting {@link FragmentActivity}
+     * @param fa The hosting {@link FragmentActivity}.
      */
     public OrganizerPagerAdapter(@NonNull FragmentActivity fa) {
         super(fa);
     }
 
     /**
-     * Creates a new fragment instance based on the selected tab index.
+     * Creates and returns a new fragment instance based on the requested tab index.
      *
-     * @param position index of the requested fragment
-     * @return the corresponding Fragment instance
+     * @param position The index of the selected page (0–2).
+     * @return The fragment corresponding to the given position.
      */
     @NonNull
     @Override
     public Fragment createFragment(int position) {
-        // We no longer call newInstance(organizerId)
-        // Just create new instances.
         switch (position) {
-            case 0: return new OrganizerAboutFragment();
-            case 1: return new OrganizerEventFragment();
-            default: return new OrganizerFollowingFragment();
+            case 0:
+                return new OrganizerAboutFragment();
+            case 1:
+                return new OrganizerEventFragment();
+            default:
+                return new OrganizerFollowingFragment();
         }
     }
 
     /**
-     * @return the number of pages hosted by this adapter (always 3)
+     * Returns the number of pages managed by this adapter.
+     *
+     * @return Always 3 ("About", "Event", "Following").
      */
     @Override
     public int getItemCount() {
-        return 3; // "About", "Event", "Following"
+        return 3;
     }
 }

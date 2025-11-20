@@ -13,7 +13,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
-// Import ViewBinding
 import com.example.ballerevents.databinding.FragmentOrganizerEventBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -22,25 +21,44 @@ import com.google.firebase.firestore.Query;
 import java.util.List;
 
 /**
- * Fragment that displays all events created by the currently authenticated organizer.
+ * Fragment displaying all events created by the currently authenticated organizer.
  * <p>
- * This fragment loads events from Firestore where <code>organizerId</code> matches the
- * current user ID. Clicking an event opens the editor (OrganizerEventCreationActivity)
- * instead of the read-only details view.
+ * This screen is accessible through the organizer dashboard and shows event cards
+ * in a vertical list using {@link TrendingEventAdapter}. When an organizer taps
+ * an event, the fragment navigates to {@link OrganizerEventCreationActivity} in
+ * edit mode, passing the Firestore document ID.
+ * </p>
+ *
+ * <p>The fragment automatically refreshes events in {@link #onResume()} so any
+ * changes made in the editor screen are immediately reflected when returning.</p>
  */
 public class OrganizerEventFragment extends Fragment {
 
+    /** Logging tag for debugging event loading. */
     private static final String TAG = "OrganizerEventFragment";
 
+    /** ViewBinding for accessing layout views. */
     private FragmentOrganizerEventBinding binding;
+
+    /** Firestore instance for reading event documents. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth instance for identifying the current organizer. */
     private FirebaseAuth mAuth;
+
+    /** Adapter used to render the organizer's event cards. */
     private TrendingEventAdapter adapter;
+
+    /** ID of the currently authenticated organizer. */
     private String currentUserId;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(
+            @NonNull LayoutInflater inflater,
+            @Nullable ViewGroup container,
+            @Nullable Bundle savedInstanceState
+    ) {
         binding = FragmentOrganizerEventBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -50,13 +68,17 @@ public class OrganizerEventFragment extends Fragment {
         super.onCreate(savedInstanceState);
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
+
         if (mAuth.getCurrentUser() != null) {
             currentUserId = mAuth.getCurrentUser().getUid();
         }
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    public void onViewCreated(
+            @NonNull View view,
+            @Nullable Bundle savedInstanceState
+    ) {
         super.onViewCreated(view, savedInstanceState);
         setupRecyclerView();
     }
@@ -64,7 +86,8 @@ public class OrganizerEventFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Reload events when returning from the Create/Edit screen
+
+        // Reload list after returning from creation/editing screens
         if (currentUserId != null) {
             loadOrganizerEvents();
         } else {
@@ -74,12 +97,13 @@ public class OrganizerEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Sets up the RecyclerView and attaches a {@link TrendingEventAdapter} where
+     * clicking an item opens the event editor activity.
+     */
     private void setupRecyclerView() {
-        // We reuse TrendingEventAdapter since it's just a card
         adapter = new TrendingEventAdapter(event -> {
-            // --- UPDATED CLICK LOGIC ---
-            // When an organizer clicks their own event, open the EDITOR (Creation Activity)
-            // passing the event ID so it knows to load data.
+            // Organizer opens the editor for their own event
             Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
             intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
             startActivity(intent);
@@ -89,6 +113,10 @@ public class OrganizerEventFragment extends Fragment {
         binding.rvOrganizerEvents.setAdapter(adapter);
     }
 
+    /**
+     * Loads all events from Firestore where {@code organizerId} matches the current organizer.
+     * Updates the RecyclerView and handles empty or failure states.
+     */
     private void loadOrganizerEvents() {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.tvNoEvents.setVisibility(View.GONE);
@@ -99,6 +127,7 @@ public class OrganizerEventFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     binding.progressBar.setVisibility(View.GONE);
+
                     List<Event> events = queryDocumentSnapshots.toObjects(Event.class);
 
                     if (events.isEmpty()) {
@@ -106,6 +135,7 @@ public class OrganizerEventFragment extends Fragment {
                     } else {
                         adapter.submitList(events);
                     }
+
                     Log.d(TAG, "Loaded " + events.size() + " events for organizer " + currentUserId);
                 })
                 .addOnFailureListener(e -> {
@@ -119,6 +149,6 @@ public class OrganizerEventFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        binding = null; // Avoid memory leaks
     }
 }

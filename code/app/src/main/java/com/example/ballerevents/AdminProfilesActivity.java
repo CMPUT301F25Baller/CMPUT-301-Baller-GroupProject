@@ -18,38 +18,55 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /**
- * Admin list of user profiles. Loads users from Firestore into
- * {@link AdminProfilesAdapter}, supports opening a profile for actions,
- * and provides a delete flow that removes the user document and reloads the list.
+ * Displays all user profiles for the Admin role.
  *
- * UI:
- *  - Toolbar back
- *  - RecyclerView of profiles
- *  - Progress indicator while loading
+ * <p>This screen uses Firestore to load all documents from the "users"
+ * collection and displays them using {@link AdminProfilesAdapter}.
+ *
+ * <p>Admin actions:
+ * <ul>
+ *     <li>View the full list of users</li>
+ *     <li>Delete a user document permanently</li>
+ *     <li>(Future) Open a full profile detail screen for moderation</li>
+ * </ul>
+ *
+ * <p>The UI provides:
+ * <ul>
+ *     <li>Toolbar with back navigation</li>
+ *     <li>A RecyclerView showing each user profile</li>
+ *     <li>A progress indicator shown during Firestore loading</li>
+ * </ul>
+ *
+ * <p>This Activity is strictly for admin moderation and does not alter
+ * the user authentication state or modify events.
  */
-
-
 public class AdminProfilesActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminProfilesActivity";
+
     private ActivityAdminProfilesBinding binding;
     private FirebaseFirestore db;
 
     private AdminProfilesAdapter adapter;
     private final List<UserProfile> data = new ArrayList<>();
 
-    // Launcher to handle result from a (hypothetical) ProfileDetailsActivity
+    /**
+     * Result launcher to handle future navigation to a profile details screen.
+     * Currently unused since the profile detail screen is not implemented.
+     */
     private final ActivityResultLauncher<Intent> detailLauncher =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    String deletedId = result.getData().getStringExtra("EXTRA_PROFILE_ID"); // Use a constant
-                    if (deletedId != null) {
-                        // We will delete the user and then reload from Firestore
-                        deleteUserFromFirestore(deletedId);
-                    }
-                }
-            });
+            registerForActivityResult(
+                    new ActivityResultContracts.StartActivityForResult(),
+                    result -> {
+                        if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                            String deletedId = result.getData().getStringExtra("EXTRA_PROFILE_ID");
+                            if (deletedId != null) {
+                                deleteUserFromFirestore(deletedId);
+                            }
+                        }
+                    });
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -59,24 +76,41 @@ public class AdminProfilesActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
 
-        binding.topAppBar.setTitle("Profiles");
-        binding.topAppBar.setNavigationOnClickListener(v -> finish());
-
-        binding.recycler.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AdminProfilesAdapter(this::openDetails);
-        binding.recycler.setAdapter(adapter);
-
+        setupToolbar();
+        setupRecycler();
         loadAllProfiles();
     }
 
+    /**
+     * Configures the top AppBar for back navigation and screen title.
+     */
+    private void setupToolbar() {
+        binding.topAppBar.setTitle("Profiles");
+        binding.topAppBar.setNavigationOnClickListener(v -> finish());
+    }
+
+    /**
+     * Initializes the RecyclerView and its adapter for listing user profiles.
+     */
+    private void setupRecycler() {
+        binding.recycler.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new AdminProfilesAdapter(this::openDetails);
+        binding.recycler.setAdapter(adapter);
+    }
+
+    /**
+     * Loads all user documents from the Firestore "users" collection.
+     * Displays a loading indicator while data is fetched.
+     */
     private void loadAllProfiles() {
         binding.progress.setVisibility(View.VISIBLE);
+
         db.collection("users")
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(snapshot -> {
                     binding.progress.setVisibility(View.GONE);
                     data.clear();
-                    data.addAll(queryDocumentSnapshots.toObjects(UserProfile.class));
+                    data.addAll(snapshot.toObjects(UserProfile.class));
                     adapter.submitList(new ArrayList<>(data));
                 })
                 .addOnFailureListener(e -> {
@@ -86,29 +120,36 @@ public class AdminProfilesActivity extends AppCompatActivity {
                 });
     }
 
-    private void openDetails(UserProfile p) {
-        // This launches a ProfileDetailsActivity which was not provided.
-        // We can just show a delete dialog here for now.
+    /**
+     * Called when the admin selects a profile from the list.
+     * Currently shows a delete confirmation dialog directly.
+     *
+     * @param profile the profile selected by the admin
+     */
+    private void openDetails(UserProfile profile) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete User?")
-                .setMessage("Delete user " + p.getName() + "? This is permanent.")
-                .setPositiveButton("Delete", (d, w) -> deleteUserFromFirestore(p.getId()))
+                .setMessage("Delete user " + profile.getName() + "? This is permanent.")
+                .setPositiveButton("Delete", (d, w) -> deleteUserFromFirestore(profile.getId()))
                 .setNegativeButton("Cancel", null)
                 .show();
 
-        // TODO: When ProfileDetailsActivity exists, use this code:
+        // Future Feature:
+        // Launch a full detail screen where the admin can moderate more fields.
         /*
         Intent i = new Intent(this, ProfileDetailsActivity.class);
-        i.putExtra("EXTRA_PROFILE_ID", p.getId());
-        i.putExtra("EXTRA_PROFILE_NAME", p.getName());
-        i.putExtra("EXTRA_PROFILE_AVATAR_URL", p.getProfilePictureUrl());
-        i.putExtra("EXTRA_PROFILE_BIO", p.getAboutMe());
-        i.putExtra("EXTRA_PROFILE_FOLLOWERS", p.getFollowerCount());
-        i.putExtra("EXTRA_PROFILE_FOLLOWING", p.getFollowingCount());
+        i.putExtra("EXTRA_PROFILE_ID", profile.getId());
+        ...
         detailLauncher.launch(i);
         */
     }
 
+    /**
+     * Deletes the Firestore document for the given user ID.
+     * After deletion, the profile list is reloaded.
+     *
+     * @param userId Firestore user document ID
+     */
     private void deleteUserFromFirestore(String userId) {
         if (userId == null) return;
 
@@ -116,7 +157,7 @@ public class AdminProfilesActivity extends AppCompatActivity {
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "User deleted", Toast.LENGTH_SHORT).show();
-                    loadAllProfiles(); // Reload the list
+                    loadAllProfiles();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error deleting user", Toast.LENGTH_SHORT).show();

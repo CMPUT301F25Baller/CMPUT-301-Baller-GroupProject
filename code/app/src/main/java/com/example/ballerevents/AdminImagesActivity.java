@@ -19,23 +19,43 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
+
 /**
- * Grid gallery of event posters. Loads events from Firestore and displays
- * their poster URLs as thumbnails. Tap to preview; long-press prompts
- * to clear the poster URL (does not delete the event).
+ * Activity that displays a grid gallery of event poster images for administrators.
+ *
+ * <p>This screen fetches all events from Firestore and displays their
+ * {@code eventPosterUrl} fields in a 3-column grid via {@link AdminImagesAdapter}.
+ *
+ * <ul>
+ *     <li><b>Tap</b> an image → Opens a large preview dialog.</li>
+ *     <li><b>Long-press</b> → Prompts the admin to clear the poster URL
+ *         (does not delete the event itself).</li>
+ * </ul>
+ *
+ * <p>This is useful for administrators needing to inspect or clean up event posters.
  */
-
-
 public class AdminImagesActivity extends AppCompatActivity implements AdminImagesAdapter.ImageActions {
 
     private static final String TAG = "AdminImagesActivity";
+
+    /** RecyclerView that shows the poster thumbnails. */
     private RecyclerView recycler;
+
+    /** Progress spinner shown while loading Firestore data. */
     private View progress;
+
+    /** Adapter responsible for rendering poster thumbnails. */
     private AdminImagesAdapter adapter;
+
+    /** Firestore instance for loading and updating events. */
     private FirebaseFirestore db;
 
+    /** Cache of all events loaded from Firestore. */
     private final List<Event> allEvents = new ArrayList<>();
 
+    /**
+     * Initializes toolbar, RecyclerView, adapter, and begins loading event images.
+     */
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,6 +80,11 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
         loadImages();
     }
 
+    /**
+     * Loads all events from Firestore and displays their poster URLs in the grid.
+     * <p>The method updates a local cache and displays a progress spinner
+     * while asynchronous Firestore loading is in progress.</p>
+     */
     private void loadImages() {
         progress.setVisibility(View.VISIBLE);
         db.collection("events")
@@ -76,11 +101,20 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
                 });
     }
 
-    // === ImageActions ===
+    // -------------------------------------------------------------------------
+    // ImageActions implementation
+    // -------------------------------------------------------------------------
 
+    /**
+     * Shows a dialog containing a large preview of the event's poster image.
+     *
+     * @param event the event whose poster should be previewed
+     */
     @Override
     public void onPreview(Event event) {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null, false);
+        View dialogView = LayoutInflater.from(this)
+                .inflate(R.layout.dialog_image_preview, null, false);
+
         ImageView iv = dialogView.findViewById(R.id.ivPreview);
 
         Glide.with(this)
@@ -94,24 +128,37 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
                 .show();
     }
 
+    /**
+     * Prompts the admin to confirm clearing the event's poster URL.
+     *
+     * <p>This does not delete the event, only resets {@code eventPosterUrl} to an empty string.</p>
+     *
+     * @param event the event whose poster URL is about to be cleared
+     */
     @Override
     public void onDelete(Event event) {
         new AlertDialog.Builder(this)
                 .setTitle("Delete poster?")
-                .setMessage("This will clear the event poster URL for '" + event.getTitle() + "'. It will not delete the event itself.")
-                .setPositiveButton("Clear URL", (d, w) -> {
-                    deletePosterFromEvent(event);
-                })
+                .setMessage("This will clear the event poster URL for '" + event.getTitle() +
+                        "'. It will not delete the event itself.")
+                .setPositiveButton("Clear URL", (d, w) -> deletePosterFromEvent(event))
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
+    /**
+     * Updates the Firestore document by setting {@code eventPosterUrl} to an empty string.
+     *
+     * <p>After successful update, the list of posters is reloaded to reflect the change.</p>
+     *
+     * @param event the event whose poster field should be cleared
+     */
     private void deletePosterFromEvent(Event event) {
         db.collection("events").document(event.getId())
-                .update("eventPosterUrl", "") // Set the URL to an empty string
+                .update("eventPosterUrl", "")
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Poster URL cleared", Toast.LENGTH_SHORT).show();
-                    loadImages(); // Reload the list
+                    loadImages();
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Error clearing URL", Toast.LENGTH_SHORT).show();

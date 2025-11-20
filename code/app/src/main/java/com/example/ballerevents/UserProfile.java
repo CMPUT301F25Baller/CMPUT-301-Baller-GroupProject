@@ -2,87 +2,116 @@ package com.example.ballerevents;
 
 import com.google.firebase.firestore.DocumentId;
 import java.util.List;
-import java.util.ArrayList; // Import ArrayList
+import java.util.ArrayList;
 
 /**
- * Represents a single user document from the Firestore "users" collection.
- * This class is a "POJO" (Plain Old Java Object) used by Firestore for
- * serializing and deserializing data. It holds all information for
- * Entrants, Organizers, and Admins.
+ * Model class representing a user document inside the Firestore
+ * <code>"users"</code> collection. This class acts as a POJO used for
+ * Firestore serialization/deserialization and holds profile information
+ * for Entrants, Organizers, and Admins.
+ *
+ * <p>The fields are intentionally public so Firestore can populate them
+ * without requiring custom getters/setters. Lists are initialized in the
+ * no-argument constructor to avoid null-pointer issues when reading new
+ * or partially-filled Firestore documents.</p>
  */
 public class UserProfile {
 
     /**
-     * The unique Firestore document ID.
-     * This field is automatically populated by Firestore and
-     * should match the user's Firebase Authentication UID.
+     * The Firestore document ID for this user.
+     * <p>
+     * Firestore automatically assigns and injects this value during
+     * deserialization. In this app’s design, this matches the FirebaseAuth UID.
      */
     @DocumentId
     private String id;
 
-    // Fields are public for easy Firestore serialization
-
     /** The user's display name. */
     public String name;
+
     /** The user's email address. */
     public String email;
-    /** The user's role: "entrant", "organizer", or "admin". */
+
+    /** The user's role: e.g. "entrant", "organizer", or "admin". */
     public String role;
-    /** A short biography for the user's profile. */
+
+    /** A short free-form biography shown on profile pages. */
     public String aboutMe;
-    /** A list of the user's selected interests. */
+
+    /** A list of interest tags chosen by the user. */
     public List<String> interests;
-    /** A URL (e.g., in Firebase Storage) for the user's profile picture. */
+
+    /** URL of the user's profile picture (typically from Firebase Storage). */
     public String profilePictureUrl;
-    /** A list of event document IDs this user has applied to (joined the waitlist for). */
+
+    /** IDs of events that this user has applied to or joined. */
     public List<String> appliedEventIds;
-    /** A list of user document IDs that this user is following. */
+
+    /** IDs of user profiles that this user follows. */
     public List<String> followingIds;
-    /** A list of user document IDs that are following this user. */
+
+    /** IDs of user profiles that follow this user. */
     public List<String> followerIds;
 
     /**
-     * Empty constructor required for Firestore deserialization.
-     * Initializes lists to avoid NullPointerExceptions when a new
-     * user document is created.
+     * No-argument constructor required by Firestore.
+     * Initializes list fields to avoid null pointer exceptions when newly
+     * created Firestore documents are missing those fields.
      */
     public UserProfile() {
-        // Initialize lists to avoid NullPointerExceptions
         interests = new ArrayList<>();
         appliedEventIds = new ArrayList<>();
         followingIds = new ArrayList<>();
         followerIds = new ArrayList<>();
     }
 
-    // --- Getters ---
-    // (Good practice, though Firestore can use public fields)
+    // ----------------------------------------------------------------------
+    // Getters
+    // (Firestore can read/write public fields, but getters make the model
+    //  easier to use and safer for UI implementations.)
+    // ----------------------------------------------------------------------
 
-    /** @return The user's unique Firebase Auth UID (which is also their document ID). */
+    /** @return the user’s Firestore document ID (FirebaseAuth UID). */
     public String getId() { return id; }
-    /** @return The user's display name. */
+
+    /** @return the user’s display name. */
     public String getName() { return name; }
-    /** @return The user's email address. */
+
+    /** @return the user’s email address. */
     public String getEmail() { return email; }
-    /** @return The user's role: "entrant", "organizer", or "admin". */
+
+    /** @return the user’s role (entrant/organizer/admin). */
     public String getRole() { return role; }
-    /** @return A short biography for the user's profile. */
+
+    /** @return the biography text the user added to their profile. */
     public String getAboutMe() { return aboutMe; }
-    /** @return A list of the user's selected interests. */
+
+    /** @return the list of interests for this user. */
     public List<String> getInterests() { return interests; }
-    /** @return A URL for the user's profile picture. */
+
+    /** @return URL for the user's profile picture. */
     public String getProfilePictureUrl() { return profilePictureUrl; }
-    /** @return A list of event document IDs this user has applied to. */
+
+    /** @return IDs of events the user has applied to. */
     public List<String> getAppliedEventIds() { return appliedEventIds; }
 
-    // Getters for new lists
-    /** @return A list of user document IDs that this user is following. */
+    /** @return IDs of users this user follows. */
     public List<String> getFollowingIds() { return followingIds; }
-    /** @return A list of user document IDs that are following this user. */
+
+    /** @return IDs of users following this user. */
     public List<String> getFollowerIds() { return followerIds; }
 
-    // Getters for counts (derived from list size)
-    /** @return The number of users this user is following. */
-    public int getFollowingCount() { return (followingIds != null) ? followingIds.size() : 0; }
-    /** @return The number of users who are following this user. */
-    public int getFollowerCount() { return (followerIds != null) ? followerIds.size() : 0; }
+    // ----------------------------------------------------------------------
+    // Derived values
+    // ----------------------------------------------------------------------
+
+    /** @return the number of users this user follows. */
+    public int getFollowingCount() {
+        return (followingIds != null) ? followingIds.size() : 0;
+    }
+
+    /** @return the number of users who follow this user. */
+    public int getFollowerCount() {
+        return (followerIds != null) ? followerIds.size() : 0;
+    }
 }

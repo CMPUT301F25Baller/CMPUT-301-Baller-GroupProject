@@ -2,37 +2,44 @@ package com.example.ballerevents;
 
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide; // <-- IMPORT GLIDE
+import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemEventNearBinding;
 
 /**
- * A RecyclerView.Adapter for displaying {@link Event} objects in a vertical,
- * compact card format (item_event_near.xml). Uses {@link ListAdapter}
- * for efficient list management.
+ * Adapter for displaying a vertical list of nearby events using
+ * {@link ListAdapter} and {@link DiffUtil} for efficient updates.
+ * <p>
+ * Each item is shown using the compact layout {@code item_event_near.xml}.
+ * The adapter supports click events through {@link OnEventClickListener}.
+ * </p>
  */
 public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventViewHolder> {
 
     /**
-     * A click listener interface to handle clicks on an event card.
+     * Listener interface for event card click actions.
      */
     public interface OnEventClickListener {
         /**
-         * Called when an event card is clicked.
-         * @param event The Event object that was clicked.
+         * Callback invoked when an event card is selected.
+         *
+         * @param event The selected {@link Event}.
          */
         void onEventClick(Event event);
     }
 
+    /** Listener instance used to handle click events on items. */
     private final OnEventClickListener onClickListener;
 
     /**
-     * Constructs the adapter.
-     * @param onClickListener The listener to be notified of click events.
+     * Creates a new {@link NearEventAdapter}.
+     *
+     * @param onClickListener A listener to be notified when an event card is clicked.
      */
     public NearEventAdapter(OnEventClickListener onClickListener) {
         super(EventDiffCallback);
@@ -43,7 +50,9 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
     @Override
     public EventViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemEventNearBinding binding = ItemEventNearBinding.inflate(
-                LayoutInflater.from(parent.getContext()), parent, false
+                LayoutInflater.from(parent.getContext()),
+                parent,
+                false
         );
         return new EventViewHolder(binding);
     }
@@ -54,53 +63,63 @@ public class NearEventAdapter extends ListAdapter<Event, NearEventAdapter.EventV
     }
 
     /**
-     * ViewHolder for the "near you" event card.
+     * ViewHolder representing a single "near you" event card.
      */
     static class EventViewHolder extends RecyclerView.ViewHolder {
+
+        /** Binding object for item_event_near.xml. */
         private final ItemEventNearBinding binding;
 
+        /**
+         * Constructs a new ViewHolder.
+         *
+         * @param binding ViewBinding for the event card layout.
+         */
         public EventViewHolder(ItemEventNearBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
 
         /**
-         * Binds an Event object to the view holder's views.
-         * @param event The event data to display.
-         * @param onClickListener The listener to attach to the card.
+         * Binds an {@link Event} model to the card views and attaches a click listener.
+         *
+         * @param event            The event data to display.
+         * @param onClickListener  Listener to invoke when the card is tapped.
          */
         public void bind(Event event, OnEventClickListener onClickListener) {
-            // --- UPDATED BINDING ---
             binding.tvEventTitle.setText(event.getTitle());
             binding.tvEventLocation.setText(event.getLocationName());
             binding.tvEventDate.setText(event.getDate());
             binding.tvEventPrice.setText(event.getPrice());
 
-            // Load image using Glide
+            // Load image via Glide with placeholder/error fallbacks
             Glide.with(binding.getRoot().getContext())
                     .load(event.getEventPosterUrl())
-                    .placeholder(R.drawable.placeholder_image) // You must add this drawable
-                    .error(R.drawable.placeholder_image)       // for placeholders
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.placeholder_image)
                     .into(binding.ivEventImage);
-            // --- END OF UPDATE ---
 
             binding.getRoot().setOnClickListener(v -> onClickListener.onEventClick(event));
         }
     }
 
     /**
-     * DiffUtil.ItemCallback for calculating list differences efficiently.
-     * Compares events based on their unique Firestore document ID.
+     * DiffUtil callback for comparing {@link Event} items.
+     * <p>
+     * Events are considered the same item if they have the same Firestore document ID.
+     * </p>
      */
-    private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
-        @Override
-        public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId().equals(newItem.getId()); // Compare String IDs
-        }
+    private static final DiffUtil.ItemCallback<Event> EventDiffCallback =
+            new DiffUtil.ItemCallback<Event>() {
 
-        @Override
-        public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId().equals(newItem.getId());
-        }
-    };
+                @Override
+                public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+                    return oldItem.getId().equals(newItem.getId());
+                }
+
+                @Override
+                public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+                    return oldItem.getId().equals(newItem.getId());
+                }
+            };
 }

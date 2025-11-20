@@ -24,26 +24,62 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The main home screen for users with the "entrant" role.
- * Displays lists of trending and near-you events, and allows users
- * to search and filter all events.
+ * Main home screen for users with the <b>entrant</b> role.
+ *
+ * <p>This activity is responsible for:
+ * <ul>
+ *     <li>Showing horizontally scrolling lists of trending and "near you" events.</li>
+ *     <li>Providing a search bar and category chips to filter all events.</li>
+ *     <li>Listening in real-time to the {@code events} collection in Firestore.</li>
+ *     <li>Navigating to {@link DetailsActivity} when an event card is tapped.</li>
+ *     <li>Navigating to {@link ProfileActivity} from the top-left menu button.</li>
+ * </ul>
+ *
+ * <p>Data Flow:
+ * <ol>
+ *     <li>{@link #loadAllEvents()} attaches a Firestore snapshot listener on {@code events}.</li>
+ *     <li>All events are cached in {@link #allEvents} for client-side search/filter.</li>
+ *     <li>Trending vs Near-You separation is based on {@link Event#isTrending()}.</li>
+ *     <li>{@link #performSearchAndFilter()} delegates filtering logic to {@code EventFilter.performSearchAndFilter}.</li>
+ * </ol>
  */
 public class EntrantMainActivity extends AppCompatActivity {
 
     private static final String TAG = "EntrantMainActivity";
 
-    /** This binding class is generated from 'activity_main.xml' */
+    /** ViewBinding for the entrant main screen (generated from {@code entrant_main.xml}). */
     private EntrantMainBinding binding;
-    private TrendingEventAdapter trendingAdapter;
-    private NearEventAdapter nearAdapter;
-    private TrendingEventAdapter searchAdapter; // Use Trending layout for search
 
+    /** Adapter for the horizontal "Trending" event list. */
+    private TrendingEventAdapter trendingAdapter;
+
+    /** Adapter for the horizontal "Near You" event list. */
+    private NearEventAdapter nearAdapter;
+
+    /** Adapter for the vertical search results list (uses same card layout as trending). */
+    private TrendingEventAdapter searchAdapter;
+
+    /** Firestore instance used to read the {@code events} collection. */
     private FirebaseFirestore db;
-    private List<Event> allEvents = new ArrayList<>(); // Cache all events for searching
+
+    /**
+     * In-memory cache of all events loaded from Firestore.
+     * Used by the search and chip filtering logic.
+     */
+    private List<Event> allEvents = new ArrayList<>();
+
+    /** Collection of currently selected category tags from the filter chips. */
     private List<String> selectedTags = new ArrayList<>();
 
-    private ListenerRegistration allEventsListener; // Listener registration
+    /** Active Firestore snapshot listener for the {@code events} collection. */
+    private ListenerRegistration allEventsListener;
 
+    /**
+     * Called when the activity is first created.
+     * Sets up ViewBinding, Firestore, RecyclerViews, and UI listeners.
+     *
+     * @param savedInstanceState prior state, if any (unused here)
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,12 +93,19 @@ public class EntrantMainActivity extends AppCompatActivity {
         setupListeners();
     }
 
+    /**
+     * Starts the real-time event listener every time the activity becomes visible.
+     */
     @Override
     protected void onStart() {
         super.onStart();
         loadAllEvents(); // Attach listener in onStart
     }
 
+    /**
+     * Removes the Firestore snapshot listener when the activity is stopped
+     * to avoid leaks and unnecessary updates.
+     */
     @Override
     protected void onStop() {
         super.onStop();
@@ -72,17 +115,27 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Initializes the RecyclerViews for trending, near-you, and search results.
+     * Configures the RecyclerViews for:
+     * <ul>
+     *     <li>Trending events (horizontal)</li>
+     *     <li>Near-You events (horizontal)</li>
+     *     <li>Search results (vertical)</li>
+     * </ul>
+     *
+     * Adapters are initialized with a click callback that opens
+     * {@link DetailsActivity} for the selected event.
      */
     private void setupRecyclerViews() {
         // Trending
         trendingAdapter = new TrendingEventAdapter(this::launchDetailsActivity);
-        binding.rvTrending.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvTrending.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvTrending.setAdapter(trendingAdapter);
 
         // Near You
         nearAdapter = new NearEventAdapter(this::launchDetailsActivity);
-        binding.rvNearYou.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        binding.rvNearYou.setLayoutManager(
+                new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         binding.rvNearYou.setAdapter(nearAdapter);
 
         // Search
@@ -92,9 +145,15 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Attaches a snapshot listener to the "events" collection in Firestore.
-     * The list of all events, trending events, and near-you events will
-     * update in real-time.
+     * Attaches a real-time snapshot listener to the Firestore {@code events} collection.
+     *
+     * <p>Behavior:
+     * <ul>
+     *     <li>Removes any existing listener before attaching a new one.</li>
+     *     <li>Orders events by title for stable UI ordering.</li>
+     *     <li>Splits results into "Trending" and "Near You" lists based on {@link Event#isTrending()}.</li>
+     *     <li>Re-applies search/filter conditions after every snapshot via {@link #performSearchAndFilter()}.</li>
+     * </ul>
      */
     private void loadAllEvents() {
         if (allEventsListener != null) {
@@ -119,7 +178,11 @@ public class EntrantMainActivity extends AppCompatActivity {
                         if (event == null) continue;
 
                         allEvents.add(event);
-                        if (event.isTrending()) trending.add(event); else near.add(event);
+                        if (event.isTrending()) {
+                            trending.add(event);
+                        } else {
+                            near.add(event);
+                        }
                     }
 
                     // Submit copies to avoid accidental adapter list mutation issues
@@ -134,9 +197,15 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Sets up click listeners for the profile menu, search bar, and filter chips.
+     * Configures UI listeners:
+     * <ul>
+     *     <li>Menu button → opens {@link ProfileActivity}.</li>
+     *     <li>Search EditText → triggers {@link #performSearchAndFilter()} on text change.</li>
+     *     <li>Category chips → toggles tags and re-filters.</li>
+     * </ul>
      */
     private void setupListeners() {
+        // Open Profile screen when the menu button is tapped
         binding.btnMenu.setOnClickListener(v -> {
             startActivity(new Intent(this, ProfileActivity.class));
         });
@@ -153,7 +222,7 @@ public class EntrantMainActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {}
         });
 
-        // Chip Listeners
+        // Chip Listeners for event categories
         setupChipListener(binding.chipMusic);
         setupChipListener(binding.chipExhibition);
         setupChipListener(binding.chipStandUp);
@@ -161,8 +230,12 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Helper method to add a checked-change listener to a filter chip.
-     * @param chip The Chip to attach the listener to.
+     * Helper method that attaches a checked-change listener to a single filter chip.
+     *
+     * <p>When checked, the chip's text is added to {@link #selectedTags}.
+     * When unchecked, it is removed. The filter is reapplied immediately.</p>
+     *
+     * @param chip the {@link Chip} to configure
      */
     private void setupChipListener(Chip chip) {
         // Use setOnCheckedChangeListener for filter chips
@@ -178,8 +251,13 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Toggles view visibility and applies the current search query and tag filters
-     * using the {@link EventFilter} helper class.
+     * Applies search and tag filters to the cached events and updates the UI:
+     * <ul>
+     *     <li>If no query and no tags are active, shows the "original content" layout.</li>
+     *     <li>Otherwise, shows the search results container.</li>
+     *     <li>Filtering logic is delegated to {@link EventFilter#performSearchAndFilter(List, String, List)}.</li>
+     *     <li>Displays or hides a "No Results" message accordingly.</li>
+     * </ul>
      */
     private void performSearchAndFilter() {
         // Get the raw query. The filter class will normalize it.
@@ -198,7 +276,8 @@ public class EntrantMainActivity extends AppCompatActivity {
 
         // --- REFACTORED PART ---
         // Call the static helper method from our testable class
-        List<Event> filteredResults = EventFilter.performSearchAndFilter(allEvents, query, selectedTags);
+        List<Event> filteredResults =
+                EventFilter.performSearchAndFilter(allEvents, query, selectedTags);
         // --- END OF REFACTOR ---
 
         searchAdapter.submitList(filteredResults);
@@ -212,8 +291,9 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Navigates to the DetailsActivity for a specific event.
-     * @param event The Event object to display details for.
+     * Launches {@link DetailsActivity} for the given event.
+     *
+     * @param event the {@link Event} whose details should be displayed
      */
     private void launchDetailsActivity(Event event) {
         Intent intent = new Intent(this, DetailsActivity.class);

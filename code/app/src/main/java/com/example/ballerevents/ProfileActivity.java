@@ -14,29 +14,55 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query; // Import Query
-import com.google.firebase.firestore.FieldPath; // Import FieldPath
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.FieldPath;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Displays the current user's profile information, including their "About Me,"
- * "Interests," and a list of events they have joined.
- * Data is loaded in real-time from Firestore.
+ * Activity displaying the authenticated user's profile, including:
+ *
+ * <ul>
+ *     <li>Profile picture</li>
+ *     <li>Name and "About Me"</li>
+ *     <li>Interests (as chips)</li>
+ *     <li>Follower/Following counts</li>
+ *     <li>List of events the user has joined</li>
+ * </ul>
+ *
+ * <p>
+ * A real-time Firestore listener updates the UI whenever the user's
+ * profile document changes, ensuring that profile edits or count changes
+ * are reflected immediately.
+ * </p>
  */
 public class ProfileActivity extends AppCompatActivity {
 
+    /** Log tag for debugging. */
     private static final String TAG = "ProfileActivity";
 
+    /** ViewBinding for accessing UI elements. */
     private ActivityProfileBinding binding;
+
+    /** RecyclerView adapter for the user's joined events. */
     private NearEventAdapter joinedEventsAdapter;
+
+    /** Firestore database reference. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth instance for identifying the current user. */
     private FirebaseAuth mAuth;
+
+    /** Authenticated user's UID. */
     private String currentUserId;
 
+    /** Active snapshot listener for the user document. */
     private ListenerRegistration userListener;
 
+    /**
+     * Initializes Firebase instances, ViewBinding, and UI listeners.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,18 +84,17 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Attaches the Firestore listener when the activity starts.
+     * Attaches a Firestore listener each time the activity starts.
+     * Ensures the profile is always refreshed after editing.
      */
     @Override
     protected void onStart() {
         super.onStart();
-        // Load data every time the activity is started
-        // This ensures data is fresh after returning from EditProfileActivity
         loadProfileData();
     }
 
     /**
-     * Detaches the Firestore listener when the activity stops.
+     * Removes the Firestore listener to avoid memory leaks.
      */
     @Override
     protected void onStop() {
@@ -80,18 +105,18 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Sets listeners for the "Back" and "Edit Profile" buttons.
+     * Sets click listeners for "Back" and "Edit Profile" buttons.
      */
     private void setupListeners() {
         binding.btnBackProfile.setOnClickListener(v -> finish());
-        binding.btnEditProfile.setOnClickListener(v -> {
-            startActivity(new Intent(this, EditProfileActivity.class));
-        });
+        binding.btnEditProfile.setOnClickListener(v ->
+                startActivity(new Intent(this, EditProfileActivity.class))
+        );
     }
 
     /**
-     * Attaches a snapshot listener to the user's document in Firestore.
-     * This will update the profile UI in real-time if data changes.
+     * Subscribes to real-time updates on the current user's Firestore document.
+     * When the user profile changes, the UI is updated accordingly.
      */
     private void loadProfileData() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
@@ -103,8 +128,8 @@ public class ProfileActivity extends AppCompatActivity {
             }
 
             if (snapshot != null && snapshot.exists()) {
-                Log.d(TAG, "Current user data: " + snapshot.getData());
                 UserProfile userProfile = snapshot.toObject(UserProfile.class);
+
                 if (userProfile != null) {
                     binding.tvProfileName.setText(userProfile.getName());
                     binding.tvFollowingCount.setText(String.valueOf(userProfile.getFollowingCount()));
@@ -118,8 +143,8 @@ public class ProfileActivity extends AppCompatActivity {
                             .error(R.drawable.placeholder_avatar1)
                             .into(binding.ivProfilePicture);
 
-                    // Populate Interests
-                    binding.chipGroupInterests.removeAllViews(); // Clear old chips
+                    // Render interests
+                    binding.chipGroupInterests.removeAllViews();
                     List<String> interests = userProfile.getInterests();
                     if (interests != null) {
                         for (String interest : interests) {
@@ -129,7 +154,7 @@ public class ProfileActivity extends AppCompatActivity {
                         }
                     }
 
-                    // After loading profile, load their joined events
+                    // Load joined events after profile is processed
                     loadJoinedEvents(userProfile.getAppliedEventIds());
                 }
             } else {
@@ -139,11 +164,10 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Initializes the RecyclerView for the user's joined events.
+     * Sets up the RecyclerView that displays the user's joined events.
      */
     private void setupRecyclerView() {
         joinedEventsAdapter = new NearEventAdapter(event -> {
-            // Go to event details when a joined event is clicked
             Intent intent = new Intent(this, DetailsActivity.class);
             intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
             startActivity(intent);
@@ -154,26 +178,25 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Fetches the event details for all events the user has applied to.
-     * @param eventIds A list of event document IDs from the user's profile.
+     * Fetches full event documents for all events the user has joined.
+     *
+     * @param eventIds List of Firestore document IDs for joined events.
      */
     private void loadJoinedEvents(List<String> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
+            joinedEventsAdapter.submitList(new ArrayList<>());
             Log.d(TAG, "User has no joined events.");
-            joinedEventsAdapter.submitList(new ArrayList<>()); // Submit empty list
             return;
         }
 
-        // Query the "events" collection for any document whose ID is in our list
-        db.collection("events").whereIn(FieldPath.documentId(), eventIds)
+        db.collection("events")
+                .whereIn(FieldPath.documentId(), eventIds)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Event> joinedEvents = queryDocumentSnapshots.toObjects(Event.class);
                     joinedEventsAdapter.submitList(joinedEvents);
                     Log.d(TAG, "Loaded " + joinedEvents.size() + " joined events.");
                 })
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Error loading joined events", e);
-                });
+                .addOnFailureListener(e -> Log.w(TAG, "Error loading joined events", e));
     }
 }

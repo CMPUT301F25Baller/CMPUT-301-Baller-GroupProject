@@ -14,17 +14,34 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
 /**
- * Simple notification log screen used as a placeholder for admin logs.
- * Displays sample rows and allows toggling between "New" and "All" via chips.
+ * Activity that displays a simple, prototype notification log for the admin.
+ *
+ * <p>This screen serves as a placeholder UI, showing log messages in a list.
+ * The data is currently mocked in-memory and demonstrates:
+ *
+ * <ul>
+ *     <li>Switching between “New” and “All” logs using Material Chips</li>
+ *     <li>Simple list rendering via {@link SimpleTextAdapter}</li>
+ *     <li>“Mark all as read” button behavior</li>
+ * </ul>
+ *
+ * <p>In the future, this activity can be wired to a Firestore-backed
+ * notification repository using {@code NotificationLogsStore}.
  */
-
-
 public class AdminLogsActivity extends AppCompatActivity {
 
+    /** View binding for activity_notification_logs.xml */
     private ActivityNotificationLogsBinding binding;
+
+    /** Adapter used to render the logs in the RecyclerView */
     private SimpleTextAdapter adapter;
+
+    /** In-memory list of all notifications (mock data). */
     private final List<String> allItems = new ArrayList<>();
+
+    /** Subset representing unread or recently added notifications. */
     private final List<String> newItems = new ArrayList<>();
 
     @Override
@@ -33,11 +50,25 @@ public class AdminLogsActivity extends AppCompatActivity {
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Toolbar back
+        setupToolbar();
+        initializeMockData();
+        setupRecycler();
+        setupChipsAndActions();
+    }
+
+    /**
+     * Configures the top app bar and back navigation.
+     */
+    private void setupToolbar() {
         setSupportActionBar(binding.topAppBar);
         binding.topAppBar.setNavigationOnClickListener(v -> finish());
+    }
 
-        // Sample data (replace with your repo later)
+    /**
+     * Populates in-memory mock notification data.
+     * In the real implementation, this will be pulled from Firestore.
+     */
+    private void initializeMockData() {
         allItems.addAll(Arrays.asList(
                 "David Silbia invited you to Jo Malone London’s Mother’s… • Just now",
                 "Adnan Safi added you to waitlist • 5 min ago",
@@ -47,18 +78,28 @@ public class AdminLogsActivity extends AppCompatActivity {
                 "Eric G. Prickett sent an invitation • Wed, 3:30 pm",
                 "Jennifer Fritz – Kids Safe Event cancelled • Tue, 5:10 pm"
         ));
-        // Pretend “New” is the first two
-        newItems.addAll(allItems.subList(0, Math.min(2, allItems.size())));
 
-        // Recycler
+        // Mock “new” notifications as the first two items
+        newItems.addAll(allItems.subList(0, Math.min(2, allItems.size())));
+    }
+
+    /**
+     * Sets up the RecyclerView and assigns the default adapter.
+     */
+    private void setupRecycler() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
         adapter = new SimpleTextAdapter(allItems);
         binding.rvLogs.setAdapter(adapter);
+    }
 
-        // Chips
-        final Chip chipNew = binding.chipNew;
-        final Chip chipAll = binding.chipAll;
-        chipAll.setChecked(true);
+    /**
+     * Wires up chip selection logic and the “Mark all as read” button.
+     */
+    private void setupChipsAndActions() {
+        Chip chipNew = binding.chipNew;
+        Chip chipAll = binding.chipAll;
+
+        chipAll.setChecked(true); // Default filter
 
         chipNew.setOnCheckedChangeListener((button, checked) -> {
             if (checked) {
@@ -66,6 +107,7 @@ public class AdminLogsActivity extends AppCompatActivity {
                 binding.rvLogs.setAdapter(adapter);
             }
         });
+
         chipAll.setOnCheckedChangeListener((button, checked) -> {
             if (checked) {
                 adapter = new SimpleTextAdapter(new ArrayList<>(allItems));
@@ -73,10 +115,11 @@ public class AdminLogsActivity extends AppCompatActivity {
             }
         });
 
-        // Mark all as read
         binding.btnMarkAll.setOnClickListener(v -> {
             newItems.clear();
             Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show();
+
+            // If viewing "New", update display to empty
             if (chipNew.isChecked()) {
                 adapter = new SimpleTextAdapter(Collections.emptyList());
                 binding.rvLogs.setAdapter(adapter);

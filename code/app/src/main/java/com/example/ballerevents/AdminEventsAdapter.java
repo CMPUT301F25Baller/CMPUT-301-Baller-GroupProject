@@ -18,47 +18,75 @@ import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 
 /**
- * RecyclerView adapter for admin event rows. Binds title/date/location and
- * loads the poster image via Glide. Overflow menu actions (e.g., delete)
- * are forwarded to {@link OnEventActionListener}.
+ * Adapter for displaying event rows in the Admin "All Events" list.
+ *
+ * <p>This adapter renders a poster thumbnail, title, date, and location for each event.
+ * It also provides an overflow menu (three dots) for admin actions such as deleting
+ * an event. Actions are forwarded to the hosting Activity via
+ * {@link AdminEventsAdapter.OnEventActionListener}.
+ *
+ * <p>Image loading is performed using Glide, and the adapter relies on a {@link DiffUtil}
+ * callback for efficient list updates.
  */
-
 public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.EventViewHolder> {
 
+    /**
+     * Listener interface for handling row-level actions such as delete.
+     */
     public interface OnEventActionListener {
+        /**
+         * Called when the admin selects the "Delete" action for an event.
+         *
+         * @param event the event associated with the action
+         */
         void onDelete(Event event);
     }
 
+    /** Callback target for row actions. */
     private final OnEventActionListener listener;
 
+    /**
+     * Constructs the adapter.
+     *
+     * @param listener callback for admin actions such as delete
+     */
     public AdminEventsAdapter(OnEventActionListener listener) {
         super(EventDiffCallback);
         this.listener = listener;
     }
 
-    @NonNull @Override
+    /**
+     * Inflates {@code item_admin_event.xml} for each row.
+     */
+    @NonNull
+    @Override
     public EventViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_admin_event, parent, false);
         return new EventViewHolder(v);
     }
 
+    /**
+     * Binds event data (title, date, location, poster image) and wires up the overflow menu.
+     */
     @Override
     public void onBindViewHolder(@NonNull EventViewHolder h, int position) {
         Event e = getItem(position);
         if (e == null) return;
 
+        // Basic fields
         h.tvTitle.setText(e.getTitle());
         h.tvDate.setText(e.getDate());
         h.tvLocation.setText(e.getLocationName());
 
-        // Load image from URL using Glide
+        // Glide: load poster URL
         Glide.with(h.itemView.getContext())
                 .load(e.getEventPosterUrl())
-                .placeholder(R.drawable.placeholder_image) // Use your placeholder
+                .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
                 .into(h.ivPoster);
 
+        // Overflow menu (delete action)
         h.ivMenu.setOnClickListener(v -> {
             PopupMenu popup = new PopupMenu(v.getContext(), v);
             MenuInflater inflater = popup.getMenuInflater();
@@ -68,6 +96,13 @@ public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.Ev
         });
     }
 
+    /**
+     * Handles overflow menu item clicks.
+     *
+     * @param item the menu item clicked
+     * @param e    the associated event
+     * @return true if handled
+     */
     private boolean handleMenu(MenuItem item, Event e) {
         if (item.getItemId() == R.id.action_delete) {
             listener.onDelete(e);
@@ -76,11 +111,19 @@ public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.Ev
         return false;
     }
 
+    /**
+     * ViewHolder containing references to all row UI components.
+     */
     static class EventViewHolder extends RecyclerView.ViewHolder {
         MaterialCardView cardRoot;
         ImageView ivPoster, ivMenu;
         TextView tvTitle, tvDate, tvLocation;
 
+        /**
+         * Binds view references on construction.
+         *
+         * @param itemView the inflated row view
+         */
         EventViewHolder(@NonNull View itemView) {
             super(itemView);
             cardRoot   = itemView.findViewById(R.id.card_root);
@@ -92,15 +135,20 @@ public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.Ev
         }
     }
 
-    private static final DiffUtil.ItemCallback<Event> EventDiffCallback = new DiffUtil.ItemCallback<Event>() {
-        @Override
-        public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId().equals(newItem.getId());
-        }
+    /**
+     * DiffUtil callback that checks item identity and content equality
+     * based solely on event IDs, which uniquely identify Firestore docs.
+     */
+    private static final DiffUtil.ItemCallback<Event> EventDiffCallback =
+            new DiffUtil.ItemCallback<Event>() {
+                @Override
+                public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+                    return oldItem.getId().equals(newItem.getId());
+                }
 
-        @Override
-        public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-            return oldItem.getId().equals(newItem.getId());
-        }
-    };
+                @Override
+                public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
+                    return oldItem.getId().equals(newItem.getId());
+                }
+            };
 }
