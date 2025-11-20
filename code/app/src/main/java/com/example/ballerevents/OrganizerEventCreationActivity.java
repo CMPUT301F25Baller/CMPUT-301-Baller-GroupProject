@@ -30,15 +30,29 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
+/**
+ * Activity that allows organizers to create NEW events or EDIT existing ones.
+ * <p>
+ * If an EXTRA_EVENT_ID is passed in the intent, this activity enters "Edit Mode":
+ * - Loads the existing event data.
+ * - Populates all input fields.
+ * - Updates the existing Firestore document on save.
+ * <p>
+ * Otherwise, it enters "Create Mode" (default behavior).
+ */
 public class OrganizerEventCreationActivity extends AppCompatActivity {
 
     private static final String TAG = "EventCreationActivity";
+    public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID"; // Key for Intent
 
     private ActivityOrganizerEventCreationBinding binding;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private String currentUserId;
     private UserProfile organizerProfile;
+
+    // If this is not null, we are in "Edit Mode"
+    private String eventIdToEdit = null;
 
     // Data fields
     private String dateStr = "";
@@ -75,9 +89,91 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
+        // Check if we are editing an existing event
+        if (getIntent().hasExtra(EXTRA_EVENT_ID)) {
+            eventIdToEdit = getIntent().getStringExtra(EXTRA_EVENT_ID);
+            binding.btnSaveEvent.setText("Update Event"); // Change button text
+            // We might also want to change the header text
+            // binding.tvHeaderTitle.setText("Edit Event");
+            loadEventData(eventIdToEdit);
+        }
+
         loadOrganizerProfile();
         setupImagePickers();
         setupClickListeners();
+    }
+
+    /**
+     * Loads existing event data from Firestore and populates the UI fields.
+     */
+    private void loadEventData(String eventId) {
+        db.collection("events").document(eventId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    Event event = documentSnapshot.toObject(Event.class);
+                    if (event != null) {
+                        // Populate text fields
+                        binding.etEventTitle.setText(event.getTitle());
+                        binding.etDescription.setText(event.getDescription());
+                        binding.etPrice.setText(event.getPrice());
+
+                        // Populate location
+                        venue = event.getLocationName();
+                        address = event.getLocationAddress();
+                        binding.tvLocationPicker.setText(venue);
+                        if (!TextUtils.isEmpty(address)) {
+                            binding.tvAddressPicker.setText(address);
+                            binding.tvAddressPicker.setVisibility(View.VISIBLE);
+                        }
+
+                        // Populate Date & Time
+                        dateStr = event.getDate();
+                        binding.tvDatePicker.setText(dateStr);
+                        // Time format in DB is "start - end". We populate the full string.
+                        // Splitting it back to fromTime/toTime is complex without stricter formatting,
+                        // so we'll just display it and let the user overwrite if they pick new times.
+                        String fullTime = event.getTime();
+                        binding.tvTimePicker.setText(fullTime);
+                        // Try to parse simple " - " split for state
+                        if (fullTime != null && fullTime.contains(" - ")) {
+                            String[] parts = fullTime.split(" - ");
+                            fromTime = parts[0];
+                            toTime = parts[1];
+                        } else {
+                            fromTime = fullTime; // Fallback
+                        }
+
+                        // Populate Tags
+                        if (event.getTags() != null && !event.getTags().isEmpty()) {
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                binding.etTags.setText(String.join(", ", event.getTags()));
+                            } else {
+                                StringBuilder sb = new StringBuilder();
+                                for(String tag : event.getTags()) {
+                                    if(sb.length() > 0) sb.append(", ");
+                                    sb.append(tag);
+                                }
+                                binding.etTags.setText(sb.toString());
+                            }
+                        }
+
+                        // Populate Images
+                        posterUriString = event.getEventPosterUrl();
+                        if (!TextUtils.isEmpty(posterUriString)) {
+                            binding.ivPosterImage.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                            Glide.with(this).load(posterUriString).into(binding.ivPosterImage);
+                        }
+                        // Banner URL is not currently in Event model (using poster for both in save logic)
+                        // If you added a bannerUrl field, load it here.
+                        if (!TextUtils.isEmpty(posterUriString)) {
+                            Glide.with(this).load(posterUriString).centerCrop().into(binding.ivEventBanner);
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error loading event data", Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "Error fetching event", e);
+                    finish();
+                });
     }
 
     private void setupImagePickers() {
@@ -111,7 +207,8 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         binding.tvLocationPicker.setOnClickListener(v -> pickLocation());
 
         // Images
-        binding.ivEventBanner.setOnClickListener(v -> bannerPickerLauncher.launch("image/*"));
+        // Use the new view_banner_click_area because ivEventBanner is behind the scrollview
+        binding.viewBannerClickArea.setOnClickListener(v -> bannerPickerLauncher.launch("image/*"));
         binding.ivPosterImage.setOnClickListener(v -> posterPickerLauncher.launch("image/*"));
     }
 
@@ -198,34 +295,52 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             }
         }
 
-        Event newEvent = new Event();
-        newEvent.title = title;
-        newEvent.date = dateStr;
-        newEvent.time = fromTime + " - " + toTime;
-        newEvent.locationName = venue;
-        newEvent.locationAddress = address;
-        newEvent.description = description;
-        newEvent.price = price;
-        newEvent.tags = tagsList;
+        // Construct the Event object
+        Event eventData = new Event();
+        eventData.title = title;
+        eventData.date = dateStr;
+        // Use entered times if available, else try to preserve existing
+        String timeString = (fromTime.isEmpty() || toTime.isEmpty()) ? binding.tvTimePicker.getText().toString() : (fromTime + " - " + toTime);
+        eventData.time = timeString;
+        eventData.locationName = venue;
+        eventData.locationAddress = address;
+        eventData.description = description;
+        eventData.price = price;
+        eventData.tags = tagsList;
 
-        // NOTE: In a real app, you must upload these URIs to Firebase Storage
-        // and get a download URL. For now, we are saving the local URI.
-        // This image will ONLY load on this specific device.
-        newEvent.eventPosterUrl = posterUriString; // Using poster as main image for now
-        // You might want a separate field for bannerUrl in your Event model later
-
-        newEvent.organizerId = currentUserId;
-        if (organizerProfile != null) {
-            newEvent.organizer = organizerProfile.getName();
-            newEvent.organizerIconUrl = organizerProfile.getProfilePictureUrl();
+        // Handle images: use new URI if picked, otherwise keep existing (if editing)
+        // NOTE: In a real app, you upload the new URI to Storage here.
+        if (!posterUriString.isEmpty()) {
+            eventData.eventPosterUrl = posterUriString;
         }
-        newEvent.isTrending = false;
+        // If editing, we want to preserve the old image if user didn't pick a new one.
+        // But since we populated posterUriString in loadEventData, it should hold the old URL if not changed.
 
-        db.collection("events").add(newEvent)
-                .addOnSuccessListener(documentReference -> {
-                    Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
+        eventData.organizerId = currentUserId;
+        if (organizerProfile != null) {
+            eventData.organizer = organizerProfile.getName();
+            eventData.organizerIconUrl = organizerProfile.getProfilePictureUrl();
+        }
+        eventData.isTrending = false; // Or keep existing if editing
+
+        // SAVE or UPDATE based on mode
+        if (eventIdToEdit != null) {
+            // --- UPDATE EXISTING ---
+            db.collection("events").document(eventIdToEdit)
+                    .set(eventData) // .set() overwrites. Use .update() for partial, but we want full overwrite here with new data.
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Event Updated!", Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(this, "Error updating event", Toast.LENGTH_SHORT).show());
+        } else {
+            // --- CREATE NEW ---
+            db.collection("events").add(eventData)
+                    .addOnSuccessListener(documentReference -> {
+                        Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
+        }
     }
 }

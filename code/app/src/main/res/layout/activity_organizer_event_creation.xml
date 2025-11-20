@@ -8,7 +8,7 @@
     android:background="@android:color/white"
     tools:context=".OrganizerEventCreationActivity">
 
-    <!-- 1. Background Event Banner (Tap to Upload) -->
+    <!-- 1. Background Event Banner (Visual Only) -->
     <ImageView
         android:id="@+id/iv_event_banner"
         android:layout_width="match_parent"
@@ -30,38 +30,8 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="120dp"/>
 
-    <!-- 2. Top Toolbar (Back Button) -->
-    <RelativeLayout
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:layout_marginTop="24dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@android:color/white"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_centerVertical="true"
-            android:contentDescription="Back" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Create Event"
-            android:textColor="@android:color/white"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-medium"
-            android:layout_toEndOf="@id/btn_back"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="16dp"/>
-    </RelativeLayout>
-
-    <!-- 3. Scrollable Content Area -->
+    <!-- 2. Scrollable Content Area -->
+    <!-- Note: ScrollView is declared BEFORE Toolbar so Toolbar sits on top -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -72,8 +42,10 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Spacer View to push card down -->
+            <!-- Spacer View / Click Area -->
+            <!-- Added ID so we can click it in Java -->
             <View
+                android:id="@+id/view_banner_click_area"
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
                 android:background="@android:color/transparent" />
@@ -261,7 +233,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerInside"
-                        android:src="@drawable/ic_add_24"
+                        android:src="@drawable/ic_add_picture"
                         app:tint="#5A00FF"
                         android:contentDescription="Upload Poster"/>
 
@@ -317,4 +289,36 @@
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- 3. Top Toolbar (Moved to End to sit on TOP of ScrollView) -->
+    <RelativeLayout
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="24dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@android:color/white"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_centerVertical="true"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Create Event"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            android:layout_toEndOf="@id/btn_back"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"/>
+    </RelativeLayout>
+
 </RelativeLayout>
