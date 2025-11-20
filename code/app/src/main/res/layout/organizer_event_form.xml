@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <!-- Top image -->
+    <ImageView
+        android:id="@+id/eventImage"
+        android:layout_width="0dp"
+        android:layout_height="250dp"
+        android:scaleType="centerCrop"
+        android:src="@drawable/placeholder_event_image"
+        android:contentDescription="Event Banner"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Gradient overlay -->
+    <View
+        android:id="@+id/gradientOverlay"
+        android:layout_width="0dp"
+        android:layout_height="90dp"
+        android:background="@drawable/top_gradient"
+        app:layout_constraintTop_toTopOf="@id/eventImage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Back button -->
+    <ImageButton
+        android:id="@+id/backButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="24dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/ic_back"
+        android:contentDescription="back"
+        app:layout_constraintTop_toTopOf="@id/eventImage"
+        app:layout_constraintStart_toStartOf="parent" />
+    <!-- Event Details Text -->
+    <TextView
+        android:id="@+id/eventFormTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Event Details"
+        android:textSize="24sp"
+        android:textColor="@color/white"
+        android:paddingStart="10sp"
+        android:paddingEnd="10sp"
+        app:layout_constraintStart_toEndOf="@id/backButton"
+        app:layout_constraintTop_toTopOf="@id/backButton"
+        app:layout_constraintBottom_toBottomOf="@id/backButton"/>
+    <!-- Favourite Button -->
+    <ImageButton
+        android:id="@+id/favButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/header_icon_bg"
+        android:src="@drawable/ic_fav"
+        android:contentDescription="favourite"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/backButton"
+        app:layout_constraintBottom_toBottomOf="@id/backButton"
+        app:tint="@android:color/white" />
+
+    <!-- Edit Event Poster Button -->
+    <ImageButton
+        android:id = "@+id/editPosterButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/header_icon_bg"
+        android:src="@drawable/ic_edit_white"
+        android:contentDescription="Edit Event Poster"
+        app:layout_constraintTop_toBottomOf="@id/gradientOverlay"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Title -->
+    <LinearLayout
+        android:id="@+id/titleLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/eventImage"
+        app:layout_constraintStart_toStartOf="parent"
+        android:orientation="horizontal"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        >
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="International Band Music Concert"
+            android:textColor="#120D26"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginStart="24dp"/>
+        <ImageButton
+            android:id="@+id/editTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/ic_edit"
+            android:background="@android:color/transparent"
+            android:contentDescription="edit"
+            app:tint="#000000"
+            android:layout_marginEnd="24dp"
+            android:layout_gravity="center"/>
+    </LinearLayout>
+
+    <!-- Date Row -->
+    <LinearLayout
+        android:id="@+id/dateRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/titleLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="24dp">
+        <ImageView
+            android:id="@+id/calendar_img"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_calendar"
+            android:background="@drawable/rounded_rect_bg"
+            android:contentDescription="calendar"
+            android:clickable="true"/>
+        <ImageButton
+            android:id="@+id/editDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginStart="-10dp"
+            android:src="@drawable/ic_edit"
+            android:background="@android:color/transparent"
+            android:contentDescription="edit"
+            app:tint="#000000" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+            <TextView
+                android:id="@+id/dateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="14 December, 2021"
+                android:textSize="16sp"
+                android:layout_marginBottom="5dp"/>
+            <TextView
+                android:id="@+id/timeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tuesday, 4:00-9:00PM"
+                android:textColor="#747688"
+                android:textSize="12sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Location Row -->
+    <LinearLayout
+        android:id="@+id/locationRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/dateRow"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="24dp">
+
+        <ImageView
+            android:id="@+id/location_img"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_location"
+            android:background="@drawable/rounded_rect_bg"
+            android:contentDescription="location"
+            android:clickable="true"/>
+        <ImageButton
+            android:id="@+id/editLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginStart="-10dp"
+            android:src="@drawable/ic_edit"
+            android:background="@android:color/transparent"
+            android:contentDescription="edit" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+            <TextView
+                android:id="@+id/locationNameText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gala Convention Center"
+                android:textSize="16sp"
+                android:layout_marginBottom="5dp"/>
+            <TextView
+                android:id="@+id/locationDetailsText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="36 Guild Street London, UK"
+                android:textColor="#747688"
+                android:textSize="12sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Event Requirements -->
+    <LinearLayout
+        android:id="@+id/requirementsLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:orientation="vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/locationRow"
+        app:layout_constraintStart_toStartOf="parent">
+        <TextView
+            android:id="@+id/requirementsHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Event Requirements"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="#120D26"/>
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/geolocationCheckBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Geolocation:"
+            android:textSize="14sp"
+            android:layoutDirection="rtl"/>
+
+    </LinearLayout>
+
+    <!-- About Event -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:id="@+id/eventLayout"
+        android:orientation="vertical"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/requirementsLayout"
+        app:layout_constraintStart_toStartOf="parent">
+        <TextView
+            android:id="@+id/aboutHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="About Event"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="#120D26"/>
+        <LinearLayout
+            android:id="@+id/editAboutLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/aboutText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginTop="4dp"
+                android:text="Add Description"
+                android:textSize="14sp"/>
+            <ImageButton
+                android:id="@+id/editAboutButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5sp"
+                android:layout_marginTop="8sp"
+                android:layout_marginEnd="6sp"
+                android:src="@drawable/ic_edit"
+                android:background="@android:color/transparent"
+                android:contentDescription="edit"
+                app:tint="#000000" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Publish Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/publishButton"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="24dp"
+        android:layout_marginStart="75dp"
+        android:layout_marginEnd="75dp"
+        android:paddingStart="30dp"
+        android:paddingEnd="10dp"
+        android:text="Publish Event"
+        android:textAllCaps="true"
+        android:textColor="@color/white"
+        android:textAlignment="center"
+        android:gravity="center"
+        app:cornerRadius="8dp"
+        app:iconPadding="8dp"
+        app:iconGravity="end"
+        app:icon="@drawable/ic_publish"
+        app:iconSize="24dp"
+        app:iconTint="@null"
+        app:backgroundTint="#5669FF"
+        app:rippleColor="@android:color/transparent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>
