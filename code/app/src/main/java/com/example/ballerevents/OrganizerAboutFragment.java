@@ -1,5 +1,6 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -24,10 +25,8 @@ import java.util.List;
  * <p>
  * This fragment listens to the currently authenticated user’s Firestore document
  * and updates UI elements (About Me text and interests chip group) in real time.
- * It attaches a Firestore snapshot listener in {@link #onStart()} and removes it
- * in {@link #onStop()} to ensure proper lifecycle handling.
+ * It also provides a button to launch the EditProfileActivity.
  */
-
 public class OrganizerAboutFragment extends Fragment {
 
     private static final String TAG = "OrganizerAboutFragment";
@@ -38,12 +37,6 @@ public class OrganizerAboutFragment extends Fragment {
     private String currentUserId;
     private ListenerRegistration userListener;
 
-    /**
-     * Initializes Firebase instances and retrieves the current authenticated
-     * user's ID (if logged in).
-     *
-     * @param savedInstanceState previously saved fragment state, if any
-     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,14 +49,6 @@ public class OrganizerAboutFragment extends Fragment {
         }
     }
 
-    /**
-     * Inflates the fragment layout using ViewBinding.
-     *
-     * @param inflater  LayoutInflater to inflate XML
-     * @param container optional parent view group
-     * @param savedInstanceState previously saved state
-     * @return the root view for this fragment
-     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -72,10 +57,17 @@ public class OrganizerAboutFragment extends Fragment {
         return binding.getRoot();
     }
 
-    /**
-     * Starts listening for updates to the organizer's Firestore profile.
-     * If no user is logged in, displays an error message.
-     */
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Set up the edit button
+        binding.btnEditProfile.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+            startActivity(intent);
+        });
+    }
+
     @Override
     public void onStart() {
         super.onStart();
@@ -87,9 +79,6 @@ public class OrganizerAboutFragment extends Fragment {
         }
     }
 
-    /**
-     * Removes the Firestore snapshot listener to prevent memory leaks.
-     */
     @Override
     public void onStop() {
         super.onStop();
@@ -99,10 +88,6 @@ public class OrganizerAboutFragment extends Fragment {
         }
     }
 
-    /**
-     * Attaches a Firestore snapshot listener to the current user's profile document.
-     * Updates the "About Me" section and interest chips in real time.
-     */
     private void loadOrganizerInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -126,7 +111,6 @@ public class OrganizerAboutFragment extends Fragment {
                         for (String interest : interests) {
                             Chip chip = new Chip(getContext());
                             chip.setText(interest);
-                            // You can style chips here
                             binding.chipGroupInterests.addView(chip);
                         }
                     }
@@ -138,10 +122,6 @@ public class OrganizerAboutFragment extends Fragment {
         });
     }
 
-    /**
-     * Clears the ViewBinding reference when the view is destroyed to avoid
-     * memory leaks.
-     */
     @Override
     public void onDestroyView() {
         super.onDestroyView();
