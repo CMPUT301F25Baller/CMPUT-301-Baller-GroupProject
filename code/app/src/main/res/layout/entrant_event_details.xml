@@ -279,6 +279,19 @@
                     android:layout_marginTop="8dp"
                     android:lineSpacingMultiplier="1.3"/>
 
+                <!-- Delete Event (admin only, hidden by default) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_delete_event"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Delete Event"
+                    android:textAllCaps="false"
+                    android:backgroundTint="@android:color/holo_red_dark"
+                    android:textColor="@android:color/white"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    android:layout_marginTop="24dp"/>
+
                 <!-- Join Waitlist Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_join_waitlist"
@@ -290,9 +303,8 @@
                     android:textSize="16sp"
                     app:icon="@drawable/ic_arrow_forward"
                     app:iconGravity="textEnd"
-                    android:layout_marginTop="32dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="16dp"/>
-
             </LinearLayout>
 
         </LinearLayout>

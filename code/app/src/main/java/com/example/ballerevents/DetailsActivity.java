@@ -95,6 +95,8 @@ public class DetailsActivity extends AppCompatActivity {
         // UI listeners
         binding.btnJoinWaitlist.setOnClickListener(v -> handleWaitlistClick());
         binding.btnBack.setOnClickListener(v -> finish());
+
+        setupAdminDeleteIfNeeded();
     }
 
     /**
@@ -227,6 +229,51 @@ public class DetailsActivity extends AppCompatActivity {
 
         binding.btnJoinWaitlist.setEnabled(true);
     }
+
+    /**
+     * Shows Delete Event button only if current user is admin.
+     */
+    private void setupAdminDeleteIfNeeded() {
+        if (eventId == null || eventId.isEmpty()) return;
+        if (mAuth.getCurrentUser() == null) return;
+
+        String uid = mAuth.getCurrentUser().getUid();
+
+        db.collection("users").document(uid)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    UserProfile user = snapshot.toObject(UserProfile.class);
+                    if (user != null &&
+                            "admin".equalsIgnoreCase(user.getRole())) {
+
+                        // show delete button
+                        binding.btnDeleteEvent.setVisibility(View.VISIBLE);
+                        binding.btnDeleteEvent.setOnClickListener(v -> confirmDelete());
+                    }
+                });
+    }
+
+    private void confirmDelete() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("Delete Event?")
+                .setMessage("This cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> deleteEvent())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deleteEvent() {
+        eventRef.delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Event deleted", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show();
+                    Log.w(TAG, "Error deleting", e);
+                });
+    }
+
 
     /**
      * Handles the "Join Waitlist" / "Withdraw" button click.
