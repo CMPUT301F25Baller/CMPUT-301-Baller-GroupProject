@@ -210,6 +210,14 @@ public class EntrantMainActivity extends AppCompatActivity {
             startActivity(new Intent(this, ProfileActivity.class));
         });
 
+        // 🔔 Open notifications when bell icon is tapped
+        binding.btnNotifications.setOnClickListener(v -> {
+            // TODO: pick the correct activity for your notifications UI
+            Intent intent = new Intent(this, NotificationLogsActivity.class);
+            // or: new Intent(this, NotificationLogsActivity.class);
+            startActivity(intent);
+        });
+
         // Search Bar
         binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -228,6 +236,7 @@ public class EntrantMainActivity extends AppCompatActivity {
         setupChipListener(binding.chipStandUp);
         setupChipListener(binding.chipTheater);
     }
+
 
     /**
      * Helper method that attaches a checked-change listener to a single filter chip.
