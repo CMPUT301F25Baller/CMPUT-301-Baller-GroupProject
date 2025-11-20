@@ -8,7 +8,7 @@
     android:background="@android:color/white"
     tools:context=".DetailsActivity">
 
-    <!-- 1. Background Event Image -->
+    <!-- 1. Background Event Image (Banner) -->
     <ImageView
         android:id="@+id/iv_event_banner"
         android:layout_width="match_parent"
@@ -18,7 +18,6 @@
         android:contentDescription="Event Banner" />
 
     <!-- 3. Scrollable Content Area -->
-    <!-- This is moved BEFORE the toolbar -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -48,7 +47,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <!-- ... (Avatar stack remains the same) ... -->
                     <LinearLayout
                         android:id="@+id/avatar_stack"
                         android:layout_width="wrap_content"
@@ -209,7 +207,7 @@
                         android:id="@+id/iv_organizer"
                         android:layout_width="48dp"
                         android:layout_height="48dp"
-                        android:src="@drawable/placeholder_organizer_icon"
+                        android:src="@drawable/placeholder_organizer"
                         android:layout_centerVertical="true"/>
 
                     <LinearLayout
@@ -250,6 +248,17 @@
 
                 </RelativeLayout>
 
+                <!-- === NEW: Event Poster (Above Description) === -->
+                <ImageView
+                    android:id="@+id/iv_event_poster"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:layout_marginTop="24dp"
+                    android:src="@drawable/placeholder_image"
+                    android:contentDescription="Event Poster" />
+
                 <!-- About Section -->
                 <TextView
                     android:layout_width="wrap_content"
@@ -258,7 +267,7 @@
                     android:textColor="@android:color/black"
                     android:textSize="20sp"
                     android:fontFamily="sans-serif-bold"
-                    android:layout_marginTop="32dp"/>
+                    android:layout_marginTop="16dp"/> <!-- Reduced margin slightly -->
 
                 <TextView
                     android:id="@+id/tv_about_event_description"
@@ -279,7 +288,7 @@
                     android:backgroundTint="#5A00FF"
                     app:cornerRadius="16dp"
                     android:textSize="16sp"
-                    app:icon="@drawable/ic_arrow_back"
+                    app:icon="@drawable/ic_arrow_forward"
                     app:iconGravity="textEnd"
                     android:layout_marginTop="32dp"
                     android:layout_marginBottom="16dp"/>
@@ -290,8 +299,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 2. Top Toolbar (Back & Bookmark) -->
-    <!-- This is NOW THE LAST CHILD, so it's drawn ON TOP -->
+    <!-- 2. Top Toolbar -->
     <RelativeLayout
         android:id="@+id/toolbar"
         android:layout_width="match_parent"

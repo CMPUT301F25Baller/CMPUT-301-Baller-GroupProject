@@ -2,6 +2,7 @@ package com.example.ballerevents;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -134,12 +135,25 @@ public class DetailsActivity extends AppCompatActivity {
      * @param event The Event object to display.
      */
     private void populateStaticUi(Event event) {
-        // Load image with Glide from URL
+        // Load Banner Image (using the poster URL for now as per your logic)
         Glide.with(this)
                 .load(event.getEventPosterUrl()) // Use URL getter
                 .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
+                .centerCrop() // Ensure it fills the banner area nicely
                 .into(binding.ivEventBanner);
+
+        // Load Full Poster Image
+        if (event.getEventPosterUrl() != null && !event.getEventPosterUrl().isEmpty()) {
+            binding.ivEventPoster.setVisibility(View.VISIBLE);
+            Glide.with(this)
+                    .load(event.getEventPosterUrl())
+                    .placeholder(R.drawable.placeholder_image)
+                    .error(R.drawable.placeholder_image)
+                    .into(binding.ivEventPoster);
+        } else {
+            binding.ivEventPoster.setVisibility(View.GONE);
+        }
 
         // Load organizer icon with Glide from URL
         Glide.with(this)
