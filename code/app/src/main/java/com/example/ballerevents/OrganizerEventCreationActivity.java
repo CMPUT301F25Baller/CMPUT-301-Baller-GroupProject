@@ -3,7 +3,6 @@ package com.example.ballerevents;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -26,9 +25,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
 
 /**
  * Activity allowing organizers to create a new event or edit an existing one.
@@ -92,6 +89,18 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     private Calendar eventDate = Calendar.getInstance();
     private Calendar fromCal = Calendar.getInstance();
     private Calendar toCal = Calendar.getInstance();
+    private static final String[] PRESET_TAGS = new String[]{
+            "Music Concert",
+            "Exhibition",
+            "Stand Up Show",
+            "Theater"
+    };
+
+    // For multi-select dialog state
+    private final boolean[] presetTagChecked = new boolean[PRESET_TAGS.length];
+
+    // Final selected tags (saved to Firestore)
+    private final java.util.List<String> selectedTags = new java.util.ArrayList<>();
 
     /** ActivityResultLaunchers for picking images. */
     private ActivityResultLauncher<String> bannerPickerLauncher;
@@ -165,17 +174,21 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                         }
 
                         // Tags
+                        selectedTags.clear();
+                        Arrays.fill(presetTagChecked, false);
+
                         if (event.getTags() != null && !event.getTags().isEmpty()) {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                binding.etTags.setText(String.join(", ", event.getTags()));
-                            } else {
-                                StringBuilder sb = new StringBuilder();
-                                for (String tag : event.getTags()) {
-                                    if (sb.length() > 0) sb.append(", ");
-                                    sb.append(tag);
+                            selectedTags.addAll(event.getTags());
+
+                            for (int i = 0; i < PRESET_TAGS.length; i++) {
+                                if (selectedTags.contains(PRESET_TAGS[i])) {
+                                    presetTagChecked[i] = true;
                                 }
-                                binding.etTags.setText(sb.toString());
                             }
+
+                            binding.etTags.setText(joinTags(selectedTags));
+                        } else {
+                            binding.etTags.setText("");
                         }
 
                         // Poster image
@@ -253,6 +266,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         binding.ivPosterImage.setOnClickListener(
                 v -> posterPickerLauncher.launch("image/*")
         );
+        binding.etTags.setKeyListener(null);      // Disable typing
+        binding.etTags.setFocusable(false);
+        binding.etTags.setOnClickListener(v -> showTagsDialog());
     }
 
     /**
@@ -349,6 +365,38 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         });
     }
 
+    /** Allows selecting tags from PRESET_TAGS instead of typing manually. */
+    private void showTagsDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Select Tags");
+
+        builder.setMultiChoiceItems(PRESET_TAGS, presetTagChecked, (dialog, which, isChecked) -> {
+            String tag = PRESET_TAGS[which];
+            if (isChecked) {
+                if (!selectedTags.contains(tag)) selectedTags.add(tag);
+            } else {
+                selectedTags.remove(tag);
+            }
+        });
+
+        builder.setPositiveButton("OK", (dialog, which) -> {
+            binding.etTags.setText(joinTags(selectedTags));
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        builder.show();
+    }
+
+    private String joinTags(java.util.List<String> tags) {
+        if (tags == null || tags.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (String t : tags) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(t);
+        }
+        return sb.toString();
+    }
+
     /**
      * Validates user input and writes the event to Firestore.
      * <p>
@@ -363,7 +411,6 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         String title = binding.etEventTitle.getText().toString().trim();
         String description = binding.etDescription.getText().toString().trim();
         String price = binding.etPrice.getText().toString().trim();
-        String tagsString = binding.etTags.getText().toString().trim();
 
         if (TextUtils.isEmpty(title)) {
             Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show();
@@ -382,20 +429,8 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             return;
         }
 
-        // Tags parsing with Java 8 streams (API 24+) fallback for pre-N
-        List<String> tagsList;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            tagsList = Arrays.stream(tagsString.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toList());
-        } else {
-            tagsList = new java.util.ArrayList<>();
-            for (String s : tagsString.split(",")) {
-                String trimmed = s.trim();
-                if (!trimmed.isEmpty()) tagsList.add(trimmed);
-            }
-        }
+        // Tags now come from the multi-select dialog state
+        java.util.List<String> tagsList = new java.util.ArrayList<>(selectedTags);
 
         // Build event model
         Event eventData = new Event();
@@ -446,4 +481,5 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                             Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
         }
     }
+
 }
