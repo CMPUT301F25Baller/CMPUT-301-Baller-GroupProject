@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+
     <!-- fragment_organizer_about.xml -->
     <LinearLayout
         android:orientation="vertical"
@@ -29,5 +31,18 @@
             android:layout_marginTop="12dp"
             android:clickable="false"
             android:focusable="false" />
+
+        <!-- Edit Button (New) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEditProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Edit Profile"
+            android:backgroundTint="#5A00FF"
+            app:icon="@drawable/ic_edit"
+            app:iconGravity="textStart"
+            app:cornerRadius="12dp"/>
+
     </LinearLayout>
 </ScrollView>
