@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.FragmentOrganizerEventBinding;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -25,8 +26,8 @@ import java.util.List;
  * <p>
  * This screen is accessible through the organizer dashboard and shows event cards
  * in a vertical list using {@link TrendingEventAdapter}. When an organizer taps
- * an event, the fragment navigates to {@link OrganizerEventCreationActivity} in
- * edit mode, passing the Firestore document ID.
+ * an event, an options dialog is shown allowing them to either edit the event
+ * or view its waitlist.
  * </p>
  *
  * <p>The fragment automatically refreshes events in {@link #onResume()} so any
@@ -99,18 +100,50 @@ public class OrganizerEventFragment extends Fragment {
 
     /**
      * Sets up the RecyclerView and attaches a {@link TrendingEventAdapter} where
-     * clicking an item opens the event editor activity.
+     * clicking an item shows options to edit the event or view its waitlist.
      */
     private void setupRecyclerView() {
-        adapter = new TrendingEventAdapter(event -> {
-            // Organizer opens the editor for their own event
-            Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
-            intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
-            startActivity(intent);
-        });
+        adapter = new TrendingEventAdapter(this::showEventOptionsDialog);
 
         binding.rvOrganizerEvents.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvOrganizerEvents.setAdapter(adapter);
+    }
+
+    /**
+     * Shows an options dialog for the selected event, allowing the organizer
+     * to either edit the event or view its waitlist.
+     *
+     * @param event the event that was tapped
+     */
+    private void showEventOptionsDialog(Event event) {
+        if (getContext() == null) {
+            return;
+        }
+
+        CharSequence[] options = new CharSequence[] {
+                "Edit Event",
+                "View Waitlist"
+        };
+
+        new MaterialAlertDialogBuilder(getContext())
+                .setTitle(event.getTitle())
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: // Edit Event
+                            Intent editIntent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
+                            editIntent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
+                            startActivity(editIntent);
+                            break;
+                        case 1: // View Waitlist
+                            Intent waitlistIntent = new Intent(getActivity(), OrganizerWaitlistActivity.class);
+                            waitlistIntent.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, event.getId());
+                            startActivity(waitlistIntent);
+                            break;
+                        default:
+                            break;
+                    }
+                })
+                .show();
     }
 
     /**

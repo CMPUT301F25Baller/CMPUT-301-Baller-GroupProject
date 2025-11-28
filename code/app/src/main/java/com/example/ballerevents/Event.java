@@ -2,7 +2,9 @@ package com.example.ballerevents;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
 import com.google.firebase.firestore.DocumentId;
+
 import java.util.List;
 
 /**
@@ -68,6 +70,40 @@ public class Event implements Parcelable {
     /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
 
+    /**
+     * Event start time in milliseconds since Unix epoch.
+     * <p>
+     * A value of {@code 0} indicates that no explicit start time was stored.
+     * </p>
+     */
+    public long eventStartAtMillis;
+
+    /**
+     * Event end time in milliseconds since Unix epoch.
+     * <p>
+     * A value of {@code 0} indicates that no explicit end time was stored.
+     * </p>
+     */
+    public long eventEndAtMillis;
+
+    /**
+     * Registration opening time in milliseconds since Unix epoch.
+     * <p>
+     * A value of {@code 0} indicates that no explicit opening time
+     * was configured for this event.
+     * </p>
+     */
+    public long registrationOpenAtMillis;
+
+    /**
+     * Registration closing time in milliseconds since Unix epoch.
+     * <p>
+     * A value of {@code 0} indicates that no explicit closing time
+     * was configured for this event.
+     * </p>
+     */
+    public long registrationCloseAtMillis;
+
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
@@ -76,7 +112,9 @@ public class Event implements Parcelable {
      * Empty constructor required for Firestore automatic deserialization.
      * <p>Do not remove or modify.</p>
      */
-    public Event() {}
+    public Event() {
+        // Default no-arg constructor
+    }
 
     /**
      * Reconstructs an Event from a Parcel.
@@ -98,6 +136,10 @@ public class Event implements Parcelable {
         eventPosterUrl = in.readString();
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
+        eventStartAtMillis = in.readLong();
+        eventEndAtMillis = in.readLong();
+        registrationOpenAtMillis = in.readLong();
+        registrationCloseAtMillis = in.readLong();
     }
 
     // -------------------------------------------------------------------------
@@ -120,6 +162,10 @@ public class Event implements Parcelable {
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
+        dest.writeLong(eventStartAtMillis);
+        dest.writeLong(eventEndAtMillis);
+        dest.writeLong(registrationOpenAtMillis);
+        dest.writeLong(registrationCloseAtMillis);
     }
 
     @Override
@@ -183,6 +229,37 @@ public class Event implements Parcelable {
     /** @return URL for the organizer avatar/icon. */
     public String getOrganizerIconUrl() { return organizerIconUrl; }
 
+    /** @return true if the event is marked as trending. */
+    public boolean isTrending() { return isTrending; }
+
+    /**
+     * @return event start time in milliseconds since epoch;
+     *         {@code 0} means no explicit start time was stored.
+     */
+    public long getEventStartAtMillis() { return eventStartAtMillis; }
+
+    /**
+     * @return event end time in milliseconds since epoch;
+     *         {@code 0} means no explicit end time was stored.
+     */
+    public long getEventEndAtMillis() { return eventEndAtMillis; }
+
+    /**
+     * @return registration opening time in milliseconds since epoch;
+     *         {@code 0} means no explicit opening time.
+     */
+    public long getRegistrationOpenAtMillis() { return registrationOpenAtMillis; }
+
+    /**
+     * @return registration closing time in milliseconds since epoch;
+     *         {@code 0} means no explicit closing time.
+     */
+    public long getRegistrationCloseAtMillis() { return registrationCloseAtMillis; }
+
+    // -------------------------------------------------------------------------
+    // Setters / helpers
+    // -------------------------------------------------------------------------
+
     /**
      * Sets the Firestore document ID for this event.
      *
@@ -190,6 +267,55 @@ public class Event implements Parcelable {
      */
     public void setId(String id) { this.id = id; }
 
-    /** @return true if the event is marked as trending. */
-    public boolean isTrending() { return isTrending; }
+    /**
+     * Sets the event start time.
+     *
+     * @param millis time in milliseconds since epoch; {@code 0} to unset
+     */
+    public void setEventStartAtMillis(long millis) {
+        this.eventStartAtMillis = millis;
+    }
+
+    /**
+     * Sets the event end time.
+     *
+     * @param millis time in milliseconds since epoch; {@code 0} to unset
+     */
+    public void setEventEndAtMillis(long millis) {
+        this.eventEndAtMillis = millis;
+    }
+
+    /**
+     * Sets the registration opening time.
+     *
+     * @param millis time in milliseconds since epoch; {@code 0} to unset
+     */
+    public void setRegistrationOpenAtMillis(long millis) {
+        this.registrationOpenAtMillis = millis;
+    }
+
+    /**
+     * Sets the registration closing time.
+     *
+     * @param millis time in milliseconds since epoch; {@code 0} to unset
+     */
+    public void setRegistrationCloseAtMillis(long millis) {
+        this.registrationCloseAtMillis = millis;
+    }
+
+    /**
+     * Returns whether registration is open at the specified moment.
+     * <ul>
+     *     <li>If {@link #registrationOpenAtMillis} is {@code 0}, the start is unbounded.</li>
+     *     <li>If {@link #registrationCloseAtMillis} is {@code 0}, the end is unbounded.</li>
+     * </ul>
+     *
+     * @param nowMillis current time in milliseconds since epoch
+     * @return {@code true} if {@code nowMillis} lies within the registration window
+     */
+    public boolean isRegistrationOpenAt(long nowMillis) {
+        boolean startOk = (registrationOpenAtMillis == 0L) || (nowMillis >= registrationOpenAtMillis);
+        boolean endOk   = (registrationCloseAtMillis == 0L) || (nowMillis <= registrationCloseAtMillis);
+        return startOk && endOk;
+    }
 }

@@ -124,6 +124,45 @@
                             android:background="?attr/selectableItemBackground"
                             android:padding="4dp"/>
                     </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Registration Period Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Registration Period"
+                    android:textColor="@android:color/black"
+                    android:textSize="18sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:layout_marginTop="24dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/tvRegistrationOpenPicker"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Select registration start"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:padding="8dp"
+                        android:background="?attr/selectableItemBackground" />
+
+                    <TextView
+                        android:id="@+id/tvRegistrationClosePicker"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Select registration end"
+                        android:textSize="14sp"
+                        android:textColor="@android:color/darker_gray"
+                        android:padding="8dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:layout_marginTop="4dp" />
                 </LinearLayout>
 
                 <!-- Location Row -->
@@ -187,6 +226,7 @@
                         android:layout_weight="1"
                         android:hint="Price"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_price"
                             android:layout_width="match_parent"
@@ -194,7 +234,9 @@
                             android:inputType="text"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <Space android:layout_width="8dp" android:layout_height="wrap_content"/>
+                    <Space
+                        android:layout_width="8dp"
+                        android:layout_height="wrap_content"/>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="0dp"
@@ -202,6 +244,7 @@
                         android:layout_weight="2"
                         android:hint="Select Tags"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/et_tags"
                             android:layout_width="match_parent"
