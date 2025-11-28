@@ -202,6 +202,11 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                         if (!TextUtils.isEmpty(posterUriString)) {
                             Glide.with(this).load(posterUriString).centerCrop().into(binding.ivEventBanner);
                         }
+
+                        // Assuming you added an EditText with id etMaxAttendees to the layout
+                        if (binding.etMaxAttendees != null) {
+                            binding.etMaxAttendees.setText(String.valueOf(event.getMaxAttendees()));
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -412,6 +417,11 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         String description = binding.etDescription.getText().toString().trim();
         String price = binding.etPrice.getText().toString().trim();
 
+        // NEW: Max Attendees
+        String maxAttendeesStr = "10"; // default
+        if (binding.etMaxAttendees != null) {
+            maxAttendeesStr = binding.etMaxAttendees.getText().toString().trim();
+        }
         if (TextUtils.isEmpty(title)) {
             Toast.makeText(this, "Title required", Toast.LENGTH_SHORT).show();
             return;
@@ -432,6 +442,14 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         // Tags now come from the multi-select dialog state
         java.util.List<String> tagsList = new java.util.ArrayList<>(selectedTags);
 
+        // Parse Max Attendees
+        int maxAttendees = 10;
+        try {
+            maxAttendees = Integer.parseInt(maxAttendeesStr);
+        } catch (NumberFormatException e) {
+            maxAttendees = 10;
+        }
+
         // Build event model
         Event eventData = new Event();
         eventData.title = title;
@@ -447,6 +465,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         eventData.description = description;
         eventData.price = price;
         eventData.tags = tagsList;
+        eventData.maxAttendees = maxAttendees;
 
         // Poster/banner image
         if (!posterUriString.isEmpty()) {

@@ -3,6 +3,7 @@ package com.example.ballerevents;
 import android.os.Parcel;
 import android.os.Parcelable;
 import com.google.firebase.firestore.DocumentId;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -55,18 +56,34 @@ public class Event implements Parcelable {
 
     /** Firestore document ID of the organizer (from the {@code users} collection). */
     public String organizerId;
-
-    /** A descriptive summary or detailed information about the event. */
-    public String description;
-
-    /** URL pointing to the event’s main poster image. */
-    public String eventPosterUrl;
-
     /** URL for the organizer's profile image or icon. */
     public String organizerIconUrl;
 
+    /** URL pointing to the event’s main poster image. */
+    public String eventPosterUrl;
     /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
+    /** A descriptive summary or detailed information about the event. */
+    public String description;
+
+    // --- Lottery & Attendance System ---
+    /** Maximum number of attendees allowed (Organizer + Lottery Winners). */
+    public int maxAttendees;
+
+    /** IDs of users who have signed up for the waitlist. */
+    public List<String> waitingListIds;
+
+    /** IDs of users explicitly invited by the organizer. */
+    public List<String> invitedUserIds;
+
+    /** IDs of users selected via the lottery draw. */
+    public List<String> drawnUserIds;
+
+    /** IDs of users who have ACCEPTED the invitation or lottery win. */
+    public List<String> confirmedUserIds;
+
+    /** IDs of users who DECLINED or cancelled. */
+    public List<String> cancelledUserIds;
 
     // -------------------------------------------------------------------------
     // Constructors
@@ -76,7 +93,18 @@ public class Event implements Parcelable {
      * Empty constructor required for Firestore automatic deserialization.
      * <p>Do not remove or modify.</p>
      */
-    public Event() {}
+    public Event() {
+        // Firestore requires a no-arg constructor
+        this.tags = new ArrayList<>();
+        this.waitingListIds = new ArrayList<>();
+        this.invitedUserIds = new ArrayList<>();
+        this.drawnUserIds = new ArrayList<>();
+        this.confirmedUserIds = new ArrayList<>();
+        this.cancelledUserIds = new ArrayList<>();
+        this.maxAttendees = 10; // Default
+    }
+
+
 
     /**
      * Reconstructs an Event from a Parcel.
@@ -98,6 +126,12 @@ public class Event implements Parcelable {
         eventPosterUrl = in.readString();
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
+        maxAttendees = in.readInt();
+        waitingListIds = in.createStringArrayList();
+        invitedUserIds = in.createStringArrayList();
+        drawnUserIds = in.createStringArrayList();
+        confirmedUserIds = in.createStringArrayList();
+        cancelledUserIds = in.createStringArrayList();
     }
 
     // -------------------------------------------------------------------------
@@ -120,6 +154,12 @@ public class Event implements Parcelable {
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
+        dest.writeInt(maxAttendees);
+        dest.writeStringList(waitingListIds);
+        dest.writeStringList(invitedUserIds);
+        dest.writeStringList(drawnUserIds);
+        dest.writeStringList(confirmedUserIds);
+        dest.writeStringList(cancelledUserIds);
     }
 
     @Override
@@ -192,4 +232,13 @@ public class Event implements Parcelable {
 
     /** @return true if the event is marked as trending. */
     public boolean isTrending() { return isTrending; }
+
+    public int getMaxAttendees() { return maxAttendees; }
+    public void setMaxAttendees(int maxAttendees) { this.maxAttendees = maxAttendees; }
+
+    public List<String> getWaitingListIds() { return waitingListIds; }
+    public List<String> getInvitedUserIds() { return invitedUserIds; }
+    public List<String> getDrawnUserIds() { return drawnUserIds; }
+    public List<String> getConfirmedUserIds() { return confirmedUserIds; }
+    public List<String> getCancelledUserIds() { return cancelledUserIds; }
 }
