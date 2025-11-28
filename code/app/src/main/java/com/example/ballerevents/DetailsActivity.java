@@ -1,5 +1,6 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -24,7 +25,8 @@ import java.util.List;
  * <ul>
  *     <li>Loads event details from Firestore in real time.</li>
  *     <li>Loads the current user's {@link UserProfile} in real time.</li>
- *     <li>Allows the user to join or withdraw from the event's lottery (waitlist).</li>
+ *     <li>Allows the user to join or withdraw from the event's lottery (waitlist),
+ *         respecting the event's registration period.</li>
  *     <li>Updates the UI based on the user's membership in {@code appliedEventIds}.</li>
  * </ul>
  *
@@ -117,6 +119,8 @@ public class DetailsActivity extends AppCompatActivity {
                 mEvent = snapshot.toObject(Event.class);
                 if (mEvent != null) {
                     populateStaticUi(mEvent);
+                    // Re-evaluate button state when event changes
+                    updateButtonAndCountUI();
                 }
             } else {
                 Log.d(TAG, "Event deleted or not found");
@@ -201,10 +205,10 @@ public class DetailsActivity extends AppCompatActivity {
 
     /**
      * Updates the state and label of the join/withdraw button based on
-     * the current user's application status, and also updates the
-     * waitlist info text.
+     * the current user's application status and the event's registration window.
      * <p>
      * The status is derived from {@link UserProfile#getAppliedEventIds()}.
+     * Registration is determined via {@link Event#isRegistrationOpenAt(long)}.
      */
     private void updateButtonAndCountUI() {
         if (mUserProfile == null) return;
@@ -220,9 +224,21 @@ public class DetailsActivity extends AppCompatActivity {
         // derived from Firestore documents.
         binding.tvWaitlistCount.setText("Join the lottery!");
 
+        long now = System.currentTimeMillis();
+        boolean registrationOpen = (mEvent == null) || mEvent.isRegistrationOpenAt(now);
+
+        // If registration is closed and the user has NOT applied,
+        // disable the button entirely.
+        if (!registrationOpen && !mIsUserApplied) {
+            binding.btnJoinWaitlist.setText("Registration Closed");
+            binding.btnJoinWaitlist.setEnabled(false);
+            return;
+        }
+
+        // If the user is already applied, allow them to withdraw
+        // even if registration has closed.
         if (mIsUserApplied) {
             binding.btnJoinWaitlist.setText("Withdraw");
-            // Optionally adjust styles here if desired
         } else {
             binding.btnJoinWaitlist.setText("Join Waitlist");
         }
@@ -231,7 +247,8 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * Shows Delete Event button only if current user is admin.
+     * Shows Delete Event button (and View Waitlist) only if current user is admin
+     * (and optionally organizer).
      */
     private void setupAdminDeleteIfNeeded() {
         if (eventId == null || eventId.isEmpty()) return;
@@ -243,14 +260,39 @@ public class DetailsActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     UserProfile user = snapshot.toObject(UserProfile.class);
-                    if (user != null &&
-                            "admin".equalsIgnoreCase(user.getRole())) {
+                    if (user == null) {
+                        return;
+                    }
 
+                    String role = user.getRole();
+                    boolean isAdmin = "admin".equalsIgnoreCase(role);
+                    boolean isOrganizer = "organizer".equalsIgnoreCase(role);
+
+                    if (isAdmin) {
                         // show delete button
                         binding.btnDeleteEvent.setVisibility(View.VISIBLE);
                         binding.btnDeleteEvent.setOnClickListener(v -> confirmDelete());
+
+                        // show waitlist button
+                        binding.btnViewWaitlist.setVisibility(View.VISIBLE);
+                        binding.btnViewWaitlist.setOnClickListener(v -> openWaitlist());
+                    }
+
+                    // Optional: allow organizers to also view waitlist from this screen
+                    if (isOrganizer) {
+                        binding.btnViewWaitlist.setVisibility(View.VISIBLE);
+                        binding.btnViewWaitlist.setOnClickListener(v -> openWaitlist());
                     }
                 });
+    }
+
+    /**
+     * Opens the waitlist screen for this event.
+     */
+    private void openWaitlist() {
+        Intent intent = new Intent(this, OrganizerWaitlistActivity.class);
+        intent.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, eventId);
+        startActivity(intent);
     }
 
     private void confirmDelete() {
@@ -274,13 +316,13 @@ public class DetailsActivity extends AppCompatActivity {
                 });
     }
 
-
     /**
      * Handles the "Join Waitlist" / "Withdraw" button click.
      * <p>
      * This method:
      * <ul>
      *     <li>Disables the button to prevent double taps.</li>
+     *     <li>Checks the event's registration window before allowing a join.</li>
      *     <li>Uses {@link FieldValue#arrayUnion(Object...)} or
      *         {@link FieldValue#arrayRemove(Object...)} to update
      *         {@code appliedEventIds} in the user's Firestore document.</li>
@@ -296,7 +338,7 @@ public class DetailsActivity extends AppCompatActivity {
             userRef.update("appliedEventIds", FieldValue.arrayRemove(eventId))
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this,
-                                "Withdrawn from " + mEvent.getTitle(),
+                                "Withdrawn from " + (mEvent != null ? mEvent.getTitle() : "event"),
                                 Toast.LENGTH_SHORT).show();
                         // UI will refresh via listener
                     })
@@ -308,6 +350,25 @@ public class DetailsActivity extends AppCompatActivity {
                     });
         } else {
             // User wants to APPLY to the lottery
+            // Guard with registration window at action time as well
+            if (mEvent == null) {
+                Toast.makeText(this,
+                        "Event data not loaded. Please try again.",
+                        Toast.LENGTH_SHORT).show();
+                binding.btnJoinWaitlist.setEnabled(true);
+                return;
+            }
+
+            long now = System.currentTimeMillis();
+            if (!mEvent.isRegistrationOpenAt(now)) {
+                Toast.makeText(this,
+                        "Registration for this event is currently closed.",
+                        Toast.LENGTH_SHORT).show();
+                // Reflect closed state in UI
+                updateButtonAndCountUI();
+                return;
+            }
+
             userRef.update("appliedEventIds", FieldValue.arrayUnion(eventId))
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this,

@@ -20,6 +20,7 @@ import com.example.ballerevents.databinding.ActivityOrganizerEventCreationBindin
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -44,6 +45,7 @@ import java.util.Locale;
  *     <li>Location input</li>
  *     <li>Tag parsing</li>
  *     <li>Poster and banner image picking</li>
+ *     <li>Registration period (open / close)</li>
  *     <li>Save/Update operations to Firestore</li>
  * </ul>
  * </p>
@@ -55,6 +57,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
 
     /** Intent key for passing an event ID for edit mode. */
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
+
+    /** Date-time format used for displaying registration period. */
+    private static final SimpleDateFormat REGISTRATION_FORMAT =
+            new SimpleDateFormat("dd MMM yyyy, h:mm a", Locale.ENGLISH);
 
     /** ViewBinding for all views in the layout. */
     private ActivityOrganizerEventCreationBinding binding;
@@ -74,7 +80,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     /** If non-null, the activity is editing an existing event. */
     private String eventIdToEdit = null;
 
+    // -------------------------------------------------------------------------
     // Cached form values
+    // -------------------------------------------------------------------------
+
     private String dateStr = "";
     private String fromTime = "";
     private String toTime = "";
@@ -86,9 +95,16 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     private String posterUriString = "";
 
     /** Calendar instances for date/time picking. */
-    private Calendar eventDate = Calendar.getInstance();
-    private Calendar fromCal = Calendar.getInstance();
-    private Calendar toCal = Calendar.getInstance();
+    private final Calendar eventDate = Calendar.getInstance();
+    private final Calendar fromCal = Calendar.getInstance();
+    private final Calendar toCal = Calendar.getInstance();
+
+    /** Registration period calendars and state. */
+    private final Calendar registrationOpenCal = Calendar.getInstance();
+    private final Calendar registrationCloseCal = Calendar.getInstance();
+    private boolean hasRegistrationOpen = false;
+    private boolean hasRegistrationClose = false;
+
     private static final String[] PRESET_TAGS = new String[]{
             "Music Concert",
             "Exhibition",
@@ -105,6 +121,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     /** ActivityResultLaunchers for picking images. */
     private ActivityResultLauncher<String> bannerPickerLauncher;
     private ActivityResultLauncher<String> posterPickerLauncher;
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,6 +154,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         setupImagePickers();
         setupClickListeners();
     }
+
+    // -------------------------------------------------------------------------
+    // Data loading
+    // -------------------------------------------------------------------------
 
     /**
      * Loads a Firestore event into the UI (only used in edit mode).
@@ -194,13 +218,38 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                         // Poster image
                         posterUriString = event.getEventPosterUrl();
                         if (!TextUtils.isEmpty(posterUriString)) {
-                            binding.ivPosterImage.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+                            binding.ivPosterImage.setScaleType(
+                                    android.widget.ImageView.ScaleType.CENTER_CROP
+                            );
                             Glide.with(this).load(posterUriString).into(binding.ivPosterImage);
                         }
 
                         // Header banner uses same poster for now
                         if (!TextUtils.isEmpty(posterUriString)) {
-                            Glide.with(this).load(posterUriString).centerCrop().into(binding.ivEventBanner);
+                            Glide.with(this)
+                                    .load(posterUriString)
+                                    .centerCrop()
+                                    .into(binding.ivEventBanner);
+                        }
+
+                        // Registration period
+                        long openMillis = event.getRegistrationOpenAtMillis();
+                        long closeMillis = event.getRegistrationCloseAtMillis();
+
+                        if (openMillis > 0) {
+                            hasRegistrationOpen = true;
+                            registrationOpenCal.setTimeInMillis(openMillis);
+                            binding.tvRegistrationOpenPicker.setText(
+                                    REGISTRATION_FORMAT.format(registrationOpenCal.getTime())
+                            );
+                        }
+
+                        if (closeMillis > 0) {
+                            hasRegistrationClose = true;
+                            registrationCloseCal.setTimeInMillis(closeMillis);
+                            binding.tvRegistrationClosePicker.setText(
+                                    REGISTRATION_FORMAT.format(registrationCloseCal.getTime())
+                            );
                         }
                     }
                 })
@@ -210,6 +259,23 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                     finish();
                 });
     }
+
+    /**
+     * Loads the organizer's profile document from Firestore so the event can
+     * correctly store organizer name and profile picture.
+     */
+    private void loadOrganizerProfile() {
+        DocumentReference userRef = db.collection("users").document(currentUserId);
+        userRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                organizerProfile = documentSnapshot.toObject(UserProfile.class);
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Image pickers
+    // -------------------------------------------------------------------------
 
     /**
      * Registers ActivityResultLaunchers for picking the poster and banner images
@@ -239,6 +305,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                 });
     }
 
+    // -------------------------------------------------------------------------
+    // Click listeners
+    // -------------------------------------------------------------------------
+
     /**
      * Sets up listeners for:
      * <ul>
@@ -247,6 +317,8 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
      *     <li>Date/time pickers</li>
      *     <li>Location selector dialog</li>
      *     <li>Poster/banner image picking</li>
+     *     <li>Registration period pickers</li>
+     *     <li>Tags multi-select dialog</li>
      * </ul>
      */
     private void setupClickListeners() {
@@ -266,10 +338,20 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         binding.ivPosterImage.setOnClickListener(
                 v -> posterPickerLauncher.launch("image/*")
         );
-        binding.etTags.setKeyListener(null);      // Disable typing
+
+        // Tags field as a read-only multi-select
+        binding.etTags.setKeyListener(null);
         binding.etTags.setFocusable(false);
         binding.etTags.setOnClickListener(v -> showTagsDialog());
+
+        // Registration period
+        binding.tvRegistrationOpenPicker.setOnClickListener(v -> pickRegistrationOpen());
+        binding.tvRegistrationClosePicker.setOnClickListener(v -> pickRegistrationClose());
     }
+
+    // -------------------------------------------------------------------------
+    // Pickers
+    // -------------------------------------------------------------------------
 
     /**
      * Opens a date picker dialog and updates {@link #dateStr} when selected.
@@ -353,17 +435,112 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     }
 
     /**
-     * Loads the organizer's profile document from Firestore so the event can
-     * correctly store organizer name and profile picture.
+     * Opens pickers for the registration opening date and time.
+     * Updates {@link #registrationOpenCal} and {@link #hasRegistrationOpen}.
+     * If a registration close time is already set and becomes invalid,
+     * it will be cleared.
      */
-    private void loadOrganizerProfile() {
-        DocumentReference userRef = db.collection("users").document(currentUserId);
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                organizerProfile = documentSnapshot.toObject(UserProfile.class);
-            }
-        });
+    private void pickRegistrationOpen() {
+        new DatePickerDialog(
+                this,
+                (view, y, m, d) -> {
+                    registrationOpenCal.set(y, m, d);
+
+                    new TimePickerDialog(
+                            this,
+                            (timeView, h, min) -> {
+                                registrationOpenCal.set(Calendar.HOUR_OF_DAY, h);
+                                registrationOpenCal.set(Calendar.MINUTE, min);
+                                registrationOpenCal.set(Calendar.SECOND, 0);
+                                registrationOpenCal.set(Calendar.MILLISECOND, 0);
+
+                                hasRegistrationOpen = true;
+                                binding.tvRegistrationOpenPicker.setText(
+                                        REGISTRATION_FORMAT.format(registrationOpenCal.getTime())
+                                );
+
+                                // If close is set but now earlier/equal than open, clear it
+                                if (hasRegistrationClose &&
+                                        registrationCloseCal.getTimeInMillis()
+                                                <= registrationOpenCal.getTimeInMillis()) {
+                                    hasRegistrationClose = false;
+                                    registrationCloseCal.setTimeInMillis(0L);
+                                    binding.tvRegistrationClosePicker
+                                            .setText("Select registration end");
+                                }
+                            },
+                            registrationOpenCal.get(Calendar.HOUR_OF_DAY),
+                            registrationOpenCal.get(Calendar.MINUTE),
+                            false
+                    ).show();
+                },
+                registrationOpenCal.get(Calendar.YEAR),
+                registrationOpenCal.get(Calendar.MONTH),
+                registrationOpenCal.get(Calendar.DAY_OF_MONTH)
+        ).show();
     }
+
+    /**
+     * Opens pickers for the registration closing date and time.
+     * Updates {@link #registrationCloseCal} and {@link #hasRegistrationClose}.
+     * If an opening time exists, the date picker will not allow dates before it.
+     */
+    private void pickRegistrationClose() {
+        DatePickerDialog datePickerDialog = new DatePickerDialog(
+                this,
+                (view, y, m, d) -> {
+                    registrationCloseCal.set(y, m, d);
+
+                    new TimePickerDialog(
+                            this,
+                            (timeView, h, min) -> {
+                                registrationCloseCal.set(Calendar.HOUR_OF_DAY, h);
+                                registrationCloseCal.set(Calendar.MINUTE, min);
+                                registrationCloseCal.set(Calendar.SECOND, 0);
+                                registrationCloseCal.set(Calendar.MILLISECOND, 0);
+
+                                // If we have an open time, enforce close > open including time
+                                if (hasRegistrationOpen &&
+                                        registrationCloseCal.getTimeInMillis()
+                                                <= registrationOpenCal.getTimeInMillis()) {
+                                    Toast.makeText(
+                                            this,
+                                            "End must be after the start time.",
+                                            Toast.LENGTH_SHORT
+                                    ).show();
+                                    registrationCloseCal.setTimeInMillis(
+                                            registrationOpenCal.getTimeInMillis() + 60 * 60 * 1000L
+                                    );
+                                }
+
+                                hasRegistrationClose = true;
+                                binding.tvRegistrationClosePicker.setText(
+                                        REGISTRATION_FORMAT.format(registrationCloseCal.getTime())
+                                );
+                            },
+                            registrationCloseCal.get(Calendar.HOUR_OF_DAY),
+                            registrationCloseCal.get(Calendar.MINUTE),
+                            false
+                    ).show();
+                },
+                registrationCloseCal.get(Calendar.YEAR),
+                registrationCloseCal.get(Calendar.MONTH),
+                registrationCloseCal.get(Calendar.DAY_OF_MONTH)
+        );
+
+        if (hasRegistrationOpen) {
+            // This still prevents choosing a date before the open date
+            datePickerDialog.getDatePicker()
+                    .setMinDate(registrationOpenCal.getTimeInMillis());
+        }
+
+        datePickerDialog.show();
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Tags
+    // -------------------------------------------------------------------------
 
     /** Allows selecting tags from PRESET_TAGS instead of typing manually. */
     private void showTagsDialog() {
@@ -373,7 +550,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         builder.setMultiChoiceItems(PRESET_TAGS, presetTagChecked, (dialog, which, isChecked) -> {
             String tag = PRESET_TAGS[which];
             if (isChecked) {
-                if (!selectedTags.contains(tag)) selectedTags.add(tag);
+                if (!selectedTags.contains(tag)) {
+                    selectedTags.add(tag);
+                }
             } else {
                 selectedTags.remove(tag);
             }
@@ -388,14 +567,22 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     }
 
     private String joinTags(java.util.List<String> tags) {
-        if (tags == null || tags.isEmpty()) return "";
+        if (tags == null || tags.isEmpty()) {
+            return "";
+        }
         StringBuilder sb = new StringBuilder();
         for (String t : tags) {
-            if (sb.length() > 0) sb.append(", ");
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
             sb.append(t);
         }
         return sb.toString();
     }
+
+    // -------------------------------------------------------------------------
+    // Firestore save
+    // -------------------------------------------------------------------------
 
     /**
      * Validates user input and writes the event to Firestore.
@@ -429,6 +616,26 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             return;
         }
 
+        // Registration window sanity checks
+        if (hasRegistrationOpen ^ hasRegistrationClose) {
+            Toast.makeText(
+                    this,
+                    "Please set both registration start and end, or leave both empty.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
+        if (hasRegistrationOpen && hasRegistrationClose &&
+                registrationCloseCal.getTimeInMillis() < registrationOpenCal.getTimeInMillis()) {
+            Toast.makeText(
+                    this,
+                    "Registration end must be after registration start.",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
         // Tags now come from the multi-select dialog state
         java.util.List<String> tagsList = new java.util.ArrayList<>(selectedTags);
 
@@ -459,27 +666,36 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             eventData.organizerIconUrl = organizerProfile.getProfilePictureUrl();
         }
 
+        // Registration period – store as millis (0 means "not set")
+        eventData.registrationOpenAtMillis =
+                hasRegistrationOpen ? registrationOpenCal.getTimeInMillis() : 0L;
+        eventData.registrationCloseAtMillis =
+                hasRegistrationClose ? registrationCloseCal.getTimeInMillis() : 0L;
+
         eventData.isTrending = false;
 
         // Update or Create
         if (eventIdToEdit != null) {
             db.collection("events").document(eventIdToEdit)
-                    .set(eventData)
+                    .set(eventData, SetOptions.merge())
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "Event Updated!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
-                    .addOnFailureListener(e ->
-                            Toast.makeText(this, "Error updating event", Toast.LENGTH_SHORT).show());
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Error updating event", Toast.LENGTH_SHORT).show();
+                        Log.w(TAG, "Error updating event", e);
+                    });
         } else {
             db.collection("events").add(eventData)
                     .addOnSuccessListener(documentReference -> {
                         Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
-                    .addOnFailureListener(e ->
-                            Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show());
+                    .addOnFailureListener(e -> {
+                        Toast.makeText(this, "Error creating event", Toast.LENGTH_SHORT).show();
+                        Log.w(TAG, "Error creating event", e);
+                    });
         }
     }
-
 }
