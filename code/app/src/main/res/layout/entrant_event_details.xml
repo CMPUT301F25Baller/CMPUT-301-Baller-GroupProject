@@ -305,6 +305,16 @@
                     app:iconGravity="textEnd"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="16dp"/>
+
+                <!-- View Waitlist Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnViewWaitlist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="View Waitlist"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
             </LinearLayout>
 
         </LinearLayout>

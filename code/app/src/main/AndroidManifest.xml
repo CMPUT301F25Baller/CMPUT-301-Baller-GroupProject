@@ -13,6 +13,12 @@
             android:exported="false" />
 
         <activity
+            android:name=".OrganizerWaitlistActivity"
+            android:exported="false"
+            android:label="Waitlist"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
+        <activity
             android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>

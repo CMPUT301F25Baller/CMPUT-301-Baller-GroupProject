@@ -35,9 +35,10 @@ import java.util.stream.Collectors;
  * </ul>
  *
  * <p>This class implements {@link AdminEventsAdapter.OnEventActionListener} to receive
- * delete actions emitted by the adapter.
+ * delete actions emitted by the adapter.</p>
  */
-public class AdminEventsActivity extends AppCompatActivity implements AdminEventsAdapter.OnEventActionListener {
+public class AdminEventsActivity extends AppCompatActivity
+        implements AdminEventsAdapter.OnEventActionListener {
 
     /** Tag used for internal logging. */
     private static final String TAG = "AdminEventsActivity";
@@ -82,7 +83,9 @@ public class AdminEventsActivity extends AppCompatActivity implements AdminEvent
         // Search bar: live filtering
         binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filter(s.toString()); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filter(s.toString());
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
     }
@@ -91,7 +94,7 @@ public class AdminEventsActivity extends AppCompatActivity implements AdminEvent
      * Loads all events from Firestore and updates the adapter.
      *
      * <p>Data is retrieved via a single `.get()` call and converted to {@link Event} objects.
-     * Once loaded, the list is stored in {@link #allEvents} for client-side filtering.
+     * Once loaded, the list is stored in {@link #allEvents} for client-side filtering.</p>
      */
     private void loadAllEvents() {
         binding.progress.setVisibility(View.VISIBLE);
@@ -141,7 +144,7 @@ public class AdminEventsActivity extends AppCompatActivity implements AdminEvent
     /**
      * Callback invoked when the delete button is pressed for a given event.
      *
-     * <p>This method displays a confirmation dialog before removing the event from Firestore.
+     * <p>This method displays a confirmation dialog before removing the event from Firestore.</p>
      *
      * @param event the event selected for deletion
      */
@@ -160,7 +163,7 @@ public class AdminEventsActivity extends AppCompatActivity implements AdminEvent
      * Permanently deletes an event from Firestore using its document ID.
      *
      * <p>After deletion succeeds, the event is also removed from the local cache and the UI is
-     * refreshed based on the current filtered query.
+     * refreshed based on the current filtered query.</p>
      *
      * @param event event instance whose ID should be removed from Firestore
      */
