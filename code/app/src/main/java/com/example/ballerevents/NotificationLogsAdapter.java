@@ -43,8 +43,9 @@ public class NotificationLogsAdapter
         void onOpen(NotificationLog log);
 
         // New actions for Invitations
-        void onAcceptInvite(NotificationLog log);
-        void onRejectInvite(NotificationLog log);
+        // Actions for Invitations
+        void onAccept(NotificationLog log);
+        void onDecline(NotificationLog log);
     }
 
     /** Action listener instance for handling row-level interactions. */
@@ -77,7 +78,8 @@ public class NotificationLogsAdapter
                 @Override
                 public boolean areContentsTheSame(@NonNull NotificationLog oldItem, @NonNull NotificationLog newItem) {
                     return oldItem.isRead == newItem.isRead &&
-                            oldItem.title.equals(newItem.title);
+                            oldItem.title.equals(newItem.title) &&
+                            oldItem.isInvitation == newItem.isInvitation;
                 }
             };
 
@@ -95,44 +97,39 @@ public class NotificationLogsAdapter
     public void onBindViewHolder(@NonNull VH h, int position) {
         NotificationLog n = getItem(position);
 
-        h.ivAvatar.setImageResource(n.avatarRes);
-        // Corrected: Use tvMessage instead of tvTitle
-        h.tvMessage.setText(n.title);
+        h.tvMessage.setText(n.title); // Mapping title to main message view
         h.tvTime.setText(n.timestamp);
+        h.ivAvatar.setImageResource(n.avatarRes);
 
-        // Logic to toggle between Standard Notification vs Invitation
+        // Logic to switch between "Mark Read" vs "Accept/Decline"
         if (n.isInvitation) {
-            // It is an invitation: Show Accept / Reject
-            h.btnMarkRead.setText("Accept");
-            h.btnOpen.setText("Reject");
+            // -- INVITATION MODE --
+            h.btnOpen.setText("Accept");
+            h.btnOpen.setTextColor(Color.parseColor("#4CAF50")); // Green for Accept
+            h.btnOpen.setVisibility(View.VISIBLE);
+            h.btnOpen.setOnClickListener(v -> actions.onAccept(n));
 
-            // Visual cues (Optional: Change text color)
-            h.btnMarkRead.setTextColor(Color.parseColor("#4CAF50")); // Green
-            h.btnOpen.setTextColor(Color.parseColor("#F44336"));     // Red
-
-            h.btnMarkRead.setOnClickListener(v -> actions.onAcceptInvite(n));
-            h.btnOpen.setOnClickListener(v -> actions.onRejectInvite(n));
-
-            // Show dot if it's an invite (usually implicitly unread until acted upon)
-            if (h.unreadDot != null) {
-                h.unreadDot.setVisibility(View.VISIBLE);
-            }
-            if (h.actionsRow != null) {
-                h.actionsRow.setVisibility(View.VISIBLE);
-            }
+            h.btnMarkRead.setText("Decline");
+            h.btnMarkRead.setTextColor(Color.parseColor("#F44336")); // Red for Decline
+            h.btnMarkRead.setVisibility(View.VISIBLE);
+            h.btnMarkRead.setOnClickListener(v -> actions.onDecline(n));
 
         } else {
-            // Standard Log: Show Mark Read / Open
-            h.btnMarkRead.setText("Mark Read");
+            // -- STANDARD NOTIFICATION MODE --
             h.btnOpen.setText("Open");
-
-            h.btnMarkRead.setTextColor(Color.GRAY); // Default
-            h.btnOpen.setTextColor(Color.GRAY);     // Default
-
-            h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
+            h.btnOpen.setTextColor(Color.GRAY);
+            h.btnOpen.setVisibility(View.VISIBLE);
             h.btnOpen.setOnClickListener(v -> actions.onOpen(n));
 
-            // Show dot only if unread
+            h.btnMarkRead.setText("Mark Read");
+            h.btnMarkRead.setTextColor(Color.GRAY);
+            // Hide "Mark Read" if already read to clean up UI, or keep it disabled
+            h.btnMarkRead.setVisibility(n.isRead ? View.GONE : View.VISIBLE);
+            h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
+        }
+
+        // Show dot only if unread
+        if (h.unreadDot != null) {
             h.unreadDot.setVisibility(n.isRead ? View.INVISIBLE : View.VISIBLE);
         }
     }
@@ -145,8 +142,8 @@ public class NotificationLogsAdapter
         final ImageView ivAvatar;
         final TextView tvMessage;
         final TextView tvTime;
-        final Button btnMarkRead;
-        final Button btnOpen;
+        final Button btnMarkRead; // Used as "Decline" or "Mark Read"
+        final Button btnOpen;     // Used as "Accept" or "Open"
         final View actionsRow;
         final View unreadDot;
 

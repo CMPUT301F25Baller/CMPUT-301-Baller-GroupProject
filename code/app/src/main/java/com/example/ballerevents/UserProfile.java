@@ -78,6 +78,7 @@ public class UserProfile {
 
     /** @return the user’s Firestore document ID (FirebaseAuth UID). */
     public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
     /** @return the user’s display name. */
     public String getName() { return name; }

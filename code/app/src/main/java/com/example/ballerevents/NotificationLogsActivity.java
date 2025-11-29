@@ -1,55 +1,38 @@
 package com.example.ballerevents;
 
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
-import com.google.android.material.chip.Chip;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.WriteBatch;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
-/**
- * Activity displaying a list of notification logs to the user.
- * <p>
- * The screen contains a RecyclerView showing log entries in text form,
- * along with chips that allow switching between:
- * <ul>
- *     <li>Only new/unread items</li>
- *     <li>All notification logs</li>
- * </ul>
- * A "Mark All" button allows marking all notifications as read and updates
- * the RecyclerView accordingly.
- * </p>
- *
- * <p>This activity uses {@link SimpleTextAdapter} to render the text rows.</p>
- */
 public class NotificationLogsActivity extends AppCompatActivity implements NotificationLogsAdapter.OnItemAction {
 
-    /**
-     * ViewBinding for accessing the notification logs layout.
-     */
+    private static final String TAG = "NotificationActivity";
     private ActivityNotificationLogsBinding binding;
-
-    /**
-     * RecyclerView adapter for displaying notification text rows.
-     */
     private NotificationLogsAdapter adapter;
-
     private FirebaseFirestore db;
+    private ListenerRegistration notificationsListener;
+    private String currentUserId;
 
-    private String userId;
-
-    // List to hold combined logs
-    private List<NotificationLog> displayedLogs = new ArrayList<>();
+    private List<NotificationLog> allLogs = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,172 +41,157 @@ public class NotificationLogsActivity extends AppCompatActivity implements Notif
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
-        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-            userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        }
+        currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
 
-        setupRecyclerView();
-        loadData();
-    }
+        setupRecycler();
+        setupChips();
 
-    private void setupRecyclerView() {
-        adapter = new NotificationLogsAdapter(this);
-        binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvLogs.setAdapter(adapter);
-
-        // Setup Chips (Simple filter logic)
-        binding.chipAll.setOnClickListener(v -> adapter.submitList(new ArrayList<>(displayedLogs)));
-        binding.chipNew.setOnClickListener(v -> filterNewLogs());
-        binding.btnMarkAll.setOnClickListener(v -> markAllRead());
-    }
-
-    private void loadData() {
-        // 1. Get Static Logs (Mock data)
-        List<NotificationLog> staticLogs = NotificationLogsStore.getAll();
-
-        // 2. Get Real Invitations from Firestore
-        if (userId != null) {
-            db.collection("users").document(userId).get()
-                    .addOnSuccessListener(documentSnapshot -> {
-                        UserProfile user = documentSnapshot.toObject(UserProfile.class);
-                        if (user != null) {
-                            List<String> invitedIds = user.getInvitedEventIds();
-
-                            if (invitedIds != null && !invitedIds.isEmpty()) {
-                                fetchEventDetailsAndMerge(invitedIds, staticLogs);
-                            } else {
-                                // No invites, just show static logs
-                                displayedLogs = staticLogs;
-                                adapter.submitList(displayedLogs);
-                            }
-                        }
-                    })
-                    .addOnFailureListener(e -> {
-                        // Fallback to static only on error
-                        displayedLogs = staticLogs;
-                        adapter.submitList(displayedLogs);
-                    });
+        if (currentUserId != null) {
+            // DEBUG: Show the user ID to ensure it matches 'chosenUserIds' in Firestore
+            Toast.makeText(this, "Logged in as: " + currentUserId, Toast.LENGTH_LONG).show();
+            startListeningForNotifications();
         } else {
-            displayedLogs = staticLogs;
-            adapter.submitList(displayedLogs);
+            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
         }
     }
 
-    /**
-     * Fetches event titles for invitations to create nice log entries.
-     */
-    private void fetchEventDetailsAndMerge(List<String> invitedIds, List<NotificationLog> staticLogs) {
-        // This is a simplified fetch loop. In production, consider a 'whereIn' query if IDs < 10.
-        List<NotificationLog> invitationLogs = new ArrayList<>();
+    private void setupRecycler() {
+        binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new NotificationLogsAdapter(this);
+        binding.rvLogs.setAdapter(adapter);
+    }
 
-        // Counter to know when all async fetches are done
-        final int[] pendingFetches = {invitedIds.size()};
+    private void setupChips() {
+        binding.chipAll.setChecked(true);
+        binding.chipAll.setOnClickListener(v -> filterList(false));
+        binding.chipNew.setOnClickListener(v -> filterList(true));
+        binding.btnMarkAll.setOnClickListener(v -> markAllAsRead());
+    }
 
-        for (String eventId : invitedIds) {
-            db.collection("events").document(eventId).get()
-                    .addOnSuccessListener(eventDoc -> {
-                        if (eventDoc.exists()) {
-                            String title = eventDoc.getString("title");
-                            NotificationLog inviteLog = new NotificationLog(
-                                    eventId, // ID
-                                    "You're invited to join " + title, // Title/Msg
-                                    "Action Required", // Timestamp label
-                                    R.drawable.ic_notification_alert, // Ensure this drawable exists
-                                    false, // isRead
-                                    true,  // isInvitation
-                                    eventId // eventId
-                            );
-                            invitationLogs.add(inviteLog);
+    private void startListeningForNotifications() {
+        binding.progressBar.setVisibility(View.VISIBLE);
+        Log.d(TAG, "Listening for notifications for User ID: " + currentUserId);
+
+        // --- CRITICAL FIX ---
+        // I have commented out .orderBy("timestamp") temporarily.
+        // If this query works now, it means you were missing a Firestore Index.
+        // You can add it back later, check Logcat for the "Create Index" link.
+        notificationsListener = db.collection("users").document(currentUserId)
+                .collection("notifications")
+                // .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener((snapshots, e) -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    if (e != null) {
+                        Log.e(TAG, "Listen failed.", e);
+                        Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    if (snapshots != null) {
+                        Log.d(TAG, "Loaded " + snapshots.size() + " notifications.");
+                        allLogs.clear();
+                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                            allLogs.add(mapDocumentToLog(doc));
                         }
-                        checkAndCombine(pendingFetches, invitationLogs, staticLogs);
-                    })
-                    .addOnFailureListener(e -> checkAndCombine(pendingFetches, invitationLogs, staticLogs));
-        }
+                        filterList(binding.chipNew.isChecked());
+                    } else {
+                        Log.d(TAG, "Snapshot was null");
+                    }
+                });
     }
 
-    private void checkAndCombine(int[] counter, List<NotificationLog> invites, List<NotificationLog> staticLogs) {
-        counter[0]--;
-        if (counter[0] <= 0) {
-            // All fetches done, merge lists
-            // Put invites at the top
-            displayedLogs.clear();
-            displayedLogs.addAll(invites);
-            displayedLogs.addAll(staticLogs);
-            adapter.submitList(new ArrayList<>(displayedLogs));
-        }
+    private NotificationLog mapDocumentToLog(DocumentSnapshot doc) {
+        String title = doc.getString("message");
+        if (title == null) title = doc.getString("title");
+        if (title == null) title = "New Notification";
+
+        boolean isRead = Boolean.TRUE.equals(doc.getBoolean("isRead"));
+        boolean isInvitation = Boolean.TRUE.equals(doc.getBoolean("isInvitation"));
+        String eventId = doc.getString("eventId");
+
+        Date date = doc.getDate("timestamp");
+        String timeLabel = (date != null)
+                ? new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(date)
+                : "Just now";
+
+        return new NotificationLog(
+                doc.getId(),
+                title,
+                timeLabel,
+                R.drawable.placeholder_avatar1,
+                isRead,
+                isInvitation,
+                eventId
+        );
     }
 
-    // --- Action Implementations ---
+    private void filterList(boolean showOnlyUnread) {
+        List<NotificationLog> filtered = new ArrayList<>();
+        if (showOnlyUnread) {
+            for (NotificationLog log : allLogs) {
+                if (!log.isRead) filtered.add(log);
+            }
+        } else {
+            filtered.addAll(allLogs);
+        }
+
+        adapter.submitList(filtered);
+        binding.tvEmpty.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
+    }
 
     @Override
-    public void onAcceptInvite(NotificationLog log) {
-        if (userId == null) return;
+    public void onAccept(NotificationLog log) {
+        if (log.eventId == null) return;
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("events").document(log.eventId), "enrolledUserIds", FieldValue.arrayUnion(currentUserId));
+        batch.update(db.collection("events").document(log.eventId), "chosenUserIds", FieldValue.arrayRemove(currentUserId));
+        batch.delete(db.collection("users").document(currentUserId).collection("notifications").document(log.id));
 
-        db.collection("users").document(userId)
-                .update(
-                        "joinedEventIds", FieldValue.arrayUnion(log.eventId),
-                        "invitedEventIds", FieldValue.arrayRemove(log.eventId),
-                        "appliedEventIds", FieldValue.arrayRemove(log.eventId)
-                )
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Invitation Accepted!", Toast.LENGTH_SHORT).show();
-                    // Remove this log from the list locally to update UI immediately
-                    removeLogFromList(log);
-                })
+        batch.commit()
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Invitation Accepted!", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to accept.", Toast.LENGTH_SHORT).show());
     }
 
     @Override
-    public void onRejectInvite(NotificationLog log) {
-        if (userId == null) return;
+    public void onDecline(NotificationLog log) {
+        if (log.eventId == null) return;
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("events").document(log.eventId), "chosenUserIds", FieldValue.arrayRemove(currentUserId));
+        batch.delete(db.collection("users").document(currentUserId).collection("notifications").document(log.id));
 
-        db.collection("users").document(userId)
-                .update("invitedEventIds", FieldValue.arrayRemove(log.eventId))
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Invitation Declined.", Toast.LENGTH_SHORT).show();
-                    removeLogFromList(log);
-                });
+        batch.commit()
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Declined.", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to decline.", Toast.LENGTH_SHORT).show());
     }
 
     @Override
     public void onMarkRead(NotificationLog log) {
-        // For static mock data, we just update local state
-        log.isRead = true;
-        adapter.notifyDataSetChanged();
+        db.collection("users").document(currentUserId).collection("notifications").document(log.id).update("isRead", true);
     }
 
     @Override
     public void onOpen(NotificationLog log) {
-        Toast.makeText(this, "Opening details for " + log.title, Toast.LENGTH_SHORT).show();
+        onMarkRead(log);
     }
 
-    // --- Helpers ---
-
-    private void removeLogFromList(NotificationLog log) {
-        List<NotificationLog> current = new ArrayList<>(adapter.getCurrentList());
-        // Find by ID and remove
-        for (int i = 0; i < current.size(); i++) {
-            if (current.get(i).id.equals(log.id)) {
-                current.remove(i);
-                break;
+    private void markAllAsRead() {
+        WriteBatch batch = db.batch();
+        boolean hasUnread = false;
+        for (NotificationLog log : allLogs) {
+            if (!log.isRead) {
+                batch.update(db.collection("users").document(currentUserId).collection("notifications").document(log.id), "isRead", true);
+                hasUnread = true;
             }
         }
-        displayedLogs = current;
-        adapter.submitList(current);
+        if (hasUnread) {
+            batch.commit().addOnSuccessListener(aVoid -> Toast.makeText(this, "All marked as read", Toast.LENGTH_SHORT).show());
+        }
     }
 
-    private void filterNewLogs() {
-        List<NotificationLog> filtered = new ArrayList<>();
-        for (NotificationLog n : displayedLogs) {
-            if (!n.isRead) filtered.add(n);
-        }
-        adapter.submitList(filtered);
-    }
-
-    private void markAllRead() {
-        for (NotificationLog n : displayedLogs) {
-            n.isRead = true;
-        }
-        adapter.notifyDataSetChanged();
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (notificationsListener != null) notificationsListener.remove();
     }
 }
