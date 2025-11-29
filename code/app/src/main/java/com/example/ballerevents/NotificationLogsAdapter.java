@@ -3,7 +3,7 @@ package com.example.ballerevents;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -11,119 +11,86 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
 /**
- * Adapter for displaying a list of {@link NotificationLog} entries.
- * <p>
- * Uses {@link ListAdapter} with {@link DiffUtil} to efficiently update rows when
- * notifications are marked as read or modified. Each row includes an avatar,
- * title, timestamp, unread indicator dot, and action buttons.
- * </p>
+ * Adapter for displaying Notifications.
+ * Handles "invitation" types by showing Accept/Decline buttons.
  */
-public class NotificationLogsAdapter
-        extends ListAdapter<NotificationLog, NotificationLogsAdapter.VH> {
+public class NotificationLogsAdapter extends ListAdapter<Notification, NotificationLogsAdapter.VH> {
 
-    /**
-     * Listener interface for notification log actions.
-     */
     public interface OnItemAction {
-        /**
-         * Triggered when the user marks a log item as read.
-         *
-         * @param log The notification entry being acted upon.
-         */
-        void onMarkRead(NotificationLog log);
-
-        /**
-         * Triggered when the user opens a log item for more details.
-         *
-         * @param log The clicked notification entry.
-         */
-        void onOpen(NotificationLog log);
+        void onAcceptInvite(Notification notif);
+        void onDeclineInvite(Notification notif);
+        void onDelete(Notification notif);
     }
 
-    /** Action listener instance for handling row-level interactions. */
     private final OnItemAction actions;
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, hh:mm a", Locale.US);
 
-    /**
-     * Constructs a new adapter instance.
-     *
-     * @param actions Callback interface handling row click events.
-     */
     public NotificationLogsAdapter(OnItemAction actions) {
-        super(DIFF);
+        super(DIFF_CALLBACK);
         this.actions = actions;
     }
 
-    /**
-     * DiffUtil callback for comparing {@link NotificationLog} entries.
-     * <p>
-     * Items are considered the same based on their unique {@code id}.
-     * Contents are compared based on read state, title, timestamp, and avatar resource.
-     * </p>
-     */
-    private static final DiffUtil.ItemCallback<NotificationLog> DIFF =
-            new DiffUtil.ItemCallback<NotificationLog>() {
-                @Override
-                public boolean areItemsTheSame(@NonNull NotificationLog a, @NonNull NotificationLog b) {
-                    return a.id.equals(b.id);
-                }
+    private static final DiffUtil.ItemCallback<Notification> DIFF_CALLBACK = new DiffUtil.ItemCallback<Notification>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Notification oldItem, @NonNull Notification newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
 
-                @Override
-                public boolean areContentsTheSame(@NonNull NotificationLog a, @NonNull NotificationLog b) {
-                    return a.isRead == b.isRead
-                            && a.title.equals(b.title)
-                            && a.timestamp.equals(b.timestamp)
-                            && a.avatarRes == b.avatarRes;
-                }
-            };
+        @Override
+        public boolean areContentsTheSame(@NonNull Notification oldItem, @NonNull Notification newItem) {
+            return oldItem.isRead() == newItem.isRead() &&
+                    oldItem.getTitle().equals(newItem.getTitle());
+        }
+    };
 
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.row_notification_log, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_notification_log, parent, false);
         return new VH(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int position) {
-        NotificationLog n = getItem(position);
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        Notification notif = getItem(position);
 
-        h.ivAvatar.setImageResource(n.avatarRes);
-        h.tvTitle.setText(n.title);
-        h.tvTime.setText(n.timestamp);
+        holder.tvTitle.setText(notif.getTitle());
+        holder.tvMessage.setText(notif.getMessage());
 
-        // Show unread indicator dot only if not read
-        h.unreadDot.setVisibility(n.isRead ? View.INVISIBLE : View.VISIBLE);
+        if (notif.getTimestamp() != null) {
+            holder.tvTime.setText(sdf.format(notif.getTimestamp()));
+        } else {
+            holder.tvTime.setText("Just now");
+        }
 
-        // Bind row actions
-        h.btnOpen.setOnClickListener(v -> actions.onOpen(n));
-        h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
-        h.itemView.setOnClickListener(v -> actions.onOpen(n));
+        // Show/Hide Action Buttons based on type
+        if ("invitation".equals(notif.getType())) {
+            holder.layoutActions.setVisibility(View.VISIBLE);
+
+            holder.btnAccept.setOnClickListener(v -> actions.onAcceptInvite(notif));
+            holder.btnDecline.setOnClickListener(v -> actions.onDeclineInvite(notif));
+        } else {
+            holder.layoutActions.setVisibility(View.GONE);
+        }
     }
 
-    /**
-     * ViewHolder for a notification log row. Holds references to all views in
-     * {@code row_notification_log.xml}.
-     */
     static class VH extends RecyclerView.ViewHolder {
-        ImageView ivAvatar;
-        View unreadDot;
-        TextView tvTitle, tvTime, btnOpen, btnMarkRead;
+        TextView tvTitle, tvMessage, tvTime;
+        View layoutActions;
+        Button btnAccept, btnDecline;
 
-        /**
-         * Constructs a ViewHolder for the log row layout.
-         *
-         * @param v Root inflated row view.
-         */
         VH(@NonNull View v) {
             super(v);
-            ivAvatar = v.findViewById(R.id.ivAvatar);
-            unreadDot = v.findViewById(R.id.unreadDot);
             tvTitle = v.findViewById(R.id.tvTitle);
+            tvMessage = v.findViewById(R.id.tvMessage);
             tvTime = v.findViewById(R.id.tvTime);
-            btnOpen = v.findViewById(R.id.btnOpen);
-            btnMarkRead = v.findViewById(R.id.btnMarkRead);
+            layoutActions = v.findViewById(R.id.layoutActions);
+            btnAccept = v.findViewById(R.id.btnAccept);
+            btnDecline = v.findViewById(R.id.btnDecline);
         }
     }
 }
