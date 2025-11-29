@@ -72,6 +72,9 @@
         <activity
             android:name=".AdminDashboardActivity"
             android:exported="false" />
+        <activity
+            android:name=".OrganizerFinalEntrantsActivity"
+            android:exported="false" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET"/>

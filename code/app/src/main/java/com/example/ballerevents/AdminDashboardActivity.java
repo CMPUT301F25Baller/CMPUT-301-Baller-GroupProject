@@ -198,5 +198,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.chipLogs.setOnClickListener(v ->
                 Toast.makeText(this, "NotificationLogsActivity not yet implemented.", Toast.LENGTH_SHORT).show()
         );
+
+
     }
 }

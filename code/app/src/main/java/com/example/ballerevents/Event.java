@@ -5,25 +5,14 @@ import android.os.Parcelable;
 
 import com.google.firebase.firestore.DocumentId;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Represents a single event document from the Firestore {@code "events"} collection.
- * <p>
- * This class is a standard POJO used by Firestore for serialization and
- * deserialization. It also implements {@link Parcelable} so that event objects
- * can be passed between Android activities when needed.
- * </p>
  */
 public class Event implements Parcelable {
 
-    /**
-     * Unique Firestore document ID for this event.
-     * <p>
-     * This value is automatically populated by Firestore when the object is
-     * deserialized through {@code @DocumentId}.
-     * </p>
-     */
     @DocumentId
     private String id;
 
@@ -70,57 +59,24 @@ public class Event implements Parcelable {
     /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
 
-    /**
-     * Event start time in milliseconds since Unix epoch.
-     * <p>
-     * A value of {@code 0} indicates that no explicit start time was stored.
-     * </p>
-     */
-    public long eventStartAtMillis;
+    /** IDs of users who are enrolled / final entrants (optional, other story). */
+    public List<String> enrolledUserIds;
 
-    /**
-     * Event end time in milliseconds since Unix epoch.
-     * <p>
-     * A value of {@code 0} indicates that no explicit end time was stored.
-     * </p>
-     */
-    public long eventEndAtMillis;
-
-    /**
-     * Registration opening time in milliseconds since Unix epoch.
-     * <p>
-     * A value of {@code 0} indicates that no explicit opening time
-     * was configured for this event.
-     * </p>
-     */
-    public long registrationOpenAtMillis;
-
-    /**
-     * Registration closing time in milliseconds since Unix epoch.
-     * <p>
-     * A value of {@code 0} indicates that no explicit closing time
-     * was configured for this event.
-     * </p>
-     */
-    public long registrationCloseAtMillis;
+    /** IDs of users who have been chosen in the lottery (invited to apply). */
+    public List<String> chosenUserIds;
 
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
 
-    /**
-     * Empty constructor required for Firestore automatic deserialization.
-     * <p>Do not remove or modify.</p>
-     */
+    /** Empty constructor required for Firestore automatic deserialization. */
     public Event() {
-        // Default no-arg constructor
+        tags = new ArrayList<>();
+        enrolledUserIds = new ArrayList<>();
+        chosenUserIds = new ArrayList<>();
     }
 
-    /**
-     * Reconstructs an Event from a Parcel.
-     *
-     * @param in Parcel containing serialized event data
-     */
+    /** Reconstructs an Event from a Parcel. */
     protected Event(Parcel in) {
         id = in.readString();
         title = in.readString();
@@ -136,14 +92,17 @@ public class Event implements Parcelable {
         eventPosterUrl = in.readString();
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
-        eventStartAtMillis = in.readLong();
-        eventEndAtMillis = in.readLong();
-        registrationOpenAtMillis = in.readLong();
-        registrationCloseAtMillis = in.readLong();
+
+        enrolledUserIds = in.createStringArrayList();
+        chosenUserIds = in.createStringArrayList();
+
+        if (tags == null) tags = new ArrayList<>();
+        if (enrolledUserIds == null) enrolledUserIds = new ArrayList<>();
+        if (chosenUserIds == null) chosenUserIds = new ArrayList<>();
     }
 
     // -------------------------------------------------------------------------
-    // Parcelable Implementation
+    // Parcelable
     // -------------------------------------------------------------------------
 
     @Override
@@ -155,17 +114,16 @@ public class Event implements Parcelable {
         dest.writeString(locationName);
         dest.writeString(locationAddress);
         dest.writeString(price);
-        dest.writeStringList(tags);
+        dest.writeStringList(tags != null ? tags : new ArrayList<>());
         dest.writeString(organizer);
         dest.writeString(organizerId);
         dest.writeString(description);
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
-        dest.writeLong(eventStartAtMillis);
-        dest.writeLong(eventEndAtMillis);
-        dest.writeLong(registrationOpenAtMillis);
-        dest.writeLong(registrationCloseAtMillis);
+
+        dest.writeStringList(enrolledUserIds != null ? enrolledUserIds : new ArrayList<>());
+        dest.writeStringList(chosenUserIds != null ? chosenUserIds : new ArrayList<>());
     }
 
     @Override
@@ -173,7 +131,6 @@ public class Event implements Parcelable {
         return 0;
     }
 
-    /** Parcelable creator for generating Event instances from a Parcel. */
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
         public Event createFromParcel(Parcel in) {
@@ -187,11 +144,13 @@ public class Event implements Parcelable {
     };
 
     // -------------------------------------------------------------------------
-    // Getters
+    // Getters (these are what all your adapters & activities are calling)
     // -------------------------------------------------------------------------
 
     /** @return the Firestore document ID of this event. */
     public String getId() { return id; }
+
+    public void setId(String id) { this.id = id; }
 
     /** @return the event title. */
     public String getTitle() { return title; }
@@ -232,90 +191,21 @@ public class Event implements Parcelable {
     /** @return true if the event is marked as trending. */
     public boolean isTrending() { return isTrending; }
 
-    /**
-     * @return event start time in milliseconds since epoch;
-     *         {@code 0} means no explicit start time was stored.
-     */
-    public long getEventStartAtMillis() { return eventStartAtMillis; }
-
-    /**
-     * @return event end time in milliseconds since epoch;
-     *         {@code 0} means no explicit end time was stored.
-     */
-    public long getEventEndAtMillis() { return eventEndAtMillis; }
-
-    /**
-     * @return registration opening time in milliseconds since epoch;
-     *         {@code 0} means no explicit opening time.
-     */
-    public long getRegistrationOpenAtMillis() { return registrationOpenAtMillis; }
-
-    /**
-     * @return registration closing time in milliseconds since epoch;
-     *         {@code 0} means no explicit closing time.
-     */
-    public long getRegistrationCloseAtMillis() { return registrationCloseAtMillis; }
-
-    // -------------------------------------------------------------------------
-    // Setters / helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Sets the Firestore document ID for this event.
-     *
-     * @param id new Firestore ID value
-     */
-    public void setId(String id) { this.id = id; }
-
-    /**
-     * Sets the event start time.
-     *
-     * @param millis time in milliseconds since epoch; {@code 0} to unset
-     */
-    public void setEventStartAtMillis(long millis) {
-        this.eventStartAtMillis = millis;
+    /** @return enrolled user IDs list (never null). */
+    public List<String> getEnrolledUserIds() {
+        return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
     }
 
-    /**
-     * Sets the event end time.
-     *
-     * @param millis time in milliseconds since epoch; {@code 0} to unset
-     */
-    public void setEventEndAtMillis(long millis) {
-        this.eventEndAtMillis = millis;
+    public void setEnrolledUserIds(List<String> enrolledUserIds) {
+        this.enrolledUserIds = enrolledUserIds;
     }
 
-    /**
-     * Sets the registration opening time.
-     *
-     * @param millis time in milliseconds since epoch; {@code 0} to unset
-     */
-    public void setRegistrationOpenAtMillis(long millis) {
-        this.registrationOpenAtMillis = millis;
+    /** @return chosen user IDs list (never null). */
+    public List<String> getChosenUserIds() {
+        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
     }
 
-    /**
-     * Sets the registration closing time.
-     *
-     * @param millis time in milliseconds since epoch; {@code 0} to unset
-     */
-    public void setRegistrationCloseAtMillis(long millis) {
-        this.registrationCloseAtMillis = millis;
-    }
-
-    /**
-     * Returns whether registration is open at the specified moment.
-     * <ul>
-     *     <li>If {@link #registrationOpenAtMillis} is {@code 0}, the start is unbounded.</li>
-     *     <li>If {@link #registrationCloseAtMillis} is {@code 0}, the end is unbounded.</li>
-     * </ul>
-     *
-     * @param nowMillis current time in milliseconds since epoch
-     * @return {@code true} if {@code nowMillis} lies within the registration window
-     */
-    public boolean isRegistrationOpenAt(long nowMillis) {
-        boolean startOk = (registrationOpenAtMillis == 0L) || (nowMillis >= registrationOpenAtMillis);
-        boolean endOk   = (registrationCloseAtMillis == 0L) || (nowMillis <= registrationCloseAtMillis);
-        return startOk && endOk;
+    public void setChosenUserIds(List<String> chosenUserIds) {
+        this.chosenUserIds = chosenUserIds;
     }
 }

@@ -655,6 +655,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         eventData.price = price;
         eventData.tags = tagsList;
 
+        // ✅ every new event starts with an empty enrolled list
+        eventData.enrolledUserIds = new java.util.ArrayList<>();
+
         // Poster/banner image
         if (!posterUriString.isEmpty()) {
             eventData.eventPosterUrl = posterUriString;
@@ -673,6 +676,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                 hasRegistrationClose ? registrationCloseCal.getTimeInMillis() : 0L;
 
         eventData.isTrending = false;
+
 
         // Update or Create
         if (eventIdToEdit != null) {
