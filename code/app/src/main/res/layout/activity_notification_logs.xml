@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:title="Notifications"
-        app:navigationIcon="@drawable/ic_arrow_left" />
+        app:navigationIcon="@drawable/ic_arrow_back" />
 
     <!-- Chips row -->
     <com.google.android.material.chip.ChipGroup
@@ -40,23 +40,39 @@
             app:checkedIconVisible="false"/>
     </com.google.android.material.chip.ChipGroup>
 
-    <!-- List -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvLogs"
+    <!-- Content Area: List + Empty View -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp" />
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvLogs"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+
+        <TextView
+            android:id="@+id/tvEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="No notifications yet."
+            android:textColor="@android:color/darker_gray"
+            android:textSize="16sp"
+            android:visibility="gone"/>
+
+    </FrameLayout>
 
     <!-- Mark all as read -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMarkAll"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="MARK ALL AS READ"
-        android:textAllCaps="true"
-        style="@style/Widget.MaterialComponents.Button" />
+        android:layout_height="56dp"
+        android:text="Mark all as read"
+        android:textAllCaps="false"
+        android:layout_marginTop="8dp"/>
 
 </LinearLayout>
