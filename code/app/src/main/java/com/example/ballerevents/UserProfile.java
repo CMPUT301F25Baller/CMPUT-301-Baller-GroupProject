@@ -47,6 +47,9 @@ public class UserProfile {
     /** IDs of events that this user has applied to or joined. */
     public List<String> appliedEventIds;
 
+    public List<String> invitedEventIds;   // Won lottery, pending acceptance
+    public List<String> joinedEventIds;    // Accepted invitations
+
     /** IDs of user profiles that this user follows. */
     public List<String> followingIds;
 
@@ -61,6 +64,8 @@ public class UserProfile {
     public UserProfile() {
         interests = new ArrayList<>();
         appliedEventIds = new ArrayList<>();
+        invitedEventIds = new ArrayList<>();
+        joinedEventIds = new ArrayList<>();
         followingIds = new ArrayList<>();
         followerIds = new ArrayList<>();
     }
@@ -94,6 +99,12 @@ public class UserProfile {
 
     /** @return IDs of events the user has applied to. */
     public List<String> getAppliedEventIds() { return appliedEventIds; }
+
+    /** @return IDs of events where the user has been selected but hasn't accepted yet. */
+    public List<String> getInvitedEventIds() { return invitedEventIds; }
+
+    /** @return IDs of events the user has officially accepted and joined. */
+    public List<String> getJoinedEventIds() { return joinedEventIds; }
 
     /** @return IDs of users this user follows. */
     public List<String> getFollowingIds() { return followingIds; }
