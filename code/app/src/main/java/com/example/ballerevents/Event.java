@@ -59,6 +59,10 @@ public class Event implements Parcelable {
     /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
 
+    // 0 means "no limit" or "not set"
+    public long registrationOpenAtMillis;
+    public long registrationCloseAtMillis;
+
     /** IDs of users who are enrolled / final entrants (optional, other story). */
     public List<String> enrolledUserIds;
 
@@ -93,6 +97,10 @@ public class Event implements Parcelable {
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
 
+        // Read new fields
+        registrationOpenAtMillis = in.readLong();
+        registrationCloseAtMillis = in.readLong();
+
         enrolledUserIds = in.createStringArrayList();
         chosenUserIds = in.createStringArrayList();
 
@@ -121,6 +129,10 @@ public class Event implements Parcelable {
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
+
+        // Write new fields
+        dest.writeLong(registrationOpenAtMillis);
+        dest.writeLong(registrationCloseAtMillis);
 
         dest.writeStringList(enrolledUserIds != null ? enrolledUserIds : new ArrayList<>());
         dest.writeStringList(chosenUserIds != null ? chosenUserIds : new ArrayList<>());
@@ -191,6 +203,9 @@ public class Event implements Parcelable {
     /** @return true if the event is marked as trending. */
     public boolean isTrending() { return isTrending; }
 
+    public long getRegistrationOpenAtMillis() { return registrationOpenAtMillis; }
+    public long getRegistrationCloseAtMillis() { return registrationCloseAtMillis; }
+
     /** @return enrolled user IDs list (never null). */
     public List<String> getEnrolledUserIds() {
         return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
@@ -207,5 +222,29 @@ public class Event implements Parcelable {
 
     public void setChosenUserIds(List<String> chosenUserIds) {
         this.chosenUserIds = chosenUserIds;
+    }
+
+    // -------------------------------------------------------------------------
+    // Logic Helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Checks if the current time falls within the registration window.
+     * Used by DetailsActivity.
+     *
+     * @param now Current time in milliseconds.
+     * @return true if registration is open.
+     */
+    public boolean isRegistrationOpenAt(long now) {
+        // If open time is 0, assume it opened long ago.
+        boolean afterOpen = (registrationOpenAtMillis == 0) || (now >= registrationOpenAtMillis);
+
+        // If close time is 0, assume it never closes? Or interpret as closed?
+        // Usually for this app, 0 close time might mean "no deadline", but let's assume
+        // strict checking if set. If 0, we can consider it "always open" or handle as needed.
+        // Here we assume if 0, there is no close limit.
+        boolean beforeClose = (registrationCloseAtMillis == 0) || (now <= registrationCloseAtMillis);
+
+        return afterOpen && beforeClose;
     }
 }

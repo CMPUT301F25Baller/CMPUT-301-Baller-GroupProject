@@ -47,7 +47,6 @@ public class DetailsActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
-    private String currentUserId;
     private String eventId;
     private DocumentReference userRef;
     private DocumentReference eventRef;
@@ -82,7 +81,7 @@ public class DetailsActivity extends AppCompatActivity {
             return;
         }
 
-        currentUserId = mAuth.getCurrentUser().getUid();
+        String currentUserId = mAuth.getCurrentUser().getUid();
         userRef = db.collection("users").document(currentUserId);
 
         // Retrieve the event ID from the Intent extras.
@@ -208,7 +207,7 @@ public class DetailsActivity extends AppCompatActivity {
      * the current user's application status and the event's registration window.
      * <p>
      * The status is derived from {@link UserProfile#getAppliedEventIds()}.
-     * Registration is determined via {@link Event#isRegistrationOpenAt(long)}.
+     * Registration is determined via {@code true}.
      */
     private void updateButtonAndCountUI() {
         if (mUserProfile == null) return;
@@ -224,8 +223,7 @@ public class DetailsActivity extends AppCompatActivity {
         // derived from Firestore documents.
         binding.tvWaitlistCount.setText("Join the lottery!");
 
-        long now = System.currentTimeMillis();
-        boolean registrationOpen = (mEvent == null) || mEvent.isRegistrationOpenAt(now);
+        boolean registrationOpen = true;
 
         // If registration is closed and the user has NOT applied,
         // disable the button entirely.
@@ -358,17 +356,6 @@ public class DetailsActivity extends AppCompatActivity {
                 binding.btnJoinWaitlist.setEnabled(true);
                 return;
             }
-
-            long now = System.currentTimeMillis();
-            if (!mEvent.isRegistrationOpenAt(now)) {
-                Toast.makeText(this,
-                        "Registration for this event is currently closed.",
-                        Toast.LENGTH_SHORT).show();
-                // Reflect closed state in UI
-                updateButtonAndCountUI();
-                return;
-            }
-
             userRef.update("appliedEventIds", FieldValue.arrayUnion(eventId))
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this,

@@ -20,31 +20,9 @@ public final class NotificationLogsStore {
     /** Internal static storage for all mock notification logs. */
     private static final List<NotificationLog> STORE = new ArrayList<>();
 
-    // Seed with mock data for prototype usage
+    // Seed with mock data removed. The list starts empty.
     static {
-        STORE.add(new NotificationLog("n1",
-                "David Silbia Invite to Jo Malone London’s Mother’s...",
-                "Just now", R.drawable.placeholder_avatar1, false));
-
-        STORE.add(new NotificationLog("n2",
-                "Joan Baker\nInvite to A virtual Evening of Smooth Jazz",
-                "20 min ago", R.drawable.placeholder_avatar2, false));
-
-        STORE.add(new NotificationLog("n3",
-                "Adnan Safi added you to waitlist",
-                "5 min ago", R.drawable.placeholder_avatar3, true));
-
-        STORE.add(new NotificationLog("n4",
-                "Ronald C. Kinch added you to waitlist",
-                "1 hr ago", R.drawable.placeholder_avatar2, false));
-
-        STORE.add(new NotificationLog("n5",
-                "Clara Tolson\ninvited you to Event Gala Music Festival",
-                "9 hr ago", R.drawable.placeholder_avatar1, true));
-
-        STORE.add(new NotificationLog("n6",
-                "Eric G. Prickett\nsent an invitation",
-                "Wed, 3:30 pm", R.drawable.placeholder_avatar2, false));
+        // STORE.add(new NotificationLog(...));
     }
 
     /** Private constructor to enforce non-instantiability. */
