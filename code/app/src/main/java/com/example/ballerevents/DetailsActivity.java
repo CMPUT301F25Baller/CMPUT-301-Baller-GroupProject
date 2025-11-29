@@ -7,65 +7,34 @@ import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.bumptech.glide.Glide; // Make sure Glide is in your build.gradle
+import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.EntrantEventDetailsBinding;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Activity that displays detailed information about a single {@link Event} to an entrant.
- * <p>
- * Responsibilities:
- * <ul>
- *     <li>Loads event details from Firestore in real time.</li>
- *     <li>Loads the current user's {@link UserProfile} in real time.</li>
- *     <li>Allows the user to join or withdraw from the event's lottery (waitlist),
- *         respecting the event's registration period.</li>
- *     <li>Updates the UI based on the user's membership in {@code appliedEventIds}.</li>
- * </ul>
- *
- * <p>The event to display is identified by a Firestore document ID passed via
- * {@link #EXTRA_EVENT_ID} in the launching {@link android.content.Intent}.</p>
+ * Entrant's view of an Event.
+ * Updated to handle Lottery Status (Join Waitlist, Accept Invite, Decline Invite).
  */
 public class DetailsActivity extends AppCompatActivity {
 
-    /**
-     * Intent extra key used to pass the event's Firestore document ID
-     * into this activity.
-     */
-    public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
-
+    public static final String EXTRA_EVENT_ID = "com.example.ballerevents.EVENT_ID";
     private static final String TAG = "DetailsActivity";
 
     private EntrantEventDetailsBinding binding;
     private FirebaseFirestore db;
-    private FirebaseAuth mAuth;
-
-    private String currentUserId;
-    private String eventId;
-    private DocumentReference userRef;
-    private DocumentReference eventRef;
-
-    private Event mEvent;
-    private UserProfile mUserProfile;
-    private boolean mIsUserApplied = false;
-
-    // Listeners to detach in onStop to avoid leaks and unnecessary updates.
+    private FirebaseAuth auth;
     private ListenerRegistration eventListener;
-    private ListenerRegistration userListener;
 
-    /**
-     * Initializes the activity, sets up bindings, resolves the event ID,
-     * and prepares references to Firestore documents.
-     *
-     * @param savedInstanceState saved instance state bundle, if any
-     */
+    private String eventId;
+    private String currentUserId;
+    private Event mEvent;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,315 +42,148 @@ public class DetailsActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
+        auth = FirebaseAuth.getInstance();
 
-        // Ensure a user is logged in before proceeding.
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "You must be logged in", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
+        if (auth.getCurrentUser() != null) {
+            currentUserId = auth.getCurrentUser().getUid();
         }
 
-        currentUserId = mAuth.getCurrentUser().getUid();
-        userRef = db.collection("users").document(currentUserId);
-
-        // Retrieve the event ID from the Intent extras.
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
-        if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(this, "Error loading event", Toast.LENGTH_SHORT).show();
+        if (eventId == null) {
+            Toast.makeText(this, "Event not found", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        eventRef = db.collection("events").document(eventId);
 
-        // UI listeners
-        binding.btnJoinWaitlist.setOnClickListener(v -> handleWaitlistClick());
-        binding.btnBack.setOnClickListener(v -> finish());
-
-        setupAdminDeleteIfNeeded();
+        setupButtons();
     }
 
-    /**
-     * Attaches Firestore listeners when the activity becomes visible,
-     * so event and user data stay up to date in real time.
-     */
     @Override
     protected void onStart() {
         super.onStart();
-
-        // Listen for real-time updates to the event document
-        eventListener = eventRef.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "Event listen failed.", e);
-                return;
-            }
-            if (snapshot != null && snapshot.exists()) {
-                mEvent = snapshot.toObject(Event.class);
-                if (mEvent != null) {
-                    populateStaticUi(mEvent);
-                    // Re-evaluate button state when event changes
-                    updateButtonAndCountUI();
-                }
-            } else {
-                Log.d(TAG, "Event deleted or not found");
-                Toast.makeText(this, "Event not found", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        });
-
-        // Listen for real-time updates to the current user's profile
-        userListener = userRef.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "User listen failed.", e);
-                return;
-            }
-            if (snapshot != null && snapshot.exists()) {
-                mUserProfile = snapshot.toObject(UserProfile.class);
-                if (mUserProfile != null) {
-                    updateButtonAndCountUI();
-                }
-            }
-        });
+        // Listen to event changes in real-time (to see when lottery is drawn)
+        eventListener = db.collection("events").document(eventId)
+                .addSnapshotListener((snapshot, e) -> {
+                    if (e != null) {
+                        Log.w(TAG, "Listen failed", e);
+                        return;
+                    }
+                    if (snapshot != null && snapshot.exists()) {
+                        mEvent = snapshot.toObject(Event.class);
+                        if (mEvent != null) {
+                            mEvent.setId(snapshot.getId());
+                            updateUI();
+                        }
+                    }
+                });
     }
 
-    /**
-     * Detaches Firestore listeners when the activity is no longer visible,
-     * preventing memory leaks and unnecessary network activity.
-     */
     @Override
     protected void onStop() {
         super.onStop();
-        if (eventListener != null) {
-            eventListener.remove();
-        }
-        if (userListener != null) {
-            userListener.remove();
-        }
+        if (eventListener != null) eventListener.remove();
     }
 
-    /**
-     * Populates the UI with static event data: title, time, location,
-     * description, and associated images (banner, poster, organizer avatar).
-     *
-     * @param event the {@link Event} whose details are being displayed
-     */
-    private void populateStaticUi(Event event) {
-        // Load banner image (using the poster URL as the banner source)
+    private void updateUI() {
+        binding.tvTitle.setText(mEvent.getTitle());
+        binding.tvDescription.setText(mEvent.getDescription());
+        binding.tvDate.setText(mEvent.getDate() + " at " + mEvent.getTime());
+        binding.tvLocation.setText(mEvent.getLocationName());
+
         Glide.with(this)
-                .load(event.getEventPosterUrl())
+                .load(mEvent.getEventPosterUrl())
                 .placeholder(R.drawable.placeholder_image)
-                .error(R.drawable.placeholder_image)
-                .centerCrop()
-                .into(binding.ivEventBanner);
+                .into(binding.ivEventPoster);
 
-        // Load full poster image if present; otherwise, hide the poster view
-        if (event.getEventPosterUrl() != null && !event.getEventPosterUrl().isEmpty()) {
-            binding.ivEventPoster.setVisibility(View.VISIBLE);
-            Glide.with(this)
-                    .load(event.getEventPosterUrl())
-                    .placeholder(R.drawable.placeholder_image)
-                    .error(R.drawable.placeholder_image)
-                    .into(binding.ivEventPoster);
-        } else {
-            binding.ivEventPoster.setVisibility(View.GONE);
-        }
-
-        // Load organizer avatar from URL
-        Glide.with(this)
-                .load(event.getOrganizerIconUrl())
-                .placeholder(R.drawable.placeholder_avatar1)
-                .error(R.drawable.placeholder_avatar1)
-                .into(binding.ivOrganizer);
-
-        // Text fields
-        binding.tvEventTitle.setText(event.getTitle());
-        binding.tvEventDate.setText(event.getDate());
-        binding.tvEventTime.setText(event.getTime());
-        binding.tvEventLocationName.setText(event.getLocationName());
-        binding.tvEventLocationAddress.setText(event.getLocationAddress());
-        binding.tvOrganizerName.setText(event.getOrganizer());
-        binding.tvAboutEventDescription.setText(event.getDescription());
+        updateStatusUI();
     }
 
     /**
-     * Updates the state and label of the join/withdraw button based on
-     * the current user's application status and the event's registration window.
-     * <p>
-     * The status is derived from {@link UserProfile#getAppliedEventIds()}.
-     * Registration is determined via {@link Event#isRegistrationOpenAt(long)}.
+     * Determines which buttons/status text to show based on User's lottery status.
      */
-    private void updateButtonAndCountUI() {
-        if (mUserProfile == null) return;
+    private void updateStatusUI() {
+        if (currentUserId == null) return;
 
-        List<String> appliedIds = mUserProfile.getAppliedEventIds();
-        if (appliedIds == null) {
-            appliedIds = new ArrayList<>();
+        boolean isWaitlisted = mEvent.getWaitlistUserIds().contains(currentUserId);
+        boolean isSelected = mEvent.getSelectedUserIds().contains(currentUserId);
+        boolean isCancelled = mEvent.getCancelledUserIds().contains(currentUserId);
+
+        String status = "unknown";
+        if (mEvent.getInvitationStatus() != null) {
+            status = mEvent.getInvitationStatus().getOrDefault(currentUserId, "pending");
         }
 
-        mIsUserApplied = appliedIds.contains(eventId);
+        // Hide all initially
+        binding.btnJoinWaitlist.setVisibility(View.GONE);
+        binding.layoutInviteActions.setVisibility(View.GONE);
+        binding.tvStatusMessage.setVisibility(View.GONE);
 
-        // Placeholder: real implementation would show an actual count
-        // derived from Firestore documents.
-        binding.tvWaitlistCount.setText("Join the lottery!");
-
-        long now = System.currentTimeMillis();
-        boolean registrationOpen = (mEvent == null) || mEvent.isRegistrationOpenAt(now);
-
-        // If registration is closed and the user has NOT applied,
-        // disable the button entirely.
-        if (!registrationOpen && !mIsUserApplied) {
-            binding.btnJoinWaitlist.setText("Registration Closed");
-            binding.btnJoinWaitlist.setEnabled(false);
-            return;
-        }
-
-        // If the user is already applied, allow them to withdraw
-        // even if registration has closed.
-        if (mIsUserApplied) {
-            binding.btnJoinWaitlist.setText("Withdraw");
+        if (isSelected) {
+            if ("accepted".equals(status)) {
+                // CONFIRMED
+                binding.tvStatusMessage.setText("You are going! ✅");
+                binding.tvStatusMessage.setVisibility(View.VISIBLE);
+                binding.tvStatusMessage.setTextColor(getColor(android.R.color.holo_green_dark));
+            } else {
+                // PENDING INVITE (WON LOTTERY)
+                binding.tvStatusMessage.setText("🎉 You won the lottery! Accept to confirm.");
+                binding.tvStatusMessage.setVisibility(View.VISIBLE);
+                binding.layoutInviteActions.setVisibility(View.VISIBLE);
+            }
+        } else if (isWaitlisted) {
+            // STILL WAITING
+            binding.tvStatusMessage.setText("You are on the waitlist. Crossing fingers! 🤞");
+            binding.tvStatusMessage.setVisibility(View.VISIBLE);
+            binding.tvStatusMessage.setTextColor(getColor(android.R.color.darker_gray));
+            // Option: Add "Leave Waitlist" button here if desired
+        } else if (isCancelled) {
+            // DECLINED
+            binding.tvStatusMessage.setText("You declined this invitation.");
+            binding.tvStatusMessage.setVisibility(View.VISIBLE);
+            binding.tvStatusMessage.setTextColor(getColor(android.R.color.holo_red_dark));
         } else {
+            // NEW USER
+            binding.btnJoinWaitlist.setVisibility(View.VISIBLE);
             binding.btnJoinWaitlist.setText("Join Waitlist");
         }
-
-        binding.btnJoinWaitlist.setEnabled(true);
     }
 
-    /**
-     * Shows Delete Event button (and View Waitlist) only if current user is admin
-     * (and optionally organizer).
-     */
-    private void setupAdminDeleteIfNeeded() {
-        if (eventId == null || eventId.isEmpty()) return;
-        if (mAuth.getCurrentUser() == null) return;
+    private void setupButtons() {
+        // Join Waitlist Logic
+        binding.btnJoinWaitlist.setOnClickListener(v -> {
+            if (mEvent == null) return;
 
-        String uid = mAuth.getCurrentUser().getUid();
+            // Add to waitlistUserIds & appliedEventIds
+            db.collection("events").document(eventId)
+                    .update("waitlistUserIds", FieldValue.arrayUnion(currentUserId));
 
-        db.collection("users").document(uid)
-                .get()
-                .addOnSuccessListener(snapshot -> {
-                    UserProfile user = snapshot.toObject(UserProfile.class);
-                    if (user == null) {
-                        return;
-                    }
+            db.collection("users").document(currentUserId)
+                    .update("appliedEventIds", FieldValue.arrayUnion(eventId))
+                    .addOnSuccessListener(a -> Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show());
+        });
 
-                    String role = user.getRole();
-                    boolean isAdmin = "admin".equalsIgnoreCase(role);
-                    boolean isOrganizer = "organizer".equalsIgnoreCase(role);
+        // Accept Logic
+        binding.btnAccept.setOnClickListener(v -> respondToInvite("accepted"));
 
-                    if (isAdmin) {
-                        // show delete button
-                        binding.btnDeleteEvent.setVisibility(View.VISIBLE);
-                        binding.btnDeleteEvent.setOnClickListener(v -> confirmDelete());
-
-                        // show waitlist button
-                        binding.btnViewWaitlist.setVisibility(View.VISIBLE);
-                        binding.btnViewWaitlist.setOnClickListener(v -> openWaitlist());
-                    }
-
-                    // Optional: allow organizers to also view waitlist from this screen
-                    if (isOrganizer) {
-                        binding.btnViewWaitlist.setVisibility(View.VISIBLE);
-                        binding.btnViewWaitlist.setOnClickListener(v -> openWaitlist());
-                    }
-                });
+        // Decline Logic
+        binding.btnDecline.setOnClickListener(v -> respondToInvite("declined"));
     }
 
-    /**
-     * Opens the waitlist screen for this event.
-     */
-    private void openWaitlist() {
-        Intent intent = new Intent(this, OrganizerWaitlistActivity.class);
-        intent.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, eventId);
-        startActivity(intent);
-    }
+    private void respondToInvite(String response) {
+        if (mEvent == null) return;
 
-    private void confirmDelete() {
-        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle("Delete Event?")
-                .setMessage("This cannot be undone.")
-                .setPositiveButton("Delete", (dialog, which) -> deleteEvent())
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("invitationStatus." + currentUserId, response);
 
-    private void deleteEvent() {
-        eventRef.delete()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Event deleted", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show();
-                    Log.w(TAG, "Error deleting", e);
-                });
-    }
-
-    /**
-     * Handles the "Join Waitlist" / "Withdraw" button click.
-     * <p>
-     * This method:
-     * <ul>
-     *     <li>Disables the button to prevent double taps.</li>
-     *     <li>Checks the event's registration window before allowing a join.</li>
-     *     <li>Uses {@link FieldValue#arrayUnion(Object...)} or
-     *         {@link FieldValue#arrayRemove(Object...)} to update
-     *         {@code appliedEventIds} in the user's Firestore document.</li>
-     *     <li>Shows a toast on success or failure.</li>
-     * </ul>
-     * The UI is updated indirectly via the Firestore listener on the user document.
-     */
-    private void handleWaitlistClick() {
-        binding.btnJoinWaitlist.setEnabled(false); // Prevent rapid double-clicks
-
-        if (mIsUserApplied) {
-            // User wants to WITHDRAW from the lottery
-            userRef.update("appliedEventIds", FieldValue.arrayRemove(eventId))
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this,
-                                "Withdrawn from " + (mEvent != null ? mEvent.getTitle() : "event"),
-                                Toast.LENGTH_SHORT).show();
-                        // UI will refresh via listener
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this,
-                                "Withdrawal failed. Try again.",
-                                Toast.LENGTH_SHORT).show();
-                        binding.btnJoinWaitlist.setEnabled(true);
-                    });
-        } else {
-            // User wants to APPLY to the lottery
-            // Guard with registration window at action time as well
-            if (mEvent == null) {
-                Toast.makeText(this,
-                        "Event data not loaded. Please try again.",
-                        Toast.LENGTH_SHORT).show();
-                binding.btnJoinWaitlist.setEnabled(true);
-                return;
-            }
-
-            long now = System.currentTimeMillis();
-            if (!mEvent.isRegistrationOpenAt(now)) {
-                Toast.makeText(this,
-                        "Registration for this event is currently closed.",
-                        Toast.LENGTH_SHORT).show();
-                // Reflect closed state in UI
-                updateButtonAndCountUI();
-                return;
-            }
-
-            userRef.update("appliedEventIds", FieldValue.arrayUnion(eventId))
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this,
-                                "Applied to lottery for " + mEvent.getTitle(),
-                                Toast.LENGTH_SHORT).show();
-                        // UI will refresh via listener
-                    })
-                    .addOnFailureListener(e -> {
-                        Toast.makeText(this,
-                                "Application failed. Try again.",
-                                Toast.LENGTH_SHORT).show();
-                        binding.btnJoinWaitlist.setEnabled(true);
-                    });
+        if ("declined".equals(response)) {
+            // If declined, move from Selected -> Cancelled
+            // This frees up the slot for the Organizer to re-draw.
+            updates.put("selectedUserIds", FieldValue.arrayRemove(currentUserId));
+            updates.put("cancelledUserIds", FieldValue.arrayUnion(currentUserId));
         }
+
+        db.collection("events").document(eventId).update(updates)
+                .addOnSuccessListener(a -> Toast.makeText(this, "Response sent: " + response, Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Error sending response", Toast.LENGTH_SHORT).show());
     }
 }
