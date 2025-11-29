@@ -1,8 +1,6 @@
 package com.example.ballerevents;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,35 +19,17 @@ import com.google.firebase.firestore.Query;
 import java.util.List;
 
 /**
- * Fragment displaying all events created by the currently authenticated organizer.
- * <p>
- * This screen is accessible through the organizer dashboard and shows event cards
- * in a vertical list using {@link TrendingEventAdapter}. When an organizer taps
- * an event, the fragment navigates to {@link OrganizerEventCreationActivity} in
- * edit mode, passing the Firestore document ID.
- * </p>
- *
- * <p>The fragment automatically refreshes events in {@link #onResume()} so any
- * changes made in the editor screen are immediately reflected when returning.</p>
+ * Fragment showing all events created by the current organizer.
  */
 public class OrganizerEventFragment extends Fragment {
 
-    /** Logging tag for debugging event loading. */
     private static final String TAG = "OrganizerEventFragment";
 
-    /** ViewBinding for accessing layout views. */
     private FragmentOrganizerEventBinding binding;
-
-    /** Firestore instance for reading event documents. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth instance for identifying the current organizer. */
     private FirebaseAuth mAuth;
 
-    /** Adapter used to render the organizer's event cards. */
-    private TrendingEventAdapter adapter;
-
-    /** ID of the currently authenticated organizer. */
+    private OrganizerEventsAdapter adapter;
     private String currentUserId;
 
     @Nullable
@@ -86,69 +66,57 @@ public class OrganizerEventFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-
-        // Reload list after returning from creation/editing screens
         if (currentUserId != null) {
             loadOrganizerEvents();
         } else {
             Toast.makeText(getContext(), "Error: Not logged in.", Toast.LENGTH_SHORT).show();
-            binding.tvNoEvents.setText("Could not load events. Please log in again.");
-            binding.tvNoEvents.setVisibility(View.VISIBLE);
         }
     }
 
-    /**
-     * Sets up the RecyclerView and attaches a {@link TrendingEventAdapter} where
-     * clicking an item opens the event editor activity.
-     */
     private void setupRecyclerView() {
-        adapter = new TrendingEventAdapter(event -> {
-            // Organizer opens the editor for their own event
-            Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
-            intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
-            startActivity(intent);
+        adapter = new OrganizerEventsAdapter(event -> {
+            // When organizer taps an event, remember its ID in the activity
+            if (getActivity() instanceof OrganizerActivity) {
+                ((OrganizerActivity) getActivity()).setSelectedEventId(event.getId());
+                Toast.makeText(
+                        getContext(),
+                        "Selected event: " + event.getTitle(),
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
         });
 
         binding.rvOrganizerEvents.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvOrganizerEvents.setAdapter(adapter);
     }
 
-    /**
-     * Loads all events from Firestore where {@code organizerId} matches the current organizer.
-     * Updates the RecyclerView and handles empty or failure states.
-     */
     private void loadOrganizerEvents() {
         binding.progressBar.setVisibility(View.VISIBLE);
-        binding.tvNoEvents.setVisibility(View.GONE);
 
         db.collection("events")
                 .whereEqualTo("organizerId", currentUserId)
                 .orderBy("date", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(qs -> {
                     binding.progressBar.setVisibility(View.GONE);
+                    List<Event> events = qs.toObjects(Event.class);
 
-                    List<Event> events = queryDocumentSnapshots.toObjects(Event.class);
+                    adapter.submitList(events);
 
-                    if (events.isEmpty()) {
-                        binding.tvNoEvents.setVisibility(View.VISIBLE);
-                    } else {
-                        adapter.submitList(events);
+                    // Optional: auto-select first event if exists
+                    if (!events.isEmpty() && getActivity() instanceof OrganizerActivity) {
+                        ((OrganizerActivity) getActivity()).setSelectedEventId(events.get(0).getId());
                     }
-
-                    Log.d(TAG, "Loaded " + events.size() + " events for organizer " + currentUserId);
                 })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    binding.tvNoEvents.setText("Error loading events.");
-                    binding.tvNoEvents.setVisibility(View.VISIBLE);
-                    Log.w(TAG, "Error loading organizer events", e);
+                    Toast.makeText(getContext(), "Error loading events.", Toast.LENGTH_SHORT).show();
                 });
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // Avoid memory leaks
+        binding = null;
     }
 }

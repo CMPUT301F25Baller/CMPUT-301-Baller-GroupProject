@@ -2,26 +2,17 @@ package com.example.ballerevents;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
 import com.google.firebase.firestore.DocumentId;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Represents a single event document from the Firestore {@code "events"} collection.
- * <p>
- * This class is a standard POJO used by Firestore for serialization and
- * deserialization. It also implements {@link Parcelable} so that event objects
- * can be passed between Android activities when needed.
- * </p>
  */
 public class Event implements Parcelable {
 
-    /**
-     * Unique Firestore document ID for this event.
-     * <p>
-     * This value is automatically populated by Firestore when the object is
-     * deserialized through {@code @DocumentId}.
-     * </p>
-     */
     @DocumentId
     private String id;
 
@@ -68,21 +59,24 @@ public class Event implements Parcelable {
     /** Whether the event should be shown as a trending event. */
     public boolean isTrending;
 
+    /** IDs of users who are enrolled / final entrants (optional, other story). */
+    public List<String> enrolledUserIds;
+
+    /** IDs of users who have been chosen in the lottery (invited to apply). */
+    public List<String> chosenUserIds;
+
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
 
-    /**
-     * Empty constructor required for Firestore automatic deserialization.
-     * <p>Do not remove or modify.</p>
-     */
-    public Event() {}
+    /** Empty constructor required for Firestore automatic deserialization. */
+    public Event() {
+        tags = new ArrayList<>();
+        enrolledUserIds = new ArrayList<>();
+        chosenUserIds = new ArrayList<>();
+    }
 
-    /**
-     * Reconstructs an Event from a Parcel.
-     *
-     * @param in Parcel containing serialized event data
-     */
+    /** Reconstructs an Event from a Parcel. */
     protected Event(Parcel in) {
         id = in.readString();
         title = in.readString();
@@ -98,10 +92,17 @@ public class Event implements Parcelable {
         eventPosterUrl = in.readString();
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
+
+        enrolledUserIds = in.createStringArrayList();
+        chosenUserIds = in.createStringArrayList();
+
+        if (tags == null) tags = new ArrayList<>();
+        if (enrolledUserIds == null) enrolledUserIds = new ArrayList<>();
+        if (chosenUserIds == null) chosenUserIds = new ArrayList<>();
     }
 
     // -------------------------------------------------------------------------
-    // Parcelable Implementation
+    // Parcelable
     // -------------------------------------------------------------------------
 
     @Override
@@ -113,13 +114,16 @@ public class Event implements Parcelable {
         dest.writeString(locationName);
         dest.writeString(locationAddress);
         dest.writeString(price);
-        dest.writeStringList(tags);
+        dest.writeStringList(tags != null ? tags : new ArrayList<>());
         dest.writeString(organizer);
         dest.writeString(organizerId);
         dest.writeString(description);
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
+
+        dest.writeStringList(enrolledUserIds != null ? enrolledUserIds : new ArrayList<>());
+        dest.writeStringList(chosenUserIds != null ? chosenUserIds : new ArrayList<>());
     }
 
     @Override
@@ -127,7 +131,6 @@ public class Event implements Parcelable {
         return 0;
     }
 
-    /** Parcelable creator for generating Event instances from a Parcel. */
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
         public Event createFromParcel(Parcel in) {
@@ -141,11 +144,13 @@ public class Event implements Parcelable {
     };
 
     // -------------------------------------------------------------------------
-    // Getters
+    // Getters (these are what all your adapters & activities are calling)
     // -------------------------------------------------------------------------
 
     /** @return the Firestore document ID of this event. */
     public String getId() { return id; }
+
+    public void setId(String id) { this.id = id; }
 
     /** @return the event title. */
     public String getTitle() { return title; }
@@ -183,13 +188,24 @@ public class Event implements Parcelable {
     /** @return URL for the organizer avatar/icon. */
     public String getOrganizerIconUrl() { return organizerIconUrl; }
 
-    /**
-     * Sets the Firestore document ID for this event.
-     *
-     * @param id new Firestore ID value
-     */
-    public void setId(String id) { this.id = id; }
-
     /** @return true if the event is marked as trending. */
     public boolean isTrending() { return isTrending; }
+
+    /** @return enrolled user IDs list (never null). */
+    public List<String> getEnrolledUserIds() {
+        return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
+    }
+
+    public void setEnrolledUserIds(List<String> enrolledUserIds) {
+        this.enrolledUserIds = enrolledUserIds;
+    }
+
+    /** @return chosen user IDs list (never null). */
+    public List<String> getChosenUserIds() {
+        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
+    }
+
+    public void setChosenUserIds(List<String> chosenUserIds) {
+        this.chosenUserIds = chosenUserIds;
+    }
 }
