@@ -8,41 +8,22 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
-import com.google.android.material.chip.Chip;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
-/**
- * Activity that displays a simple, prototype notification log for the admin.
- *
- * <p>This screen serves as a placeholder UI, showing log messages in a list.
- * The data is currently mocked in-memory and demonstrates:
- *
- * <ul>
- *     <li>Switching between “New” and “All” logs using Material Chips</li>
- *     <li>Simple list rendering via {@link SimpleTextAdapter}</li>
- *     <li>“Mark all as read” button behavior</li>
- * </ul>
- *
- * <p>In the future, this activity can be wired to a Firestore-backed
- * notification repository using {@code NotificationLogsStore}.
- */
 public class AdminLogsActivity extends AppCompatActivity {
 
-    /** View binding for activity_notification_logs.xml */
     private ActivityNotificationLogsBinding binding;
+    private NotificationLogsAdapter adapter;
+    private NotificationLogsStore store;
 
-    /** Adapter used to render the logs in the RecyclerView */
-    private SimpleTextAdapter adapter;
-
-    /** In-memory list of all notifications (mock data). */
-    private final List<String> allItems = new ArrayList<>();
-
-    /** Subset representing unread or recently added notifications. */
-    private final List<String> newItems = new ArrayList<>();
+    private boolean filterOnlyNew = false;
+    private ListenerRegistration activeSub;
+    private DocumentSnapshot nextCursor;
+    private final List<NotificationLog> buffer = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -50,80 +31,89 @@ public class AdminLogsActivity extends AppCompatActivity {
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        setupToolbar();
-        initializeMockData();
-        setupRecycler();
-        setupChipsAndActions();
-    }
-
-    /**
-     * Configures the top app bar and back navigation.
-     */
-    private void setupToolbar() {
         setSupportActionBar(binding.topAppBar);
         binding.topAppBar.setNavigationOnClickListener(v -> finish());
-    }
 
-    /**
-     * Populates in-memory mock notification data.
-     * In the real implementation, this will be pulled from Firestore.
-     */
-    private void initializeMockData() {
-        allItems.addAll(Arrays.asList(
-                "David Silbia invited you to Jo Malone London’s Mother’s… • Just now",
-                "Adnan Safi added you to waitlist • 5 min ago",
-                "Joan Baker – Virtual Evening of Smooth Jazz • 20 min ago",
-                "Ronald C. Kinch added you to waitlist • 1 hr ago",
-                "Clara Tolson invited you to Gala Music Festival • 9 hr ago",
-                "Eric G. Prickett sent an invitation • Wed, 3:30 pm",
-                "Jennifer Fritz – Kids Safe Event cancelled • Tue, 5:10 pm"
-        ));
+        adapter = new NotificationLogsAdapter();
+        store = new NotificationLogsStore();
 
-        // Mock “new” notifications as the first two items
-        newItems.addAll(allItems.subList(0, Math.min(2, allItems.size())));
-    }
-
-    /**
-     * Sets up the RecyclerView and assigns the default adapter.
-     */
-    private void setupRecycler() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new SimpleTextAdapter(allItems);
         binding.rvLogs.setAdapter(adapter);
+
+        // Chips: All / New
+        binding.chipAll.setChecked(true);
+        binding.chipNew.setOnCheckedChangeListener((btn, checked) -> {
+            if (checked) { filterOnlyNew = true; reload(); }
+        });
+        binding.chipAll.setOnCheckedChangeListener((btn, checked) -> {
+            if (checked) { filterOnlyNew = false; reload(); }
+        });
+
+        // Mark all as read
+        binding.btnMarkAll.setOnClickListener(v ->
+                store.markAllAsRead()
+                        .addOnSuccessListener(aVoid -> Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show())
+                        .addOnFailureListener(e -> Toast.makeText(this, "Failed to mark as read", Toast.LENGTH_SHORT).show())
+        );
+
+        // Endless scroll
+        binding.rvLogs.addOnScrollListener(new EndlessRecyclerListener(() -> {
+            if (nextCursor != null) paginate(nextCursor);
+        }));
+
+        reload();
     }
 
-    /**
-     * Wires up chip selection logic and the “Mark all as read” button.
-     */
-    private void setupChipsAndActions() {
-        Chip chipNew = binding.chipNew;
-        Chip chipAll = binding.chipAll;
+    @Override protected void onDestroy() {
+        super.onDestroy();
+        if (activeSub != null) activeSub.remove();
+    }
 
-        chipAll.setChecked(true); // Default filter
+    private void reload() {
+        if (activeSub != null) activeSub.remove();
+        buffer.clear();
+        adapter.submitList(new ArrayList<>(buffer));
+        nextCursor = null;
 
-        chipNew.setOnCheckedChangeListener((button, checked) -> {
-            if (checked) {
-                adapter = new SimpleTextAdapter(new ArrayList<>(newItems));
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+        activeSub = store.watchAll(
+                filterOnlyNew,
+                null,
+                30,
+                new NotificationLogsStore.LogsListener() {
+                    @Override
+                    public void onChanged(List<NotificationLog> logs, @Nullable DocumentSnapshot cursor) {
+                        nextCursor = cursor;
+                        buffer.clear();
+                        buffer.addAll(logs);
+                        adapter.submitList(new ArrayList<>(buffer));
+                    }
 
-        chipAll.setOnCheckedChangeListener((button, checked) -> {
-            if (checked) {
-                adapter = new SimpleTextAdapter(new ArrayList<>(allItems));
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+                    @Override
+                    public void onError(Exception e) {
+                        Toast.makeText(AdminLogsActivity.this, "Error loading logs", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
 
-        binding.btnMarkAll.setOnClickListener(v -> {
-            newItems.clear();
-            Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show();
+    private void paginate(DocumentSnapshot cursor) {
+        ListenerRegistration tmp = store.watchAll(
+                filterOnlyNew,
+                cursor,
+                30,
+                new NotificationLogsStore.LogsListener() {
+                    @Override
+                    public void onChanged(List<NotificationLog> logs, @Nullable DocumentSnapshot next) {
+                        nextCursor = next;
+                        buffer.addAll(logs);
+                        adapter.submitList(new ArrayList<>(buffer));
+                    }
 
-            // If viewing "New", update display to empty
-            if (chipNew.isChecked()) {
-                adapter = new SimpleTextAdapter(Collections.emptyList());
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+                    @Override
+                    public void onError(Exception e) { /* ignore page errors */ }
+                }
+        );
+        // one-shot page; remove listener immediately
+        tmp.remove();
     }
 }

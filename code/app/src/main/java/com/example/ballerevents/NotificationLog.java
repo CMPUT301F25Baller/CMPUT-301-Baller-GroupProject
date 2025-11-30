@@ -1,49 +1,26 @@
 package com.example.ballerevents;
 
-/**
- * Simple model representing a notification log entry, typically used for
- * displaying past or archived notifications in a list.
- * <p>
- * Each entry includes an identifier, a title or message label, timestamp,
- * avatar resource, and read/unread state. This model is UI-focused and does
- * not integrate directly with Firestore.
- * </p>
- */
+import com.google.firebase.firestore.ServerTimestamp;
+import java.util.Date;
+
+/** Firestore-backed notification log sent by organizers to entrants. */
 public class NotificationLog {
+    public String id;            // Firestore doc id (filled after fetch)
+    public String type;          // e.g., WAITLIST_ADDED, INVITE_SENT, EVENT_UPDATED
+    public String message;       // human-readable summary
 
-    /** Unique identifier for the log entry. */
-    public final String id;
+    public String eventId;
+    public String eventTitle;
 
-    /** Short title or label describing the notification. */
-    public final String title;
+    public String senderId;      // organizer uid
+    public String senderName;
 
-    /** Display-friendly timestamp string (e.g., "Just now", "1h ago"). */
-    public final String timestamp;
+    public String recipientId;   // entrant uid
+    public String recipientName;
 
-    /** Drawable resource ID for the avatar icon associated with the notification. */
-    public final int avatarRes;
+    public boolean read;         // simple global read flag for admin list
 
-    /** Whether this log entry has been marked as read. */
-    public boolean isRead;
+    @ServerTimestamp public Date timestamp; // server time
 
-    /**
-     * Constructs a new {@link NotificationLog} entry.
-     *
-     * @param id         Unique identifier for the log entry
-     * @param title      Title or summary of the notification
-     * @param timestamp  Human-readable timestamp label
-     * @param avatarRes  Drawable resource ID for the avatar icon
-     * @param isRead     Whether the entry is marked as read
-     */
-    public NotificationLog(String id,
-                           String title,
-                           String timestamp,
-                           int avatarRes,
-                           boolean isRead) {
-        this.id = id;
-        this.title = title;
-        this.timestamp = timestamp;
-        this.avatarRes = avatarRes;
-        this.isRead = isRead;
-    }
+    public NotificationLog() {}  // required for Firestore
 }

@@ -1,13 +1,17 @@
 package com.example.ballerevents;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ImageView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.AdminDashboardBinding;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -15,52 +19,30 @@ import com.google.firebase.firestore.Query;
 import java.util.List;
 
 /**
- * Represents the administrator landing dashboard screen.
+ * Administrator landing dashboard screen.
  *
- * <p>This activity displays three horizontally scrolling lists:
- * <ul>
- *     <li><b>Recent Events</b> – Latest event documents from Firestore.</li>
- *     <li><b>Recent Profiles</b> – Recent user profiles from Firestore.</li>
- *     <li><b>Recent Posters</b> – Uses event posters rendered via event adapter.</li>
- * </ul>
+ * Shows three horizontal lists:
+ *  - Recent Events
+ *  - Recent Profiles
+ *  - Recent Posters
  *
- * <p>From this dashboard, the admin can navigate to:
- * <ul>
- *     <li>{@link AdminEventsActivity} – Full list of events</li>
- *     <li>{@link AdminProfilesActivity} – Full list of user profiles</li>
- *     <li>{@link AdminImagesActivity} – Full list of event posters</li>
- *     <li>Notification logs (placeholder stub)</li>
- * </ul>
- *
- * <p>This class reads Firestore data using one-time `.get()` calls and fills
- * the respective adapters. No real-time streaming is needed for this prototype.
+ * From here admin can navigate to:
+ *  - AdminEventsActivity (events list)
+ *  - AdminProfilesActivity (profiles list)
+ *  - AdminImagesActivity (posters grid)
+ *  - NotificationLogsActivity (notification audit logs)
  */
 public class AdminDashboardActivity extends AppCompatActivity {
 
-    /** Log tag for debugging. */
     private static final String TAG = "AdminDashboard";
 
-    /** ViewBinding for the admin dashboard layout. */
     private AdminDashboardBinding binding;
-
-    /** Firebase Firestore reference for loading admin dashboard data. */
     private FirebaseFirestore db;
 
-    /** Adapter for rendering recent event cards. */
     private TrendingEventAdapter eventsAdapter;
-
-    /** Adapter for rendering recent profile items. */
     private AdminProfilesAdapter profilesAdapter;
-
-    /** Adapter for rendering recent event posters. */
     private AdminPostersAdapter postersAdapter;
 
-    /**
-     * Initializes the dashboard, configures RecyclerViews,
-     * initializes adapters, loads Firestore data, and attaches navigation handlers.
-     *
-     * @param savedInstanceState previously saved UI state (unused)
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -75,48 +57,68 @@ public class AdminDashboardActivity extends AppCompatActivity {
         setupNavigation();
     }
 
-    /**
-     * Configures the layout managers for the three horizontal RecyclerViews.
-     * Each list scrolls horizontally.
-     */
+    /** Configure horizontal RecyclerViews. */
     private void setupRecyclerViews() {
         binding.rvEvents.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
         binding.rvProfiles.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
-
         binding.rvImages.setLayoutManager(
                 new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
     }
 
-    /**
-     * Initializes the adapters used by the dashboard:
-     * <ul>
-     *     <li>TrendingEventAdapter – reused for the events section</li>
-     *     <li>AdminProfilesAdapter – admin-specific adapter for profiles</li>
-     *     <li>AdminPostersAdapter – admin-specific event poster adapter</li>
-     * </ul>
-     *
-     * Also binds click listeners where applicable.
-     */
+    /** Initialize adapters and bind click actions. */
     private void setupAdapters() {
-
-        // Events (reusing existing adapter)
+        // Events (reuse existing adapter)
         eventsAdapter = new TrendingEventAdapter(event -> {
             Intent i = new Intent(this, DetailsActivity.class);
             i.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
             startActivity(i);
         });
 
-        // Profiles list (admin-specific)
+        // Profiles (admin-specific)
         profilesAdapter = new AdminProfilesAdapter(profile -> {
-            // TODO: Implement profile click if needed for admin prototype
+            // optional: open profile details if desired
+            // startActivity(new Intent(this, ProfileDetailsActivity.class)
+            //        .putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, profile.getId()));
         });
 
-        // Posters list (admin-specific)
-        postersAdapter = new AdminPostersAdapter(event -> {
-            // TODO: Implement poster click if needed for admin prototype
+        // Posters (admin-specific) — use anonymous class (two abstract methods)
+        postersAdapter = new AdminPostersAdapter(new AdminPostersAdapter.PosterActions() {
+            @Override
+            public void onPreview(@NonNull Event event) {
+                String url = event.getEventPosterUrl();
+                if (url == null || url.isEmpty()) {
+                    Toast.makeText(AdminDashboardActivity.this, "No poster to preview", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                // Inflate preview dialog
+                final ImageView iv = (ImageView) getLayoutInflater()
+                        .inflate(R.layout.dialog_image_preview, null, false)
+                        .findViewById(R.id.ivPreview);
+
+                Glide.with(AdminDashboardActivity.this)
+                        .load(url)
+                        .placeholder(R.drawable.placeholder_image)
+                        .error(R.drawable.placeholder_image)
+                        .fitCenter()
+                        .into(iv);
+
+                new AlertDialog.Builder(AdminDashboardActivity.this)
+                        .setView(iv.getRootView()) // the FrameLayout root from dialog_image_preview
+                        .setPositiveButton("Close", (d, w) -> d.dismiss())
+                        .show();
+            }
+
+            @Override
+            public void onDelete(@NonNull Event event) {
+                // Dashboard grid is read-only; guide user to Posters screen for deletion
+                Toast.makeText(
+                        AdminDashboardActivity.this,
+                        "Hold to delete in Posters screen (Admin → Images).",
+                        Toast.LENGTH_SHORT
+                ).show();
+            }
         });
 
         binding.rvEvents.setAdapter(eventsAdapter);
@@ -124,20 +126,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.rvImages.setAdapter(postersAdapter);
     }
 
-    /**
-     * Loads recent events and recent user profiles from Firestore.
-     *
-     * <p>For this prototype:
-     * <ul>
-     *     <li>Events are ordered by descending date.</li>
-     *     <li>User profiles are simply the newest 10 documents.</li>
-     * </ul>
-     *
-     * Loaded data is submitted to the respective adapters.
-     */
+    /** Load recent events and profiles from Firestore. */
     private void loadDashboardData() {
-
-        // === Load recent events ===
+        // Recent events (also feed posters row)
         db.collection("events")
                 .orderBy("date", Query.Direction.DESCENDING)
                 .limit(10)
@@ -145,13 +136,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Event> events = queryDocumentSnapshots.toObjects(Event.class);
                     eventsAdapter.submitList(events);
-
-                    // The "images" panel also uses event objects
                     postersAdapter.submitList(events);
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error loading recent events", e));
 
-        // === Load recent profiles ===
+        // Recent profiles
         db.collection("users")
                 .limit(10)
                 .get()
@@ -162,41 +151,31 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Log.w(TAG, "Error loading recent profiles", e));
     }
 
-    /**
-     * Attaches click listeners to all navigation elements in the dashboard:
-     * <ul>
-     *     <li>Events chip + "See all"</li>
-     *     <li>Profiles chip + "See all"</li>
-     *     <li>Images chip + "See all"</li>
-     *     <li>Logs chip (placeholder)</li>
-     * </ul>
-     */
+    /** Wire dashboard navigation. */
     private void setupNavigation() {
-
-        // Events navigation
+        // Events
         binding.chipEvents.setOnClickListener(v ->
-                startActivity(new Intent(AdminDashboardActivity.this, AdminEventsActivity.class)));
-
+                startActivity(new Intent(this, AdminEventsActivity.class)));
         binding.btnSeeAllEvents.setOnClickListener(v ->
-                startActivity(new Intent(AdminDashboardActivity.this, AdminEventsActivity.class)));
+                startActivity(new Intent(this, AdminEventsActivity.class)));
 
-        // Profiles navigation
+        // Profiles
         binding.chipPeople.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminProfilesActivity.class)));
-
         binding.btnSeeAllProfiles.setOnClickListener(v ->
-                startActivity(new Intent(AdminDashboardActivity.this, AdminProfilesActivity.class)));
+                startActivity(new Intent(this, AdminProfilesActivity.class)));
 
-        // Images navigation
+        // Images (posters grid)
         binding.chipImages.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminImagesActivity.class)));
-
         binding.btnSeeAllImages.setOnClickListener(v ->
                 startActivity(new Intent(this, AdminImagesActivity.class)));
 
-        // Logs (stub)
+        // Logs → open the implemented logs screen
         binding.chipLogs.setOnClickListener(v ->
-                Toast.makeText(this, "NotificationLogsActivity not yet implemented.", Toast.LENGTH_SHORT).show()
-        );
+                startActivity(new Intent(this, NotificationLogsActivity.class)));
+        // If you have a "See all" button for logs, wire it similarly:
+        // binding.btnSeeAllLogs.setOnClickListener(v ->
+        //         startActivity(new Intent(this, NotificationLogsActivity.class)));
     }
 }

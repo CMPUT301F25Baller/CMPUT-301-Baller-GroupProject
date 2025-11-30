@@ -1,115 +1,89 @@
 package com.example.ballerevents;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.example.ballerevents.databinding.ItemAdminPosterBinding;
 
-/**
- * RecyclerView adapter used on the Admin Dashboard and Admin Images screen
- * to display event poster thumbnails.
- *
- * <p>This adapter binds each {@link Event}'s poster URL and title into a
- * compact visual layout. Glide is used for efficient image loading and
- * caching. The adapter exposes a click callback through
- * {@link OnPosterClickListener} so the parent screen can respond to poster
- * taps (e.g., open preview or navigate to details).
- *
- * <p>This class is a thin wrapper around {@link ListAdapter}, using a
- * diffing strategy based on event IDs to efficiently update the UI.
- */
+/** Admin grid of event posters. No tvLabel required. */
 public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.VH> {
 
-    /**
-     * Callback interface for poster click actions.
-     * Implemented by the parent Activity or Fragment.
-     */
-    public interface OnPosterClickListener {
-        /** Called when the user taps a poster thumbnail. */
-        void onPosterClick(Event event);
+    public interface PosterActions {
+        void onPreview(@NonNull Event event);
+        void onDelete(@NonNull Event event);
     }
 
-    private final OnPosterClickListener clickListener;
+    private final PosterActions actions;
 
-    /**
-     * Constructs the adapter with a required click listener.
-     *
-     * @param listener callback invoked when a poster is clicked
-     */
-    public AdminPostersAdapter(OnPosterClickListener listener) {
-        super(EventDiffCallback);
-        this.clickListener = listener;
+    public AdminPostersAdapter(@NonNull PosterActions actions) {
+        super(DIFF);
+        this.actions = actions;
+        setHasStableIds(true);
     }
 
-    /**
-     * ViewHolder that binds the poster image and label using view binding.
-     */
+    private static final DiffUtil.ItemCallback<Event> DIFF = new DiffUtil.ItemCallback<Event>() {
+        @Override public boolean areItemsTheSame(@NonNull Event a, @NonNull Event b) {
+            String ia = a.getId(), ib = b.getId();
+            return ia != null && ia.equals(ib);
+        }
+        @Override public boolean areContentsTheSame(@NonNull Event a, @NonNull Event b) {
+            String ap = a.getEventPosterUrl() == null ? "" : a.getEventPosterUrl();
+            String bp = b.getEventPosterUrl() == null ? "" : b.getEventPosterUrl();
+            String at = a.getTitle() == null ? "" : a.getTitle();
+            String bt = b.getTitle() == null ? "" : b.getTitle();
+            return ap.equals(bp) && at.equals(bt);
+        }
+    };
+
     static class VH extends RecyclerView.ViewHolder {
-        final ItemAdminPosterBinding b;
+        ImageView ivPoster;
+        TextView tvTitle;
 
-        VH(ItemAdminPosterBinding b) {
-            super(b.getRoot());
-            this.b = b;
+        VH(@NonNull View v) {
+            super(v);
+            ivPoster = v.findViewById(R.id.ivPoster);
+            tvTitle  = v.findViewById(R.id.tvTitle);
         }
 
-        /**
-         * Binds a single {@link Event} to the row layout.
-         *
-         * @param event    the event whose poster is being shown
-         * @param listener callback to notify when poster is tapped
-         */
-        void bind(Event event, OnPosterClickListener listener) {
-            b.tvLabel.setText(event.getTitle());
+        void bind(@NonNull Event e, @NonNull PosterActions actions) {
+            tvTitle.setText(e.getTitle() == null ? "Untitled Event" : e.getTitle());
 
-            Glide.with(itemView.getContext())
-                    .load(event.getEventPosterUrl())
+            String url = e.getEventPosterUrl();
+            Glide.with(ivPoster.getContext())
+                    .load(url == null || url.isEmpty() ? null : url)
                     .placeholder(R.drawable.placeholder_image)
                     .error(R.drawable.placeholder_image)
-                    .into(b.ivPoster);
+                    .centerCrop()
+                    .into(ivPoster);
 
-            itemView.setOnClickListener(v -> listener.onPosterClick(event));
+            itemView.setOnClickListener(v -> actions.onPreview(e));
+            itemView.setOnLongClickListener(v -> { actions.onDelete(e); return true; });
         }
     }
 
-    @NonNull
-    @Override
+    @NonNull @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new VH(
-                ItemAdminPosterBinding.inflate(
-                        LayoutInflater.from(parent.getContext()),
-                        parent,
-                        false
-                )
-        );
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_admin_poster, parent, false);
+        return new VH(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH holder, int position) {
-        Event event = getItem(position);
-        if (event != null) {
-            holder.bind(event, clickListener);
-        }
+        holder.bind(getItem(position), actions);
     }
 
-    /**
-     * DiffUtil callback that identifies items by Firestore document ID.
-     */
-    private static final DiffUtil.ItemCallback<Event> EventDiffCallback =
-            new DiffUtil.ItemCallback<Event>() {
-                @Override
-                public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-                    return oldItem.getId().equals(newItem.getId());
-                }
-
-                @Override
-                public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-                    // Treat content the same if IDs match; admin view only needs basic diffing.
-                    return oldItem.getId().equals(newItem.getId());
-                }
-            };
+    @Override
+    public long getItemId(int position) {
+        Event e = getItem(position);
+        return e.getId() != null ? e.getId().hashCode() : position;
+    }
 }

@@ -12,5 +12,7 @@
     <string name="joined_events">Joined Events</string>
     <string name="followers">Followers</string>
     <string name="following">Following</string>
+    <string name="events">Events</string>
+    <string name="search_events">search_events</string>
 
 </resources>

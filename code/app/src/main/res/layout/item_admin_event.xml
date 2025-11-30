@@ -6,6 +6,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginVertical="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardCornerRadius="16dp"
     app:cardElevation="3dp"
     app:cardUseCompatPadding="true">
@@ -20,11 +23,11 @@
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_alignParentStart="true"
+            android:layout_marginEnd="12dp"
+            android:contentDescription="Event poster"
             android:background="@android:color/transparent"
             android:scaleType="centerCrop"
-            android:src="@drawable/placeholder_poster"
-            android:contentDescription="@string/event_poster"
-            android:layout_marginEnd="12dp" />
+            android:src="@android:drawable/ic_menu_report_image" />
 
         <TextView
             android:id="@+id/tvDate"
@@ -32,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_toEndOf="@id/ivPoster"
             android:textAllCaps="true"
-            android:textColor="@color/purple_500"
+            android:textColor="#7C4DFF"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -53,9 +56,9 @@
             android:layout_below="@id/tvTitle"
             android:layout_toEndOf="@id/ivPoster"
             android:layout_marginTop="2dp"
-            android:textColor="@color/dark_gray"
-            android:textSize="13sp"
-            android:text="See details" />
+            android:text="See details"
+            android:textColor="#666666"
+            android:textSize="13sp" />
 
         <ImageView
             android:id="@+id/ivMenu"
@@ -63,7 +66,7 @@
             android:layout_height="24dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:src="@drawable/ic_more_vert"
-            android:contentDescription="@string/menu_icon" />
+            android:contentDescription="More"
+            android:src="@android:drawable/ic_menu_more" />
     </RelativeLayout>
 </com.google.android.material.card.MaterialCardView>
