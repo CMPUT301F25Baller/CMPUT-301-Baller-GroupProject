@@ -12,12 +12,20 @@ public class FirestoreEventRepository {
 
     public interface ListCallback<T> {
         void onSuccess(List<T> data);
+
         void onError(Exception e);
     }
+
     public interface ItemCallback<T> {
         void onSuccess(@Nullable T item);
+
         void onError(Exception e);
     }
+    public interface VoidCallback {
+        void onSuccess();
+        void onError(Exception e);
+    }
+
 
     private static List<Event> mapToEvents(QuerySnapshot snap) {
         List<Event> out = new ArrayList<>();
@@ -33,7 +41,9 @@ public class FirestoreEventRepository {
         return out;
     }
 
-    /** "Trending" events (prototype): either filter by flag or just order by title */
+    /**
+     * "Trending" events (prototype): either filter by flag or just order by title
+     */
     public void fetchTrending(ListCallback<Event> cb) {
         db.collection("events")
                 // Uncomment next line if you set isTrending on create:
@@ -45,7 +55,9 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Prototype "nearby" – same as trending for now (later: add geo/city) */
+    /**
+     * Prototype "nearby" – same as trending for now (later: add geo/city)
+     */
     public void fetchNearYou(ListCallback<Event> cb) {
         db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING)
@@ -55,17 +67,24 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Real-time feed (optional; useful for home to auto-refresh) */
+    /**
+     * Real-time feed (optional; useful for home to auto-refresh)
+     */
     public ListenerRegistration listenAll(ListCallback<Event> cb) {
         return db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING)
                 .addSnapshotListener((snap, e) -> {
-                    if (e != null) { cb.onError(e); return; }
+                    if (e != null) {
+                        cb.onError(e);
+                        return;
+                    }
                     cb.onSuccess(mapToEvents(snap));
                 });
     }
 
-    /** Fetch all events created by a specific organizer (optional) */
+    /**
+     * Fetch all events created by a specific organizer (optional)
+     */
     public void fetchByOrganizer(String organizerId, ListCallback<Event> cb) {
         db.collection("events")
                 .whereEqualTo("organizerId", organizerId)
@@ -90,5 +109,63 @@ public class FirestoreEventRepository {
         db.collection("events").add(e)
                 .addOnSuccessListener(ref -> cb.onSuccess(ref.getId()))
                 .addOnFailureListener(cb::onError);
+    }
+
+    public void sendWinnerNotifications(String eventId, VoidCallback cb) {
+        CollectionReference entrantsRef = db.collection("events")
+                .document(eventId)
+                .collection("entrants");
+
+        entrantsRef
+                .whereEqualTo("status", "chosen")          // rename if your field/value is different
+                .whereEqualTo("winnerNotified", false)     // boolean field on entrant docs
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+
+                    if (querySnapshot.isEmpty()) {
+                        if (cb != null) cb.onSuccess();
+                        return;
+                    }
+
+                    WriteBatch batch = db.batch();
+
+                    for (DocumentSnapshot snap : querySnapshot.getDocuments()) {
+                        String userId = snap.getString("userId"); // field linking entrant -> user
+                        if (userId == null) continue;
+
+                        // 1) create notification for this user
+                        DocumentReference notifRef = db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .document();
+
+                        java.util.Map<String, Object> notif = new java.util.HashMap<>();
+                        notif.put("eventId", eventId);
+                        notif.put("title", "You won the lottery!");
+                        notif.put("message",
+                                "You have been selected for this event. Open the app to confirm your spot.");
+                        notif.put("timestamp", FieldValue.serverTimestamp());
+                        notif.put("read", false);
+
+                        batch.set(notifRef, notif);
+
+                        // 2) mark entrant as notified (and invited)
+                        DocumentReference entrantRef = snap.getReference();
+                        batch.update(entrantRef,
+                                "winnerNotified", true,
+                                "status", "invited"); // or whatever status you use
+                    }
+
+                    batch.commit()
+                            .addOnSuccessListener(unused -> {
+                                if (cb != null) cb.onSuccess();
+                            })
+                            .addOnFailureListener(e -> {
+                                if (cb != null) cb.onError(e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (cb != null) cb.onError(e);
+                });
     }
 }
