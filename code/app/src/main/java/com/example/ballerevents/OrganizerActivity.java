@@ -80,6 +80,7 @@ public class OrganizerActivity extends AppCompatActivity {
                 Toast.makeText(this, "Messaging feature coming soon.", Toast.LENGTH_SHORT).show());
 
         binding.btnViewFinalEntrants.setOnClickListener(v -> openFinalEntrantsScreen());
+        binding.btnViewLotteryWinners.setOnClickListener(v -> openLotteryWinnersScreen());
 
         // 🔹 Use findViewById for Run Lottery instead of binding
         MaterialButton btnRunLottery = findViewById(R.id.btnRunLottery);
@@ -202,4 +203,18 @@ public class OrganizerActivity extends AppCompatActivity {
             Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show();
         });
     }
+    private void openLotteryWinnersScreen() {
+        if (selectedEventId == null || selectedEventId.isEmpty()) {
+            Toast.makeText(this,
+                    "Select an event in the Events tab first.",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent i = new Intent(this, OrganizerLotteryWinnersActivity.class);
+        i.putExtra("eventId", selectedEventId);
+        startActivity(i);
+    }
+
+
 }

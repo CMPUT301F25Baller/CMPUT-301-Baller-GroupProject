@@ -75,6 +75,9 @@
         <activity
             android:name=".OrganizerFinalEntrantsActivity"
             android:exported="false" />
+        <activity
+            android:name=".OrganizerLotteryWinnersActivity"
+            android:exported="false" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET"/>

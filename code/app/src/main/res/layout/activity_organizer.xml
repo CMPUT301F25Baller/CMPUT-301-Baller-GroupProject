@@ -119,6 +119,19 @@
             android:textColor="#5A00FF"
             android:insetTop="10dp"
             android:insetBottom="10dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnViewLotteryWinners"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            app:strokeColor="#5A00FF"
+            android:textColor="#5A00FF"
+            android:text="View Winners"
+            android:insetTop="10dp"
+            android:insetBottom="10dp"/>
+
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRunLottery"
