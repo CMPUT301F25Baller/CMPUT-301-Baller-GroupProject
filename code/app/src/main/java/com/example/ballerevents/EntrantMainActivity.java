@@ -8,17 +8,21 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 // The binding class name must match your layout file name.
-// Your file is 'activity_main.xml', so this is correct.
 import com.example.ballerevents.databinding.EntrantMainBinding;
 import com.google.android.material.chip.Chip;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.ListenerRegistration; // Import for listener
 import com.google.firebase.firestore.FirebaseFirestoreException; // Import for listener
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +66,9 @@ public class EntrantMainActivity extends AppCompatActivity {
     /** Firestore instance used to read the {@code events} collection. */
     private FirebaseFirestore db;
 
+    private FirebaseAuth auth;
+
+
     /**
      * In-memory cache of all events loaded from Firestore.
      * Used by the search and chip filtering logic.
@@ -73,6 +80,24 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     /** Active Firestore snapshot listener for the {@code events} collection. */
     private ListenerRegistration allEventsListener;
+
+    // QR Code Scanner Launcher
+    private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(),
+            result -> {
+                if(result.getContents() != null) {
+                    String scannedEventId = result.getContents();
+                    Log.d(TAG, "Scanned QR Code: " + scannedEventId);
+
+                    if (scannedEventId != null && !scannedEventId.isEmpty()) {
+                        // Navigate directly to the event details
+                        Intent intent = new Intent(EntrantMainActivity.this, DetailsActivity.class);
+                        intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, scannedEventId);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(this, "Invalid QR Code", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
 
     /**
      * Called when the activity is first created.
@@ -91,6 +116,20 @@ public class EntrantMainActivity extends AppCompatActivity {
 
         setupRecyclerViews();
         setupListeners();
+
+        // NEW: QR Code Button Logic
+        binding.fabQr.setOnClickListener(v -> {
+            ScanOptions options = new ScanOptions();
+            options.setPrompt("Scan Event QR Code");
+            options.setBeepEnabled(false);
+
+            // Use our custom Activity to force portrait mode
+            options.setCaptureActivity(PortraitCaptureActivity.class);
+            options.setOrientationLocked(true); // Locks to the Activity's orientation (Portrait)
+
+            options.setBarcodeImageEnabled(true);
+            barcodeLauncher.launch(options);
+        });
     }
 
     /**

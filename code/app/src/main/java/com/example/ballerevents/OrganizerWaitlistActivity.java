@@ -1,7 +1,9 @@
 package com.example.ballerevents;
 
 import android.app.AlertDialog;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -14,16 +16,16 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.common.BitMatrix;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-/**
- * Activity for Organizers to manage the lottery system.
- * Updated to send Notifications to winners.
- */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
@@ -59,7 +61,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
 
         setupRecyclerViews();
         setupTabs();
-        setupDrawButton();
+        setupButtons();
 
         loadEventAndEntrants();
     }
@@ -91,31 +93,67 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         binding.btnShowWaitlist.performClick();
     }
 
-    private void setupDrawButton() {
-        binding.btnDrawLottery.setOnClickListener(v -> {
-            if (currentEvent == null) return;
+    private void setupButtons() {
+        binding.btnDrawLottery.setOnClickListener(v -> handleDrawClick());
+        binding.btnGenerateQr.setOnClickListener(v -> generateAndSaveQRCode());
+        binding.btnBack.setOnClickListener(v -> finish());
+    }
 
-            int max = currentEvent.getMaxAttendees();
-            int currentSelected = currentEvent.getSelectedUserIds().size();
-            int spotsAvailable = max - currentSelected;
+    private void handleDrawClick() {
+        if (currentEvent == null) return;
 
-            if (spotsAvailable <= 0) {
-                Toast.makeText(this, "Event is full!", Toast.LENGTH_LONG).show();
-                return;
+        int max = currentEvent.getMaxAttendees();
+        int currentSelected = currentEvent.getSelectedUserIds().size();
+        int spotsAvailable = max - currentSelected;
+
+        if (spotsAvailable <= 0) {
+            Toast.makeText(this, "Event is full!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (currentEvent.getWaitlistUserIds().isEmpty()) {
+            Toast.makeText(this, "Waitlist is empty.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Draw Lottery")
+                .setMessage("Draw " + Math.min(spotsAvailable, currentEvent.getWaitlistUserIds().size()) + " entrants?")
+                .setPositiveButton("Draw", (d, w) -> performLotteryDraw(spotsAvailable))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    /**
+     * Generates a QR Code encoding the Event ID and saves it to the device Gallery.
+     */
+    private void generateAndSaveQRCode() {
+        try {
+            MultiFormatWriter writer = new MultiFormatWriter();
+            // Encode the Event ID as the content of the QR code
+            BitMatrix matrix = writer.encode(eventId, BarcodeFormat.QR_CODE, 500, 500);
+
+            BarcodeEncoder encoder = new BarcodeEncoder();
+            Bitmap bitmap = encoder.createBitmap(matrix);
+
+            // Save to MediaStore (Gallery)
+            String savedImageURL = MediaStore.Images.Media.insertImage(
+                    getContentResolver(),
+                    bitmap,
+                    "EventQR_" + currentEvent.getTitle(),
+                    "Check-in QR Code for " + currentEvent.getTitle()
+            );
+
+            if(savedImageURL != null) {
+                Toast.makeText(this, "QR Code saved to Gallery!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Failed to save QR Code", Toast.LENGTH_SHORT).show();
             }
 
-            if (currentEvent.getWaitlistUserIds().isEmpty()) {
-                Toast.makeText(this, "Waitlist is empty.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            new AlertDialog.Builder(this)
-                    .setTitle("Draw Lottery")
-                    .setMessage("Draw " + Math.min(spotsAvailable, currentEvent.getWaitlistUserIds().size()) + " entrants?")
-                    .setPositiveButton("Draw", (d, w) -> performLotteryDraw(spotsAvailable))
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        });
+        } catch (Exception e) {
+            Log.e(TAG, "QR Gen Error", e);
+            Toast.makeText(this, "Error generating QR Code", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void loadEventAndEntrants() {
@@ -152,7 +190,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             return;
         }
 
-        // Batch fetch in chunks of 10
         db.collection("users")
                 .whereIn(FieldPath.documentId(), allIds.subList(0, Math.min(allIds.size(), 10)))
                 .get()
@@ -174,9 +211,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Draws winners and sends notifications.
-     */
     private void performLotteryDraw(int spotsToFill) {
         List<String> pool = new ArrayList<>(currentEvent.getWaitlistUserIds());
         List<String> winners = new ArrayList<>();
@@ -198,20 +232,17 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             currentEvent.getInvitationStatus().put(winnerId, "pending");
         }
 
-        // Use a WriteBatch to update Event AND send Notifications atomically
         WriteBatch batch = db.batch();
 
-        // 1. Update Event
         batch.update(db.collection("events").document(eventId),
                 "waitlistUserIds", currentEvent.getWaitlistUserIds(),
                 "selectedUserIds", currentEvent.getSelectedUserIds(),
                 "invitationStatus", currentEvent.getInvitationStatus());
 
-        // 2. Create Notification for each winner
         for (String winnerId : winners) {
             String notifId = db.collection("users").document(winnerId).collection("notifications").document().getId();
             Notification notif = new Notification(
-                    "You Won the Lottery! \uD83C\uDF89", // 🎉
+                    "You Won the Lottery! \uD83C\uDF89",
                     "You have been selected for " + currentEvent.getTitle() + ". Please accept or decline your invitation.",
                     eventId,
                     "invitation"
