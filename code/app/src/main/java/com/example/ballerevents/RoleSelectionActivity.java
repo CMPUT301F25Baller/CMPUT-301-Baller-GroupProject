@@ -16,12 +16,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * <p>
  * The selected role is written to the user's Firestore document (field
  * {@code "role"} in the {@code users} collection) and the user is then
- * navigated to the appropriate main activity:
- * <ul>
- *     <li>Entrant → {@link EntrantMainActivity}</li>
- *     <li>Organizer → {@link OrganizerActivity}</li>
- *     <li>Admin → {@link AdminMainActivity}</li>
- * </ul>
+ * navigated to the appropriate main activity.
+ * <p>
+ * Update: Both Entrants and Organizers are now routed to {@link EntrantMainActivity}
+ * to provide a unified dashboard experience.
  */
 public class RoleSelectionActivity extends AppCompatActivity {
 
@@ -53,8 +51,9 @@ public class RoleSelectionActivity extends AppCompatActivity {
         Button btnEntrant = findViewById(R.id.btnEntrant);
         Button btnAdmin = findViewById(R.id.btnAdmin);
 
+        // Update: Organizers now go to the main dashboard (EntrantMainActivity) first
         btnOrganizer.setOnClickListener(v ->
-                selectRole("organizer", OrganizerActivity.class)
+                selectRole("organizer", EntrantMainActivity.class)
         );
 
         btnEntrant.setOnClickListener(v ->
@@ -62,7 +61,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
         );
 
         btnAdmin.setOnClickListener(v ->
-                selectRole("admin", AdminMainActivity.class) // Updated to launch AdminMainActivity
+                selectRole("admin", AdminMainActivity.class)
         );
     }
 
