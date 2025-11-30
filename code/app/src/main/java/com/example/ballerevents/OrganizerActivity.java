@@ -19,14 +19,12 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * Main activity for organizers, hosting a tab-based layout with the following
  * sections:
  * <ul>
- *     <li>About – displays profile details</li>
- *     <li>Event – lists events created by the organizer</li>
- *     <li>Following – shows followed entrants or other entities (prototype)</li>
+ * <li>About – displays profile details</li>
+ * <li>Event – lists events created by the organizer</li>
+ * <li>Following – shows followed entrants or other entities (prototype)</li>
  * </ul>
  *
- * <p>The activity loads the organizer’s profile header (name and avatar),
- * configures a {@link ViewPager2} with {@link OrganizerPagerAdapter}, and provides
- * buttons for creating events and accessing messaging features.</p>
+ * <p>Updated to use consistent navigation styling (CardView Back Button).</p>
  */
 public class OrganizerActivity extends AppCompatActivity {
 
@@ -65,9 +63,10 @@ public class OrganizerActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
-        // Configure toolbar navigation
-        if (binding.toolbar != null) {
-            binding.toolbar.setNavigationOnClickListener(v -> finish());
+        // --- NEW: Custom Back Button Logic ---
+        // Replaces old Toolbar navigation logic to match Event Details style
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
         }
 
         // Setup ViewPager and page adapter

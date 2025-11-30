@@ -19,7 +19,14 @@ import java.util.Map;
 
 /**
  * Entrant's view of an Event.
- * Updated to handle Lottery Status (Join Waitlist, Accept Invite, Decline Invite).
+ * <p>
+ * This activity displays event details and handles the lottery interaction flow:
+ * <ul>
+ * <li>Join Waitlist</li>
+ * <li>Accept Invitation (Win)</li>
+ * <li>Decline Invitation (Win)</li>
+ * </ul>
+ * It also handles navigation back to the previous screen.
  */
 public class DetailsActivity extends AppCompatActivity {
 
@@ -135,7 +142,6 @@ public class DetailsActivity extends AppCompatActivity {
             binding.tvStatusMessage.setText("You are on the waitlist. Crossing fingers! 🤞");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
             binding.tvStatusMessage.setTextColor(getColor(android.R.color.darker_gray));
-            // Option: Add "Leave Waitlist" button here if desired
         } else if (isCancelled) {
             // DECLINED
             binding.tvStatusMessage.setText("You declined this invitation.");
@@ -149,6 +155,12 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
+        // --- NEW: Back Button Navigation ---
+        // Assumes the back button ID in layout/entrant_event_details.xml is "btnBack"
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
+
         // Join Waitlist Logic
         binding.btnJoinWaitlist.setOnClickListener(v -> {
             if (mEvent == null) return;

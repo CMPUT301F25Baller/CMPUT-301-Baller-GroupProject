@@ -43,6 +43,11 @@ public class NotificationLogsActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
+        // --- NEW: Handle Custom Back Button ---
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
+
         setupRecyclerView();
 
         if (auth.getCurrentUser() != null) {
