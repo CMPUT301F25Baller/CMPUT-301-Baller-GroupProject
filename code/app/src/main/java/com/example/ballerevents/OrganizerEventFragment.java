@@ -8,6 +8,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import android.app.AlertDialog;                   // NEW
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -53,6 +55,9 @@ public class OrganizerEventFragment extends Fragment {
     /** ID of the currently authenticated organizer. */
     private String currentUserId;
 
+    /** Repository for extra event operations (sending notifications). */   // NEW
+    private FirestoreEventRepository eventRepository;                       // NEW
+
     @Nullable
     @Override
     public View onCreateView(
@@ -73,6 +78,8 @@ public class OrganizerEventFragment extends Fragment {
         if (mAuth.getCurrentUser() != null) {
             currentUserId = mAuth.getCurrentUser().getUid();
         }
+
+        eventRepository = new FirestoreEventRepository();   // NEW
     }
 
     @Override
@@ -100,16 +107,27 @@ public class OrganizerEventFragment extends Fragment {
 
     /**
      * Sets up the RecyclerView and attaches a {@link TrendingEventAdapter} where
+<<<<<<< HEAD
      * clicking an item shows options to edit the event or view its waitlist.
      */
     private void setupRecyclerView() {
         adapter = new TrendingEventAdapter(this::showEventOptionsDialog);
+=======
+     * clicking an item opens a dialog with actions for that event.
+     */
+    private void setupRecyclerView() {
+        adapter = new TrendingEventAdapter(event -> {
+            // NEW: show options instead of immediately editing
+            showEventOptionsDialog(event);
+        });
+>>>>>>> dbd4633 (changes stev)
 
         binding.rvOrganizerEvents.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvOrganizerEvents.setAdapter(adapter);
     }
 
     /**
+<<<<<<< HEAD
      * Shows an options dialog for the selected event, allowing the organizer
      * to either edit the event or view its waitlist.
      *
@@ -143,10 +161,67 @@ public class OrganizerEventFragment extends Fragment {
                             break;
                     }
                 })
+=======
+     * Dialog with actions for an event:
+     *  - Edit event
+     *  - Send winner notifications
+     */
+    private void showEventOptionsDialog(Event event) {                // NEW
+        if (getContext() == null) return;
+
+        new AlertDialog.Builder(getContext())
+                .setTitle(event.getTitle())
+                .setItems(new String[]{"Edit event", "Send winner notifications"},
+                        (dialog, which) -> {
+                            if (which == 0) {
+                                // Edit event (existing behavior)
+                                Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
+                                intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
+                                startActivity(intent);
+                            } else if (which == 1) {
+                                // New behavior: send notifications
+                                sendWinnerNotificationsForEvent(event);
+                            }
+                        })
+>>>>>>> dbd4633 (changes stev)
                 .show();
     }
 
     /**
+<<<<<<< HEAD
+=======
+     * Calls the repository to send notifications for the given event.
+     */
+    private void sendWinnerNotificationsForEvent(Event event) {       // NEW
+        if (eventRepository == null) return;
+
+        eventRepository.sendWinnerNotifications(
+                event.getId(),
+                new FirestoreEventRepository.VoidCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Winner notifications sent.",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Failed: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        Log.w(TAG, "Error sending winner notifications", e);
+                    }
+                }
+        );
+    }
+
+    /**
+>>>>>>> dbd4633 (changes stev)
      * Loads all events from Firestore where {@code organizerId} matches the current organizer.
      * Updates the RecyclerView and handles empty or failure states.
      */

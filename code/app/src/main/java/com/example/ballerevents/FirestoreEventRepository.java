@@ -44,6 +44,14 @@ public class FirestoreEventRepository {
         /** Called when an error occurs. */
         void onError(Exception e);
     }
+    /**
+     * Simple callback for operations that don't return data.
+     */
+    public interface VoidCallback {
+        void onSuccess();
+        void onError(Exception e);
+    }
+
 
     /**
      * Converts a {@link QuerySnapshot} to a list of {@link Event} objects and ensures
@@ -162,4 +170,75 @@ public class FirestoreEventRepository {
                 .addOnSuccessListener(ref -> cb.onSuccess(ref.getId()))
                 .addOnFailureListener(cb::onError);
     }
+
+    /**
+     * Sends notifications to all "chosen" entrants of an event who have not yet been notified.
+     *
+     * events/{eventId}/entrants/{entrantId}
+     *   - status          : "chosen" | "invited" | ...
+     *   - winnerNotified  : boolean
+     *   - userId          : String (id of the user profile / auth user)
+     *
+     * users/{userId}/notifications/{notificationId}
+     *   - eventId, title, message, timestamp, read
+     */
+    public void sendWinnerNotifications(String eventId, VoidCallback cb) {
+        CollectionReference entrantsRef = db.collection("events")
+                .document(eventId)
+                .collection("entrants");
+
+        // Find all chosen entrants who haven't been notified yet
+        entrantsRef
+                .whereEqualTo("status", "chosen")          // change if your field/value is different
+                .whereEqualTo("winnerNotified", false)     // make sure this field exists on entrants
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+
+                    if (querySnapshot.isEmpty()) {
+                        if (cb != null) cb.onSuccess();
+                        return;
+                    }
+
+                    WriteBatch batch = db.batch();
+
+                    for (DocumentSnapshot snap : querySnapshot.getDocuments()) {
+                        String userId = snap.getString("userId"); // field linking entrant -> user
+                        if (userId == null) continue;
+
+                        // 1) Create a notification for this user
+                        DocumentReference notifRef = db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .document(); // auto ID
+
+                        java.util.Map<String, Object> notif = new java.util.HashMap<>();
+                        notif.put("eventId", eventId);
+                        notif.put("title", "You won the lottery!");
+                        notif.put("message",
+                                "You have been selected for this event. Open the app to confirm your spot.");
+                        notif.put("timestamp", FieldValue.serverTimestamp());
+                        notif.put("read", false);
+
+                        batch.set(notifRef, notif);
+
+                        // 2) Mark entrant as notified (and invited)
+                        DocumentReference entrantRef = snap.getReference();
+                        batch.update(entrantRef,
+                                "winnerNotified", true,
+                                "status", "invited");   // change if you use another status label
+                    }
+
+                    batch.commit()
+                            .addOnSuccessListener(unused -> {
+                                if (cb != null) cb.onSuccess();
+                            })
+                            .addOnFailureListener(e -> {
+                                if (cb != null) cb.onError(e);
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (cb != null) cb.onError(e);
+                });
+    }
 }
+
