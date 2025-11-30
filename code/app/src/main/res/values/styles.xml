@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
     <!-- Base stubs so any legacy references don't crash linking -->
@@ -14,6 +15,9 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">50%</item>
     </style>
+
+    <!-- Alias added to match usage in activity_profile.xml and activity_edit_profile.xml -->
+    <style name="CircleImage" parent="ShapeAppearanceOverlay.CircleImage"/>
 
     <!-- Top-only rounded corners (used in item_event_near.xml) -->
     <style name="RoundedTopCorners" parent="ShapeAppearance.Material3.LargeComponent">

@@ -3,9 +3,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:fillViewport="true">
 
-    <!-- fragment_organizer_about.xml -->
     <LinearLayout
         android:orientation="vertical"
         android:padding="16dp"
@@ -21,7 +21,7 @@
             android:textSize="16sp"
             android:lineSpacingExtra="4dp"
             android:text=""
-            tools:text="This is the organizer's about me section. It will be populated from their user profile in Firestore." />
+            tools:text="This is the organizer's about me section." />
 
         <!-- Interests chips -->
         <com.google.android.material.chip.ChipGroup
@@ -32,7 +32,12 @@
             android:clickable="false"
             android:focusable="false" />
 
-        <!-- Edit Button (New) -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <!-- Edit Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnEditProfile"
             android:layout_width="match_parent"
@@ -42,7 +47,22 @@
             android:backgroundTint="#5A00FF"
             app:icon="@drawable/ic_edit"
             app:iconGravity="textStart"
-            app:cornerRadius="12dp"/>
+            android:textAllCaps="false"
+            app:cornerRadius="8dp"/>
+
+        <!-- Logout Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="16dp"
+            android:text="Log Out"
+            android:backgroundTint="#D32F2F"
+            app:icon="@drawable/ic_arrow_back"
+            app:iconGravity="textStart"
+            android:textAllCaps="false"
+            app:cornerRadius="8dp"/>
 
     </LinearLayout>
 </ScrollView>
