@@ -100,7 +100,7 @@
                 android:orientation="horizontal"
                 android:overScrollMode="never"
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_event_admin"
+                tools:listitem="@layout/item_event_near"
                 tools:itemCount="3" />
 
             <!-- Section: Recent Profiles -->
