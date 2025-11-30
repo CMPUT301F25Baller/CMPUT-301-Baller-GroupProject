@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ActivityOrganizerEventCreationBinding;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
@@ -153,12 +155,16 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                         if (e.getMaxAttendees() > 0) {
                             binding.etMaxAttendees.setText(String.valueOf(e.getMaxAttendees()));
                         }
+                        binding.etGeolocation.setChecked(e.isGeolocationRequired());
+
 
                         // Load Poster
                         if (e.getEventPosterUrl() != null && !e.getEventPosterUrl().isEmpty()) {
                             Glide.with(this).load(e.getEventPosterUrl()).into(binding.ivEventPoster);
                             // We also load it into banner for visual consistency if desired, or leave placeholder
-                            Glide.with(this).load(e.getEventPosterUrl()).centerCrop().into(binding.ivPageHeader);
+                        }
+                        if (e.getEventBannerUrl() != null && !e.getEventBannerUrl().isEmpty()) {
+                            Glide.with(this).load(e.getEventBannerUrl()).centerCrop().into(binding.ivPageHeader);
                         }
 
                         // Note: Ideally we load registration timestamps back into calendars here
@@ -184,6 +190,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         String timeStr = binding.etTime.getText().toString();
         String location = binding.etLocation.getText().toString();
         String capacityStr = binding.etMaxAttendees.getText().toString();
+        boolean geolocationRequirement = binding.etGeolocation.isChecked();
 
         if (TextUtils.isEmpty(title)) {
             binding.etTitle.setError("Title required");
@@ -207,6 +214,8 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         data.put("time", timeStr);
         data.put("locationName", location);
         data.put("maxAttendees", maxAttendees);
+        data.put("geolocationRequired", geolocationRequirement);
+
 
         // Save timestamps for Lottery Logic
         // Only save if the fields are actually filled
@@ -224,6 +233,9 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         // Handle Image URIs (For prototype, we store string URI. Production needs Storage upload)
         if (selectedPosterUri != null) {
             data.put("eventPosterUrl", selectedPosterUri.toString());
+        }
+        if (selectedBannerUri != null){
+            data.put("eventBannerUrl", selectedBannerUri.toString());
         }
         // Note: Event model doesn't have 'bannerUrl', so we only save poster for now.
 
