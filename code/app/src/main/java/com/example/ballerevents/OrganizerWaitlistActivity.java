@@ -1,7 +1,10 @@
 package com.example.ballerevents;
 
+import android.Manifest;
 import android.app.AlertDialog;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.InputType;
@@ -11,6 +14,8 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityOrganizerWaitlistBinding;
@@ -43,6 +48,7 @@ import java.util.Map;
  * <li><b>Smart Notifications:</b> Sends notifications to either "Selected" users or "All" users based on selection state.</li>
  * <li><b>Lottery System:</b> Randomly samples entrants from the waitlist and moves them to the "Selected" list in Firestore.</li>
  * <li><b>QR Generation:</b> Generates and saves a promotional QR code for the event.</li>
+ * <li><b>CSV Export:</b> Exports accepted entrants' names and emails to a CSV file.</li>
  * </ul>
  */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
@@ -51,6 +57,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
 
     private static final String TAG = "OrganizerWaitlistActivity";
+    private static final int REQUEST_STORAGE_PERMISSION = 100;
 
     /** View binding for the activity layout. */
     private ActivityOrganizerWaitlistBinding binding;
@@ -97,6 +104,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
 
         setupRecyclerView();
         setupButtons();
+        requestStoragePermission();
     }
 
     /**
@@ -118,6 +126,35 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         super.onStop();
         if (eventListener != null) {
             eventListener.remove();
+        }
+    }
+
+    /**
+     * Requests storage permission for saving CSV and QR codes.
+     */
+    private void requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // Only needed for Android 6-9
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_STORAGE_PERMISSION);
+            }
+        }
+        // Android 10+ uses scoped storage (no permission needed)
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_STORAGE_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Storage permission denied. Cannot save files.", Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -165,6 +202,9 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         binding.btnGenerateQr.setOnClickListener(v -> generateAndSaveQRCode());
         binding.btnBack.setOnClickListener(v -> finish());
 
+        // NEW: Export CSV Button
+        binding.btnExportCsv.setOnClickListener(v -> exportAcceptedEntrantsToCsv());
+
         // Smart Notify Button Logic
         binding.btnNotifyAll.setOnClickListener(v -> {
             List<UserProfile> selectedUsers = waitlistAdapter.getSelectedUsers();
@@ -181,6 +221,108 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                 promptForNotification(selectedUsers, "Selected (" + selectedUsers.size() + ")");
             }
         });
+    }
+
+    // --- CSV EXPORT LOGIC ---
+
+    /**
+     * Exports accepted entrants to a CSV file.
+     *
+     * <p>This method queries Firestore for all users who have "accepted" their
+     * invitation (invitationStatus == "accepted"), fetches their full profiles,
+     * and exports their names and emails to a CSV file saved in Downloads.</p>
+     */
+    private void exportAcceptedEntrantsToCsv() {
+        if (currentEvent == null) {
+            Toast.makeText(this, "Event data not loaded", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Show progress
+        binding.progressBar.setVisibility(View.VISIBLE);
+
+        // Get list of user IDs who accepted
+        List<String> acceptedUserIds = new ArrayList<>();
+
+        if (currentEvent.getInvitationStatus() != null) {
+            for (Map.Entry<String, String> entry : currentEvent.getInvitationStatus().entrySet()) {
+                if ("accepted".equals(entry.getValue())) {
+                    acceptedUserIds.add(entry.getKey());
+                }
+            }
+        }
+
+        if (acceptedUserIds.isEmpty()) {
+            binding.progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, "No accepted entrants to export", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Fetch user profiles (Firestore 'whereIn' limited to 10 items)
+        // For production, you'd batch this in groups of 10
+        int batchSize = Math.min(acceptedUserIds.size(), 10);
+        List<String> batchIds = acceptedUserIds.subList(0, batchSize);
+
+        db.collection("users")
+                .whereIn(FieldPath.documentId(), batchIds)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<UserProfile> acceptedProfiles = new ArrayList<>();
+
+                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
+                        UserProfile profile = doc.toObject(UserProfile.class);
+                        if (profile != null) {
+                            profile.setUid(doc.getId());
+                            acceptedProfiles.add(profile);
+                        }
+                    }
+
+                    binding.progressBar.setVisibility(View.GONE);
+
+                    if (acceptedProfiles.isEmpty()) {
+                        Toast.makeText(this, "No profiles found for accepted entrants", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // Export to CSV
+                    CsvExportHelper.exportAcceptedEntrants(
+                            this,
+                            currentEvent.getTitle(),
+                            acceptedProfiles,
+                            new CsvExportHelper.ExportCallback() {
+                                @Override
+                                public void onSuccess(String filePath) {
+                                    Toast.makeText(OrganizerWaitlistActivity.this,
+                                            "CSV exported successfully to " + filePath,
+                                            Toast.LENGTH_LONG).show();
+                                }
+
+                                @Override
+                                public void onFailure(Exception error) {
+                                    Toast.makeText(OrganizerWaitlistActivity.this,
+                                            "Export failed: " + error.getMessage(),
+                                            Toast.LENGTH_LONG).show();
+                                    Log.e(TAG, "CSV export failed", error);
+                                }
+                            }
+                    );
+
+                    // Show info dialog about export
+                    new AlertDialog.Builder(this)
+                            .setTitle("Export Complete")
+                            .setMessage("Exported " + acceptedProfiles.size() + " accepted entrants.\n\n" +
+                                    "File saved to Downloads folder.\n" +
+                                    "Note: If more than 10 entrants accepted, only the first 10 were exported " +
+                                    "(Firestore limitation).")
+                            .setPositiveButton("OK", null)
+                            .show();
+                })
+                .addOnFailureListener(e -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Failed to fetch accepted entrants: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Error fetching accepted entrants", e);
+                });
     }
 
     // --- NOTIFICATION LOGIC ---
@@ -387,7 +529,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         for (String winnerId : winners) {
             String notifId = db.collection("users").document(winnerId).collection("notifications").document().getId();
             Notification notif = new Notification(
-                    "You Won the Lottery! \uD83C\uDF89",
+                    "You Won the Lottery! 🎉",
                     "You have been selected for " + currentEvent.getTitle() + ". Please accept or decline your invitation.",
                     eventId,
                     "invitation"
