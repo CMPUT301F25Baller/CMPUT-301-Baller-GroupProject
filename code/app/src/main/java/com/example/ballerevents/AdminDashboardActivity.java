@@ -60,6 +60,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.chipLogs.setOnClickListener(v ->
                 startActivity(new Intent(this, NotificationLogsActivity.class))
         );
+
+
     }
 
     private void setupLogout() {

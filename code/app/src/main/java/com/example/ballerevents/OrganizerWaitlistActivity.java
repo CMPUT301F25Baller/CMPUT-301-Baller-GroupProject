@@ -371,7 +371,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         currentEvent.getSelectedUserIds().addAll(winners);
 
         if (currentEvent.getInvitationStatus() == null) {
-            currentEvent.invitationStatus = new HashMap<>();
+            currentEvent.setInvitationStatus(new HashMap<>());
         }
         for (String winnerId : winners) {
             currentEvent.getInvitationStatus().put(winnerId, "pending");

@@ -10,11 +10,15 @@ import androidx.viewpager2.widget.ViewPager2;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ActivityOrganizerBinding;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 /**
  * Main activity for users with the Organizer role.
  *
@@ -27,33 +31,22 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * <li><b>Following</b>: Lists of followers and following users.</li>
  * </ul>
  */
+
 public class OrganizerActivity extends AppCompatActivity {
 
-    /** Tag for logging errors and debug info. */
     private static final String TAG = "OrganizerActivity";
-
-    /** Titles for the tabs displayed in the TabLayout. */
     private static final String[] TAB_TITLES = {"About", "Event", "Following"};
 
-    /** View binding for the activity layout. */
     private ActivityOrganizerBinding binding;
-
-    /** Firestore instance for fetching profile data. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth instance for authentication checks. */
     private FirebaseAuth mAuth;
 
-    /** The UID of the current organizer. */
     private String currentUserId;
 
-    /**
-     * Called when the activity is first created.
-     * Initializes views, sets up the ViewPager/TabLayout, and loads profile data.
-     *
-     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
-     * this Bundle contains the data it most recently supplied in onSaveInstanceState.
-     */
+    // --- Lottery System ---
+    private static final int LOTTERY_SLOTS = 10;
+    private String selectedEventId; // set by OrganizerEventFragment
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,6 +56,7 @@ public class OrganizerActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
+        // Ensure authentication
         if (mAuth.getCurrentUser() == null) {
             Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
             finish();
@@ -70,89 +64,180 @@ public class OrganizerActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
-        // Handle Custom Back Button
+        // Custom back button
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
 
-        // Setup ViewPager
+        setupTabsAndPager();
+        setupButtons();
+        loadOrganizerHeaderInfo();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadOrganizerHeaderInfo();
+    }
+
+    // ----------------------------------------------------------
+    // VIEWPAGER + TABS
+    // ----------------------------------------------------------
+    private void setupTabsAndPager() {
         binding.viewPager.setAdapter(new OrganizerPagerAdapter(this));
         binding.viewPager.setOffscreenPageLimit(2);
-        binding.viewPager.setCurrentItem(1, false); // Default to Event tab
+        binding.viewPager.setCurrentItem(1, false);  // open Events tab
 
-        // Connect TabLayout to ViewPager
         new TabLayoutMediator(binding.tabLayout, binding.viewPager,
                 (tab, position) -> tab.setText(TAB_TITLES[position])
         ).attach();
+    }
 
-        // "New Event" Button Listener
+    // ----------------------------------------------------------
+    // ALL BUTTONS (Create Event, Message, Lottery actions)
+    // ----------------------------------------------------------
+    private void setupButtons() {
+
+        // Create New Event
         binding.btnNewEvent.setOnClickListener(v ->
                 startActivity(new Intent(this, OrganizerEventCreationActivity.class))
         );
 
-        // "Message" Button Listener (Prototype)
+        // Message (prototype)
         binding.btnMessage.setOnClickListener(v ->
                 Toast.makeText(this, "Messaging prototype coming soon.", Toast.LENGTH_SHORT).show()
         );
 
-        loadOrganizerHeaderInfo();
-    }
+        // Open Final Entrants
+        binding.btnViewFinalEntrants.setOnClickListener(v -> openFinalEntrantsScreen());
 
-    /**
-     * Called when the activity resumes.
-     * Reloads the header info to ensure stats/bio are up-to-date if changed elsewhere.
-     */
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (currentUserId != null) {
-            loadOrganizerHeaderInfo();
+        // Open Lottery Winners
+        binding.btnViewLotteryWinners.setOnClickListener(v -> openLotteryWinnersScreen());
+
+        // Run Lottery
+        MaterialButton btnRunLottery = findViewById(R.id.btnRunLottery);
+        if (btnRunLottery != null) {
+            btnRunLottery.setOnClickListener(v -> runLotteryForSelectedEvent());
         }
     }
 
-    /**
-     * Fetches the organizer's profile document from Firestore.
-     * Updates the header UI elements: Name, Bio (About Me), Profile Picture, and Follower/Following counts.
-     */
+    // Called from OrganizerEventFragment
+    public void setSelectedEventId(String eventId) {
+        selectedEventId = eventId;
+        Log.d(TAG, "Selected Event ID: " + eventId);
+    }
+
+    // ----------------------------------------------------------
+    // OPEN EXTRA SCREENS
+    // ----------------------------------------------------------
+    private void openFinalEntrantsScreen() {
+        if (selectedEventId == null || selectedEventId.isEmpty()) {
+            Toast.makeText(this, "Select an event first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent i = new Intent(this, OrganizerFinalEntrantsActivity.class);
+        i.putExtra(OrganizerFinalEntrantsActivity.EXTRA_EVENT_ID, selectedEventId);
+        startActivity(i);
+    }
+
+    private void openLotteryWinnersScreen() {
+        if (selectedEventId == null || selectedEventId.isEmpty()) {
+            Toast.makeText(this, "Select an event first.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Intent i = new Intent(this, OrganizerLotteryWinnersActivity.class);
+        i.putExtra("eventId", selectedEventId);
+        startActivity(i);
+    }
+
+    // ----------------------------------------------------------
+    // LOTTERY LOGIC
+    // ----------------------------------------------------------
+    private void runLotteryForSelectedEvent() {
+        if (selectedEventId == null) {
+            Toast.makeText(this, "Select an event in the Events tab.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        runSimpleLottery(selectedEventId, LOTTERY_SLOTS);
+    }
+
+    private void runSimpleLottery(String eventId, int maxSlots) {
+        db.collection("users")
+                .whereArrayContains("appliedEventIds", eventId)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    List<String> waitlist = new ArrayList<>();
+                    snap.getDocuments().forEach(doc -> waitlist.add(doc.getId()));
+
+                    if (waitlist.isEmpty()) {
+                        Toast.makeText(this, "No waitlist for this event.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Collections.shuffle(waitlist);
+                    int winners = Math.min(maxSlots, waitlist.size());
+                    List<String> chosen = new ArrayList<>(waitlist.subList(0, winners));
+
+                    db.collection("events")
+                            .document(eventId)
+                            .update("chosenUserIds", chosen)
+                            .addOnSuccessListener(a ->
+                                    Toast.makeText(this, "Lottery complete — " + chosen.size() + " winners selected.", Toast.LENGTH_SHORT).show()
+                            )
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(this, "Failed to save lottery results.", Toast.LENGTH_SHORT).show()
+                            );
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error loading waitlist.", Toast.LENGTH_SHORT).show()
+                );
+    }
+
+    // ----------------------------------------------------------
+    // LOAD ORGANIZER HEADER
+    // ----------------------------------------------------------
     private void loadOrganizerHeaderInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                UserProfile userProfile = documentSnapshot.toObject(UserProfile.class);
-
-                if (userProfile != null) {
-                    // Update Name
-                    binding.tvOrganizerName.setText(userProfile.getName());
-
-                    // Update About Me (Bio)
-                    if (binding.tvOrganizerAboutMe != null) {
-                        binding.tvOrganizerAboutMe.setText(userProfile.getAboutMe());
-                    }
-
-                    // Update Profile Image
-                    Glide.with(this)
-                            .load(userProfile.getProfilePictureUrl())
-                            .placeholder(R.drawable.placeholder_avatar1)
-                            .error(R.drawable.placeholder_avatar1)
-                            .into(binding.ivOrganizerProfile);
-
-                    // Update Stats
-                    int following = userProfile.getFollowingIds() != null ? userProfile.getFollowingIds().size() : 0;
-                    int followers = userProfile.getFollowerIds() != null ? userProfile.getFollowerIds().size() : 0;
-
-                    if (binding.tvFollowingCount != null) {
-                        binding.tvFollowingCount.setText(String.valueOf(following));
-                    }
-                    if (binding.tvFollowersCount != null) {
-                        binding.tvFollowersCount.setText(String.valueOf(followers));
-                    }
-                }
-            } else {
-                Toast.makeText(this, "Could not find organizer profile.", Toast.LENGTH_SHORT).show();
+        userRef.get().addOnSuccessListener(snapshot -> {
+            if (!snapshot.exists()) {
+                Toast.makeText(this, "Organizer profile not found.", Toast.LENGTH_SHORT).show();
+                return;
             }
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error fetching user profile", e);
-        });
+
+            UserProfile profile = snapshot.toObject(UserProfile.class);
+            if (profile == null) return;
+
+            // Name
+            binding.tvOrganizerName.setText(profile.getName());
+
+            // About Me
+            if (binding.tvOrganizerAboutMe != null) {
+                binding.tvOrganizerAboutMe.setText(profile.getAboutMe());
+            }
+
+            // Profile Picture
+            Glide.with(this)
+                    .load(profile.getProfilePictureUrl())
+                    .placeholder(R.drawable.placeholder_avatar1)
+                    .error(R.drawable.placeholder_avatar1)
+                    .into(binding.ivOrganizerProfile);
+
+            // Follow counts
+            int following = profile.getFollowingIds() != null ? profile.getFollowingIds().size() : 0;
+            int followers = profile.getFollowerIds() != null ? profile.getFollowerIds().size() : 0;
+
+            if (binding.tvFollowingCount != null) {
+                binding.tvFollowingCount.setText(String.valueOf(following));
+            }
+            if (binding.tvFollowersCount != null) {
+                binding.tvFollowersCount.setText(String.valueOf(followers));
+            }
+
+        }).addOnFailureListener(e ->
+                Toast.makeText(this, "Error loading profile.", Toast.LENGTH_SHORT).show()
+        );
     }
 }
