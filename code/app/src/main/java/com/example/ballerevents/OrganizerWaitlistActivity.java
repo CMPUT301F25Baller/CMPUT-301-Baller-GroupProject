@@ -19,8 +19,10 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityOrganizerWaitlistBinding;
+import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -39,54 +41,26 @@ import java.util.Map;
 
 /**
  * Activity for Organizers to manage the waitlist for a specific event.
- *
- * <p>This activity provides the following features:</p>
- * <ul>
- * <li><b>Real-time Dashboard:</b> Displays live capacity, checked selection count, and total waitlist count.</li>
- * <li><b>Waitlist Management:</b> Lists all entrants currently on the waitlist.</li>
- * <li><b>Multi-Selection:</b> Allows organizers to select specific entrants via checkboxes.</li>
- * <li><b>Smart Notifications:</b> Sends notifications to either "Selected" users or "All" users based on selection state.</li>
- * <li><b>Lottery System:</b> Randomly samples entrants from the waitlist and moves them to the "Selected" list in Firestore.</li>
- * <li><b>QR Generation:</b> Generates and saves a promotional QR code for the event.</li>
- * <li><b>CSV Export:</b> Exports accepted entrants' names and emails to a CSV file.</li>
- * </ul>
  */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
 
-    /** Intent extra key for passing the Event ID. */
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
 
     private static final String TAG = "OrganizerWaitlistActivity";
     private static final int REQUEST_STORAGE_PERMISSION = 100;
 
-    /** View binding for the activity layout. */
     private ActivityOrganizerWaitlistBinding binding;
-
-    /** Firestore instance for database operations. */
     private FirebaseFirestore db;
-
-    /** The ID of the event being managed. */
     private String eventId;
-
-    /** Local object representation of the current event data. */
     private Event currentEvent;
-
-    /** Listener for real-time updates on the event document. */
     private ListenerRegistration eventListener;
 
-    /** Adapter for displaying the list of entrants. */
     private WaitlistUserAdapter waitlistAdapter;
+    private final List<UserProfile> displayedProfiles = new ArrayList<>();
 
-    /** List of user profiles currently on the waitlist. */
-    private final List<UserProfile> waitlistProfiles = new ArrayList<>();
+    // 0 = Waitlist, 1 = Invited (Pending), 2 = Accepted, 3 = Declined
+    private int currentTabPosition = 0;
 
-    /**
-     * Called when the activity is first created.
-     * Initializes the UI, Firestore, and setup methods.
-     *
-     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
-     * this Bundle contains the data it most recently supplied in onSaveInstanceState.
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -102,25 +76,18 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             return;
         }
 
+        setupTabs();
         setupRecyclerView();
         setupButtons();
         requestStoragePermission();
     }
 
-    /**
-     * Called when the activity becomes visible.
-     * Starts listening to real-time Firestore updates.
-     */
     @Override
     protected void onStart() {
         super.onStart();
         startRealtimeUpdates();
     }
 
-    /**
-     * Called when the activity is no longer visible.
-     * Removes the Firestore listener to conserve resources.
-     */
     @Override
     protected void onStop() {
         super.onStop();
@@ -129,13 +96,9 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Requests storage permission for saving CSV and QR codes.
-     */
     private void requestStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            // Only needed for Android 6-9
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this,
@@ -143,7 +106,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                         REQUEST_STORAGE_PERMISSION);
             }
         }
-        // Android 10+ uses scoped storage (no permission needed)
     }
 
     @Override
@@ -152,98 +114,175 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         if (requestCode == REQUEST_STORAGE_PERMISSION) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Storage permission denied. Cannot save files.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
     /**
-     * Configures the RecyclerView with a LayoutManager and the {@link WaitlistUserAdapter}.
-     * Passes a lambda to handle selection changes, updating the UI accordingly.
+     * Sets up the tabs for filtering the user lists.
+     * Assumes a TabLayout with id 'tabLayout' exists in the binding.
      */
+    private void setupTabs() {
+        if (binding.tabLayout != null) {
+            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Waitlist"));
+            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Invited"));
+            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Accepted"));
+            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Declined"));
+
+            binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+                @Override
+                public void onTabSelected(TabLayout.Tab tab) {
+                    currentTabPosition = tab.getPosition();
+                    waitlistAdapter.clearSelection(); // Clear checkboxes when switching tabs
+                    fetchProfilesForCurrentTab();
+                    updateUIForTabState();
+                }
+
+                @Override
+                public void onTabUnselected(TabLayout.Tab tab) {}
+                @Override
+                public void onTabReselected(TabLayout.Tab tab) {}
+            });
+        }
+    }
+
     private void setupRecyclerView() {
         binding.rvWaitlist.setLayoutManager(new LinearLayoutManager(this));
-        // Pass listener that updates buttons AND stats bar when checkboxes change
-        waitlistAdapter = new WaitlistUserAdapter(waitlistProfiles, this, count -> updateUIBasedOnSelection(count));
+        waitlistAdapter = new WaitlistUserAdapter(displayedProfiles, this, count -> updateUIBasedOnSelection(count));
         binding.rvWaitlist.setAdapter(waitlistAdapter);
     }
 
     /**
-     * Updates the "Notify" button text/color and the "Selected" count in the header
-     * based on how many checkboxes are currently active.
-     *
-     * @param selectedCount The number of users currently selected in the adapter.
+     * Updates visibility of buttons based on which tab is active.
+     * e.g., "Remove" should only be available on the Waitlist tab.
      */
+    private void updateUIForTabState() {
+        if (binding.btnRemove != null) {
+            // Only show Remove button if we are on the Waitlist tab (index 0)
+            binding.btnRemove.setVisibility(currentTabPosition == 0 ? View.VISIBLE : View.GONE);
+        }
+
+        // Hide Lottery button if not on Waitlist tab
+        binding.btnDrawLottery.setVisibility(currentTabPosition == 0 ? View.VISIBLE : View.GONE);
+    }
+
     private void updateUIBasedOnSelection(int selectedCount) {
-        // 1. Update Notification Button Appearance
+        // 1. Update Notification Button
         if (selectedCount > 0) {
             binding.btnNotifyAll.setText("Notify Selected (" + selectedCount + ")");
             binding.btnNotifyAll.setBackgroundColor(getColor(R.color.purple_500));
         } else {
-            binding.btnNotifyAll.setText("Notify All Waitlist");
+            // Contextual text based on tab
+            String targetText = "All";
+            switch(currentTabPosition) {
+                case 0: targetText = "Waitlist"; break;
+                case 1: targetText = "Invited"; break;
+                case 2: targetText = "Accepted"; break;
+                case 3: targetText = "Declined"; break;
+            }
+            binding.btnNotifyAll.setText("Notify " + targetText);
             binding.btnNotifyAll.setBackgroundColor(0xFFFF9800); // Orange
         }
 
-        // 2. Update Header Stats (Selected = Checkbox Selection)
+        // 2. Update Remove Button Text
+        if (binding.btnRemove != null) {
+            if (selectedCount > 0) {
+                binding.btnRemove.setEnabled(true);
+                binding.btnRemove.setText("Remove Selected (" + selectedCount + ")");
+            } else {
+                binding.btnRemove.setEnabled(false);
+                binding.btnRemove.setText("Remove Selected");
+            }
+        }
+
+        // 3. Update Header Stats
         if (currentEvent != null) {
             int max = currentEvent.getMaxAttendees();
             int waiting = (currentEvent.getWaitlistUserIds() != null) ? currentEvent.getWaitlistUserIds().size() : 0;
-
             binding.tvCapacityInfo.setText(String.format("Capacity: %d | Selected: %d | Waiting: %d", max, selectedCount, waiting));
         }
     }
 
-    /**
-     * Sets up click listeners for all interactive buttons in the activity.
-     */
     private void setupButtons() {
         binding.btnDrawLottery.setOnClickListener(v -> handleDrawClick());
         binding.btnGenerateQr.setOnClickListener(v -> generateAndSaveQRCode());
         binding.btnBack.setOnClickListener(v -> finish());
-
-        // NEW: Export CSV Button
         binding.btnExportCsv.setOnClickListener(v -> exportAcceptedEntrantsToCsv());
 
-        // Smart Notify Button Logic
+        // Remove Button Logic
+        if (binding.btnRemove != null) {
+            binding.btnRemove.setOnClickListener(v -> handleRemoveEntrants());
+        }
+
+        // Notify Logic
         binding.btnNotifyAll.setOnClickListener(v -> {
             List<UserProfile> selectedUsers = waitlistAdapter.getSelectedUsers();
-
             if (selectedUsers.isEmpty()) {
-                // Scenario A: No selection -> Notify ALL in waitlist
-                if (waitlistProfiles.isEmpty()) {
-                    Toast.makeText(this, "Waitlist is empty.", Toast.LENGTH_SHORT).show();
+                if (displayedProfiles.isEmpty()) {
+                    Toast.makeText(this, "List is empty.", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                promptForNotification(waitlistProfiles, "All Waitlist Entrants");
+                String targetGroup = "All Displayed Users";
+                promptForNotification(displayedProfiles, targetGroup);
             } else {
-                // Scenario B: Selection active -> Notify only SELECTED
                 promptForNotification(selectedUsers, "Selected (" + selectedUsers.size() + ")");
             }
         });
     }
 
-    // --- CSV EXPORT LOGIC ---
-
     /**
-     * Exports accepted entrants to a CSV file.
-     *
-     * <p>This method queries Firestore for all users who have "accepted" their
-     * invitation (invitationStatus == "accepted"), fetches their full profiles,
-     * and exports their names and emails to a CSV file saved in Downloads.</p>
+     * Removes selected users from the waitlist entirely.
+     * Only valid on the Waitlist tab.
      */
+    private void handleRemoveEntrants() {
+        if (currentTabPosition != 0) return; // Safety check
+
+        List<UserProfile> selectedUsers = waitlistAdapter.getSelectedUsers();
+        if (selectedUsers.isEmpty()) {
+            Toast.makeText(this, "No users selected to remove", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Remove Entrants?")
+                .setMessage("Are you sure you want to remove " + selectedUsers.size() + " user(s) from the waitlist? This action cannot be undone.")
+                .setPositiveButton("Remove", (dialog, which) -> {
+                    performRemoval(selectedUsers);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void performRemoval(List<UserProfile> usersToRemove) {
+        List<String> idsToRemove = new ArrayList<>();
+        for (UserProfile user : usersToRemove) {
+            idsToRemove.add(user.getUid());
+        }
+
+        binding.progressBar.setVisibility(View.VISIBLE);
+
+        // Remove these IDs from the 'waitlistUserIds' array in Firestore
+        db.collection("events").document(eventId)
+                .update("waitlistUserIds", FieldValue.arrayRemove(idsToRemove.toArray()))
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Removed successfully", Toast.LENGTH_SHORT).show();
+                    waitlistAdapter.clearSelection();
+                    // The realtime listener will automatically refresh the list
+                })
+                .addOnFailureListener(e -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Failed to remove: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
     private void exportAcceptedEntrantsToCsv() {
         if (currentEvent == null) {
             Toast.makeText(this, "Event data not loaded", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // Show progress
         binding.progressBar.setVisibility(View.VISIBLE);
 
-        // Get list of user IDs who accepted
         List<String> acceptedUserIds = new ArrayList<>();
-
         if (currentEvent.getInvitationStatus() != null) {
             for (Map.Entry<String, String> entry : currentEvent.getInvitationStatus().entrySet()) {
                 if ("accepted".equals(entry.getValue())) {
@@ -258,8 +297,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             return;
         }
 
-        // Fetch user profiles (Firestore 'whereIn' limited to 10 items)
-        // For production, you'd batch this in groups of 10
         int batchSize = Math.min(acceptedUserIds.size(), 10);
         List<String> batchIds = acceptedUserIds.subList(0, batchSize);
 
@@ -268,7 +305,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<UserProfile> acceptedProfiles = new ArrayList<>();
-
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         UserProfile profile = doc.toObject(UserProfile.class);
                         if (profile != null) {
@@ -276,15 +312,13 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                             acceptedProfiles.add(profile);
                         }
                     }
-
                     binding.progressBar.setVisibility(View.GONE);
 
                     if (acceptedProfiles.isEmpty()) {
-                        Toast.makeText(this, "No profiles found for accepted entrants", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "No profiles found", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    // Export to CSV
                     CsvExportHelper.exportAcceptedEntrants(
                             this,
                             currentEvent.getTitle(),
@@ -292,47 +326,21 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                             new CsvExportHelper.ExportCallback() {
                                 @Override
                                 public void onSuccess(String filePath) {
-                                    Toast.makeText(OrganizerWaitlistActivity.this,
-                                            "CSV exported successfully to " + filePath,
-                                            Toast.LENGTH_LONG).show();
+                                    Toast.makeText(OrganizerWaitlistActivity.this, "CSV exported: " + filePath, Toast.LENGTH_LONG).show();
                                 }
-
                                 @Override
                                 public void onFailure(Exception error) {
-                                    Toast.makeText(OrganizerWaitlistActivity.this,
-                                            "Export failed: " + error.getMessage(),
-                                            Toast.LENGTH_LONG).show();
-                                    Log.e(TAG, "CSV export failed", error);
+                                    Toast.makeText(OrganizerWaitlistActivity.this, "Export failed", Toast.LENGTH_LONG).show();
                                 }
                             }
                     );
-
-                    // Show info dialog about export
-                    new AlertDialog.Builder(this)
-                            .setTitle("Export Complete")
-                            .setMessage("Exported " + acceptedProfiles.size() + " accepted entrants.\n\n" +
-                                    "File saved to Downloads folder.\n" +
-                                    "Note: If more than 10 entrants accepted, only the first 10 were exported " +
-                                    "(Firestore limitation).")
-                            .setPositiveButton("OK", null)
-                            .show();
                 })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Failed to fetch accepted entrants: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
-                    Log.e(TAG, "Error fetching accepted entrants", e);
+                    Log.e(TAG, "Error fetching accepted", e);
                 });
     }
 
-    // --- NOTIFICATION LOGIC ---
-
-    /**
-     * Displays an input dialog allowing the organizer to type a custom message.
-     *
-     * @param targets     The list of users who will receive the notification.
-     * @param titleSuffix A string appended to the dialog title (e.g., "All Users" or "Selected (2)").
-     */
     private void promptForNotification(List<UserProfile> targets, String titleSuffix) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Notify " + titleSuffix);
@@ -346,20 +354,12 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             String message = input.getText().toString().trim();
             if (!message.isEmpty()) {
                 sendBatchNotification(targets, message);
-            } else {
-                Toast.makeText(this, "Message cannot be empty", Toast.LENGTH_SHORT).show();
             }
         });
         builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
         builder.show();
     }
 
-    /**
-     * Sends a notification to a list of users using a Firestore WriteBatch.
-     *
-     * @param targets The list of UserProfile objects to notify.
-     * @param message The message body entered by the organizer.
-     */
     private void sendBatchNotification(List<UserProfile> targets, String message) {
         WriteBatch batch = db.batch();
         int count = 0;
@@ -388,17 +388,11 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         batch.commit()
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Notifications Sent!", Toast.LENGTH_SHORT).show();
-                    waitlistAdapter.clearSelection(); // Clear checkboxes after sending
+                    waitlistAdapter.clearSelection();
                 })
                 .addOnFailureListener(e -> Toast.makeText(this, "Failed to send.", Toast.LENGTH_SHORT).show());
     }
 
-    // --- REAL-TIME DATA LOGIC ---
-
-    /**
-     * Attaches a real-time listener to the Firestore document for this event.
-     * This ensures the UI updates immediately if the lottery is run or users join/leave.
-     */
     private void startRealtimeUpdates() {
         binding.progressBar.setVisibility(View.VISIBLE);
 
@@ -414,9 +408,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                         currentEvent = snapshot.toObject(Event.class);
                         if (currentEvent != null) {
                             currentEvent.setId(snapshot.getId());
-                            // Initial header update (Selected starts at 0 for checked state)
-                            updateUIBasedOnSelection(0);
-                            fetchWaitlistProfiles();
+                            fetchProfilesForCurrentTab();
                         }
                     } else {
                         binding.progressBar.setVisibility(View.GONE);
@@ -425,45 +417,86 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     }
 
     /**
-     * Fetches full UserProfile documents for the IDs currently in the waitlist.
-     * <p>Note: This uses a 'whereIn' query which is limited to 10 items in Firestore.
-     * For production with large lists, this should be batched or paginated.</p>
+     * Determines which list of User IDs to fetch based on the selected tab
+     * and filters the 'invitationStatus' map.
      */
-    private void fetchWaitlistProfiles() {
-        List<String> waitlistIds = currentEvent.getWaitlistUserIds();
+    private void fetchProfilesForCurrentTab() {
+        if (currentEvent == null) return;
 
-        if (waitlistIds == null || waitlistIds.isEmpty()) {
-            waitlistProfiles.clear();
+        List<String> targetIds = new ArrayList<>();
+        Map<String, String> statusMap = currentEvent.getInvitationStatus();
+        if (statusMap == null) statusMap = new HashMap<>();
+
+        switch (currentTabPosition) {
+            case 0: // Waitlist
+                if (currentEvent.getWaitlistUserIds() != null) {
+                    targetIds.addAll(currentEvent.getWaitlistUserIds());
+                }
+                break;
+            case 1: // Invited (Pending)
+                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
+                    if ("pending".equals(entry.getValue()) || "invited".equals(entry.getValue())) {
+                        targetIds.add(entry.getKey());
+                    }
+                }
+                break;
+            case 2: // Accepted
+                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
+                    if ("accepted".equals(entry.getValue())) {
+                        targetIds.add(entry.getKey());
+                    }
+                }
+                break;
+            case 3: // Declined
+                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
+                    if ("declined".equals(entry.getValue())) {
+                        targetIds.add(entry.getKey());
+                    }
+                }
+                break;
+        }
+
+        fetchProfilesByIds(targetIds);
+    }
+
+    /**
+     * Helper to fetch full profile objects for a list of IDs.
+     */
+    private void fetchProfilesByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            displayedProfiles.clear();
             waitlistAdapter.notifyDataSetChanged();
             binding.tvEmpty.setVisibility(View.VISIBLE);
             binding.progressBar.setVisibility(View.GONE);
+            updateUIBasedOnSelection(0);
             return;
         }
 
-        // Limit to 10 for 'whereIn' query to prevent crash
+        // Limit to 10 for 'whereIn' query to prevent crash.
+        // In a real app, you would chunk this list into batches of 10.
+        List<String> safeList = ids.subList(0, Math.min(ids.size(), 10));
+
         db.collection("users")
-                .whereIn(FieldPath.documentId(), waitlistIds.subList(0, Math.min(waitlistIds.size(), 10)))
+                .whereIn(FieldPath.documentId(), safeList)
                 .get()
                 .addOnSuccessListener(snap -> {
-                    waitlistProfiles.clear();
+                    displayedProfiles.clear();
                     for (DocumentSnapshot doc : snap.getDocuments()) {
                         UserProfile p = doc.toObject(UserProfile.class);
                         if (p != null) {
                             p.setUid(doc.getId());
-                            waitlistProfiles.add(p);
+                            displayedProfiles.add(p);
                         }
                     }
                     waitlistAdapter.notifyDataSetChanged();
-                    binding.tvEmpty.setVisibility(waitlistProfiles.isEmpty() ? View.VISIBLE : View.GONE);
+                    binding.tvEmpty.setVisibility(displayedProfiles.isEmpty() ? View.VISIBLE : View.GONE);
                     binding.progressBar.setVisibility(View.GONE);
+
+                    // Reset selection count
+                    updateUIBasedOnSelection(0);
                 });
     }
 
-    // --- LOTTERY & QR LOGIC ---
-
-    /**
-     * Validates the event state and triggers the lottery draw dialog if valid.
-     */
     private void handleDrawClick() {
         if (currentEvent == null) return;
         int max = currentEvent.getMaxAttendees();
@@ -487,17 +520,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Executes the random lottery draw logic.
-     * <ol>
-     * <li>Shuffles the waitlist.</li>
-     * <li>Selects the top N entrants (where N is spots available).</li>
-     * <li>Updates the Event document (moves users from waitlist -> selected).</li>
-     * <li>Sends "You Won" notifications to the winners.</li>
-     * </ol>
-     *
-     * @param spotsToFill The number of entrants to select.
-     */
     private void performLotteryDraw(int spotsToFill) {
         List<String> pool = new ArrayList<>(currentEvent.getWaitlistUserIds());
         List<String> winners = new ArrayList<>();
@@ -509,7 +531,9 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             count++;
         }
 
+        // Update local object states before sending to Firestore
         currentEvent.getWaitlistUserIds().removeAll(winners);
+        if (currentEvent.getSelectedUserIds() == null) currentEvent.setSelectedUserIds(new ArrayList<>());
         currentEvent.getSelectedUserIds().addAll(winners);
 
         if (currentEvent.getInvitationStatus() == null) {
@@ -538,13 +562,10 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         }
 
         batch.commit()
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Draw complete. Stats updating...", Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Draw complete.", Toast.LENGTH_SHORT).show())
                 .addOnFailureListener(e -> Toast.makeText(this, "Draw failed.", Toast.LENGTH_SHORT).show());
     }
 
-    /**
-     * Generates a QR Code for the current event ID and saves it to the device's gallery.
-     */
     private void generateAndSaveQRCode() {
         try {
             MultiFormatWriter writer = new MultiFormatWriter();
