@@ -175,14 +175,18 @@ public class FirestoreEventRepository {
     }
 
     /**
-     * US30: Randomly sample a specified number of waiting entrants for an event
-     * and mark them as "chosen".
+     * US30 + US29 together: Randomly sample waiting entrants AND automatically send
+     * winner notifications for the chosen entrants.
+     *
+     * Organizer calls this once per event with a sample size; system handles both
+     * selection and notification.
      */
-    public void sampleAttendees(String eventId, int sampleSize, VoidCallback cb) {
+    public void sampleAttendeesAndNotify(String eventId, int sampleSize, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)
                 .collection("entrants");
 
+        // 1) get all waiting entrants
         entrantsRef
                 .whereEqualTo("status", "waiting")
                 .get()
@@ -190,10 +194,12 @@ public class FirestoreEventRepository {
                     List<DocumentSnapshot> docs = querySnapshot.getDocuments();
 
                     if (docs.isEmpty()) {
+                        // Nothing to sample; just call back success
                         if (cb != null) cb.onSuccess();
                         return;
                     }
 
+                    // 2) shuffle & pick N
                     Collections.shuffle(docs);
                     int n = Math.min(sampleSize, docs.size());
                     List<DocumentSnapshot> chosen = docs.subList(0, n);
@@ -206,9 +212,11 @@ public class FirestoreEventRepository {
                                 "winnerNotified", false);
                     }
 
+                    // 3) commit the chosen ones, then automatically send notifications
                     batch.commit()
                             .addOnSuccessListener(unused -> {
-                                if (cb != null) cb.onSuccess();
+                                // Immediately send notifications to chosen entrants
+                                sendWinnerNotifications(eventId, cb);
                             })
                             .addOnFailureListener(e -> {
                                 if (cb != null) cb.onError(e);
@@ -220,7 +228,15 @@ public class FirestoreEventRepository {
     }
 
     /**
-     * US31: Cancel entrants who were invited but did not sign up / confirm.
+     * US31 (optional extra): Cancel entrants who were invited but did not sign up / confirm.
+     */
+    /**
+     * US31: Cancel entrants who were invited but did not sign up / confirm,
+     * and send them a cancellation notification.
+     */
+    /**
+     * US31: Cancel entrants who were invited but did not sign up / confirm,
+     * and send them a cancellation notification.
      */
     public void cancelUnresponsiveEntrants(String eventId, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
@@ -239,7 +255,30 @@ public class FirestoreEventRepository {
                     }
 
                     WriteBatch batch = db.batch();
+
                     for (DocumentSnapshot snap : docs) {
+                        String userId = snap.getString("userId");
+                        if (userId == null) continue;
+
+                        // (a) cancellation notification
+                        DocumentReference notifRef = db.collection("users")
+                                .document(userId)
+                                .collection("notifications")
+                                .document();
+
+                        java.util.Map<String, Object> notif = new java.util.HashMap<>();
+                        notif.put("eventId", eventId);
+                        notif.put("title", "Your invitation was cancelled");
+                        notif.put("message",
+                                "Your spot for this event has been cancelled by the organizer.");
+                        notif.put("type", "cancellation");
+                        notif.put("actionRequired", false);
+                        notif.put("timestamp", FieldValue.serverTimestamp());
+                        notif.put("read", false);
+
+                        batch.set(notifRef, notif);
+
+                        // (b) update entrant status
                         DocumentReference entrantRef = snap.getReference();
                         batch.update(entrantRef, "status", "cancelled");
                     }
