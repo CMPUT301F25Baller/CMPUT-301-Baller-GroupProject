@@ -234,6 +234,10 @@ public class FirestoreEventRepository {
      * US31: Cancel entrants who were invited but did not sign up / confirm,
      * and send them a cancellation notification.
      */
+    /**
+     * US31: Cancel entrants who were invited but did not sign up / confirm,
+     * and send them a cancellation notification.
+     */
     public void cancelUnresponsiveEntrants(String eventId, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)
