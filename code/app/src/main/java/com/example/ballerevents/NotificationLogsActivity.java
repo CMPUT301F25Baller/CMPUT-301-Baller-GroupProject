@@ -1,279 +1,205 @@
 package com.example.ballerevents;
 
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
 /**
- * Displays the user's notification log.
- * Fetches real data from users/{uid}/notifications while also showing
- * static mock logs and event invitations.
+ * FINAL VERSION — fully compatible with:
+ * • NotificationItem (your model)
+ * • NotificationAdapter (your RecyclerView adapter)
+ * • Firestore Notification model
+ * • Your XML layout: activity_notification_logs.xml
  */
-public class NotificationLogsActivity extends AppCompatActivity implements NotificationLogsAdapter.OnItemAction {
+public class NotificationLogsActivity extends AppCompatActivity
+        implements NotificationAdapter.OnNotificationActionListener {
 
-    private ActivityNotificationLogsBinding binding;
-    private NotificationLogsAdapter adapter;
+    private RecyclerView rvLogs;
+    private Chip chipNew, chipAll;
+    private MaterialButton btnMarkAll;
+    private NotificationAdapter adapter;
+
+    private final List<NotificationItem> allNotifications = new ArrayList<>();
+
+    private final SimpleDateFormat timeFormat =
+            new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
+
     private FirebaseFirestore db;
-    private FirebaseAuth auth;
-    private ListenerRegistration notifListener;
-
-    private String userId;
-    private List<Notification> allNotifications = new ArrayList<>();
-    private List<NotificationLog> staticLogs = new ArrayList<>();
-    private List<Object> displayedLogs = new ArrayList<>();
+    private String uid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_notification_logs);
 
         db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
+        uid = FirebaseAuth.getInstance().getCurrentUser() != null
+                ? FirebaseAuth.getInstance().getCurrentUser().getUid()
+                : null;
 
-        if (auth.getCurrentUser() != null) {
-            userId = auth.getCurrentUser().getUid();
-        }
-
-        if (binding.btnBack != null) {
-            binding.btnBack.setOnClickListener(v -> finish());
-        }
-
-        setupRecyclerView();
-        setupButtons();
-        loadStaticLogs();
-
-        if (userId != null) {
-            setupRealtimeListener();
-            loadEventInvitations();
-        } else {
-            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
-            adapter.submitList(staticLogs);
-        }
+        initViews();
+        setupRecycler();
+        setupChips();
+        loadNotifications();
     }
 
-    // -------------------------------------------------------------------------
-    // SETUP
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // INITIALIZATION
+    // ------------------------------------------------------------------
 
-    private void setupRecyclerView() {
-        adapter = new NotificationLogsAdapter(this);
-        binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvLogs.setAdapter(adapter);
+    private void initViews() {
+        rvLogs = findViewById(R.id.rvLogs);
+        chipNew = findViewById(R.id.chipNew);
+        chipAll = findViewById(R.id.chipAll);
+        btnMarkAll = findViewById(R.id.btnMarkAll);
+
+        // Back button from your XML
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
     }
 
-    private void setupButtons() {
-        binding.chipAll.setOnClickListener(v -> adapter.submitList(new ArrayList<>(displayedLogs)));
-        binding.chipNew.setOnClickListener(v -> filterNewLogs());
-        binding.btnMarkAll.setOnClickListener(v -> markAllAsRead());
+    private void setupRecycler() {
+        adapter = new NotificationAdapter(this);
+        rvLogs.setLayoutManager(new LinearLayoutManager(this));
+        rvLogs.setAdapter(adapter);
     }
 
-    private void loadStaticLogs() {
-        staticLogs = NotificationLogsStore.getAll(); // Your local mock notifications
+    private void setupChips() {
+        chipAll.setChecked(true);
+
+        // Show all notifications
+        chipAll.setOnClickListener(v ->
+                adapter.submitList(new ArrayList<>(allNotifications)));
+
+        // Show unread only
+        chipNew.setOnClickListener(v -> {
+            List<NotificationItem> unread = new ArrayList<>();
+            for (NotificationItem item : allNotifications) {
+                if (!item.isRead) unread.add(item);
+            }
+            adapter.submitList(unread);
+        });
+
+        // Mark all as read
+        btnMarkAll.setOnClickListener(v -> markAllAsRead());
     }
 
-    // -------------------------------------------------------------------------
-    // REAL-TIME FIRESTORE NOTIFICATION FETCH
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // LOAD FIRESTORE NOTIFICATIONS
+    // ------------------------------------------------------------------
 
-    private void setupRealtimeListener() {
-        notifListener = db.collection("users")
-                .document(userId)
+    private void loadNotifications() {
+        if (uid == null) return;
+
+        db.collection("users")
+                .document(uid)
                 .collection("notifications")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .addSnapshotListener((snapshots, e) -> {
-                    if (e != null) {
-                        Log.w("NotifActivity", "Listen failed.", e);
-                        return;
+                .orderBy("timestamp")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    allNotifications.clear();
+
+                    for (QueryDocumentSnapshot doc : snap) {
+                        Notification notif = doc.toObject(Notification.class);
+
+                        NotificationItem item = new NotificationItem(
+                                notif.getId(),
+                                R.drawable.ic_notification_alert,  // default avatar
+                                notif.getTitle(),
+                                notif.getMessage(),
+                                notif.getTimestamp() == null
+                                        ? "–"
+                                        : timeFormat.format(notif.getTimestamp()),
+                                true,                       // hasActions
+                                notif.isRead(),
+                                "invitation".equalsIgnoreCase(notif.getType()),
+                                notif.getEventId()
+                        );
+
+                        allNotifications.add(item);
                     }
 
-                    if (snapshots != null) {
-                        allNotifications = snapshots.toObjects(Notification.class);
+                    adapter.submitList(new ArrayList<>(allNotifications));
+                });
+    }
 
-                        for (int i = 0; i < snapshots.size(); i++) {
-                            allNotifications.get(i).setId(snapshots.getDocuments().get(i).getId());
-                        }
+    // ------------------------------------------------------------------
+    // MARK ALL AS READ
+    // ------------------------------------------------------------------
 
-                        mergeAndDisplayLogs();
+    private void markAllAsRead() {
+        for (NotificationItem item : allNotifications) {
+            item.isRead = true;
+        }
+
+        adapter.submitList(new ArrayList<>(allNotifications));
+
+        if (uid == null) return;
+
+        db.collection("users")
+                .document(uid)
+                .collection("notifications")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    for (QueryDocumentSnapshot doc : snap) {
+                        doc.getReference().update("read", true);
                     }
                 });
     }
 
-    // -------------------------------------------------------------------------
-    // EVENT INVITATION FETCH
-    // -------------------------------------------------------------------------
-
-    private void loadEventInvitations() {
-        db.collection("users").document(userId).get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    UserProfile user = documentSnapshot.toObject(UserProfile.class);
-                    if (user != null && user.getInvitedEventIds() != null && !user.getInvitedEventIds().isEmpty()) {
-                        fetchEventDetailsAndMerge(user.getInvitedEventIds());
-                    } else {
-                        mergeAndDisplayLogs();
-                    }
-                })
-                .addOnFailureListener(e -> mergeAndDisplayLogs());
-    }
-
-    private void fetchEventDetailsAndMerge(List<String> invitedIds) {
-        List<NotificationLog> inviteLogs = new ArrayList<>();
-        final int[] pending = {invitedIds.size()};
-
-        for (String eventId : invitedIds) {
-            db.collection("events").document(eventId).get()
-                    .addOnSuccessListener(eventDoc -> {
-                        if (eventDoc.exists()) {
-                            String title = eventDoc.getString("title");
-                            NotificationLog log = new NotificationLog(
-                                    eventId,
-                                    "You're invited to join " + title,
-                                    "Action Required",
-                                    R.drawable.ic_notification_alert,
-                                    false,
-                                    true,
-                                    eventId
-                            );
-                            inviteLogs.add(log);
-                        }
-                        checkMergeCompletion(pending, inviteLogs);
-                    })
-                    .addOnFailureListener(e -> checkMergeCompletion(pending, inviteLogs));
-        }
-    }
-
-    private void checkMergeCompletion(int[] pending, List<NotificationLog> invites) {
-        pending[0]--;
-        if (pending[0] <= 0) {
-            displayedLogs.addAll(invites);
-            mergeAndDisplayLogs();
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // MERGE STATIC, REALTIME, AND INVITE LOGS
-    // -------------------------------------------------------------------------
-
-    private void mergeAndDisplayLogs() {
-        displayedLogs.clear();
-        displayedLogs.addAll(allNotifications);
-        displayedLogs.addAll(staticLogs);
-        adapter.submitList(new ArrayList<>(displayedLogs));
-        binding.tvEmpty.setVisibility(displayedLogs.isEmpty() ? View.VISIBLE : View.GONE);
-    }
-
-    // -------------------------------------------------------------------------
-    // ACTIONS — INVITATION RESPONSE / DELETE / READ
-    // -------------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // ACTION BUTTONS: Accept / Reject / Mark Read
+    // ------------------------------------------------------------------
 
     @Override
-    public void onAcceptInvite(Object item) {
-        if (item instanceof NotificationLog log && userId != null) {
-            db.collection("users").document(userId)
-                    .update(
-                            "joinedEventIds", FieldValue.arrayUnion(log.eventId),
-                            "invitedEventIds", FieldValue.arrayRemove(log.eventId),
-                            "appliedEventIds", FieldValue.arrayRemove(log.eventId)
-                    )
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Invitation accepted!", Toast.LENGTH_SHORT).show();
-                        removeLog(log);
-                    })
-                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to accept", Toast.LENGTH_SHORT).show());
-        }
+    public void onAccept(@NonNull NotificationItem item) {
+        markOneAsRead(item);
+
+        // TODO: Update Event.invitationStatus here
+        // Example:
+        // db.collection("events").document(item.eventId)
+        //     .update("invitationStatus." + uid, "accepted");
     }
 
     @Override
-    public void onDeclineInvite(Object item) {
-        if (item instanceof NotificationLog log && userId != null) {
-            db.collection("users").document(userId)
-                    .update("invitedEventIds", FieldValue.arrayRemove(log.eventId))
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Invitation declined", Toast.LENGTH_SHORT).show();
-                        removeLog(log);
-                    });
-        }
+    public void onReject(@NonNull NotificationItem item) {
+        markOneAsRead(item);
+
+        // TODO: Update Event.invitationStatus here
+        // Example:
+        // db.collection("events").document(item.eventId)
+        //     .update("invitationStatus." + uid, "declined");
     }
 
     @Override
-    public void onDeleteNotification(Object item) {
-        if (item instanceof Notification notif && userId != null) {
-            db.collection("users").document(userId)
-                    .collection("notifications")
-                    .document(notif.getId())
-                    .delete();
-        }
+    public void onMarkRead(@NonNull NotificationItem item) {
+        markOneAsRead(item);
     }
 
-    @Override
-    public void onMarkRead(Object item) {
-        if (item instanceof Notification notif && userId != null) {
-            db.collection("users").document(userId)
-                    .collection("notifications")
-                    .document(notif.getId())
-                    .update("read", true);
-        } else if (item instanceof NotificationLog log) {
-            log.isRead = true;
-        }
+    private void markOneAsRead(NotificationItem item) {
+        item.isRead = true;
         adapter.notifyDataSetChanged();
-    }
 
-    // -------------------------------------------------------------------------
-    // HELPERS
-    // -------------------------------------------------------------------------
+        if (uid == null) return;
 
-    private void filterNewLogs() {
-        List<Object> filtered = new ArrayList<>();
-        for (Object n : displayedLogs) {
-            if (n instanceof Notification && !((Notification) n).isRead()) {
-                filtered.add(n);
-            }
-            if (n instanceof NotificationLog && !((NotificationLog) n).isRead) {
-                filtered.add(n);
-            }
-        }
-        adapter.submitList(filtered);
-    }
-
-    private void markAllAsRead() {
-        for (Object n : displayedLogs) {
-            if (n instanceof Notification && userId != null) {
-                db.collection("users").document(userId)
-                        .collection("notifications")
-                        .document(((Notification) n).getId())
-                        .update("read", true);
-            } else if (n instanceof NotificationLog) {
-                ((NotificationLog) n).isRead = true;
-            }
-        }
-        Toast.makeText(this, "All marked as read", Toast.LENGTH_SHORT).show();
-        adapter.notifyDataSetChanged();
-    }
-
-    private void removeLog(Object log) {
-        displayedLogs.remove(log);
-        adapter.submitList(new ArrayList<>(displayedLogs));
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (notifListener != null) notifListener.remove();
+        db.collection("users")
+                .document(uid)
+                .collection("notifications")
+                .document(item.id)
+                .update("read", true);
     }
 }

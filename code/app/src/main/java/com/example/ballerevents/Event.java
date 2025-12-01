@@ -1,3 +1,4 @@
+// FILE: Event.java
 package com.example.ballerevents;
 
 import android.os.Parcel;
@@ -24,92 +25,279 @@ public class Event implements Parcelable {
     // -----------------------------
     // Standard Event Metadata
     // -----------------------------
-    public String title;
-    public String date;
-    public String time;
-    public String locationName;
-    public String locationAddress;        // MAIN branch
-    public String description;
-    public String price;
-    public String organizer;
-    public String organizerId;
-    public String eventPosterUrl;
-    public String organizerIconUrl;       // MAIN branch
-    public boolean isTrending;
+    private String title;
+    private String date;
+    private String time;
+    private String locationName;
+    private String locationAddress;  // MAIN branch
+    private String description;
+    private String price;
+    private String organizer;
+    private String organizerId;
+    private String eventPosterUrl;
+    private String organizerIconUrl; // MAIN branch
+    private boolean isTrending;
 
-    public List<String> tags = new ArrayList<>();
+    private List<String> tags = new ArrayList<>();
 
     // -----------------------------
     // MAIN Branch Attendance Fields
     // -----------------------------
 
     /** Enrolled / confirmed attendees */
-    public List<String> enrolledUserIds = new ArrayList<>();
+    private List<String> enrolledUserIds = new ArrayList<>();
 
     /** Final chosen winner IDs (old main field) */
-    public List<String> chosenUserIds = new ArrayList<>();
+    private List<String> chosenUserIds = new ArrayList<>();
 
     // -----------------------------
-    // Lottery System Fields (Your version)
+    // Lottery System Fields
     // -----------------------------
 
     /** Maximum number of attendees allowed */
-    public int maxAttendees = 0;
+    private int maxAttendees = 0;
 
     /** Users waiting to be drawn in lottery */
-    public List<String> waitlistUserIds = new ArrayList<>();
+    private List<String> waitlistUserIds = new ArrayList<>();
 
     /** Users selected in lottery or manually invited */
-    public List<String> selectedUserIds = new ArrayList<>();
+    private List<String> selectedUserIds = new ArrayList<>();
 
     /** Users who declined an invite */
-    public List<String> cancelledUserIds = new ArrayList<>();
+    private List<String> cancelledUserIds = new ArrayList<>();
 
     /** Map userId → status ("pending", "accepted", "declined") */
-    public Map<String, String> invitationStatus = new HashMap<>();
+    private Map<String, String> invitationStatus = new HashMap<>();
 
     /** Registration windows */
-    public long registrationOpenAtMillis = 0;
-    public long registrationCloseAtMillis = 0;
+    private long registrationOpenAtMillis = 0;
+    private long registrationCloseAtMillis = 0;
 
     // -----------------------------
-    // Constructor
+    // Constructors
     // -----------------------------
-    public Event() {}
+
+    /** Required empty constructor for Firestore. */
+    public Event() {
+    }
+
+    /**
+     * Convenience constructor used from OrganizerEventCreationActivity.
+     */
+    public Event(String title,
+                 String description,
+                 String date,
+                 String time,
+                 String locationName,
+                 int maxAttendees) {
+        this.title = title;
+        this.description = description;
+        this.date = date;
+        this.time = time;
+        this.locationName = locationName;
+        this.maxAttendees = maxAttendees;
+
+        // Reasonable defaults
+        this.locationAddress = "";
+        this.price = "";
+        this.organizer = "";
+        this.organizerId = "";
+        this.eventPosterUrl = "";
+        this.organizerIconUrl = "";
+        this.isTrending = false;
+    }
 
     // -----------------------------
-    // Getters
+    // Getters / Setters
     // -----------------------------
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
 
-    public String getTitle() { return title; }
-    public String getDate() { return date; }
-    public String getTime() { return time; }
-    public String getLocationName() { return locationName; }
-    public String getLocationAddress() { return locationAddress; }
-    public String getDescription() { return description; }
-    public String getPrice() { return price; }
-    public String getOrganizer() { return organizer; }
-    public String getOrganizerId() { return organizerId; }
-    public String getEventPosterUrl() { return eventPosterUrl; }
-    public String getOrganizerIconUrl() { return organizerIconUrl; }
-    public boolean isTrending() { return isTrending; }
+    public String getId() {
+        return id;
+    }
 
-    public List<String> getTags() { return tags == null ? new ArrayList<>() : tags; }
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    // --- Basic metadata ---
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getDate() {
+        return date;
+    }
+
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    public String getTime() {
+        return time;
+    }
+
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
+    }
+
+    public String getLocationAddress() {
+        return locationAddress;
+    }
+
+    public void setLocationAddress(String locationAddress) {
+        this.locationAddress = locationAddress;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getPrice() {
+        return price;
+    }
+
+    public void setPrice(String price) {
+        this.price = price;
+    }
+
+    public String getOrganizer() {
+        return organizer;
+    }
+
+    public void setOrganizer(String organizer) {
+        this.organizer = organizer;
+    }
+
+    public String getOrganizerId() {
+        return organizerId;
+    }
+
+    public void setOrganizerId(String organizerId) {
+        this.organizerId = organizerId;
+    }
+
+    public String getEventPosterUrl() {
+        return eventPosterUrl;
+    }
+
+    public void setEventPosterUrl(String eventPosterUrl) {
+        this.eventPosterUrl = eventPosterUrl;
+    }
+
+    public String getOrganizerIconUrl() {
+        return organizerIconUrl;
+    }
+
+    public void setOrganizerIconUrl(String organizerIconUrl) {
+        this.organizerIconUrl = organizerIconUrl;
+    }
+
+    public boolean isTrending() {
+        return isTrending;
+    }
+
+    public void setTrending(boolean trending) {
+        isTrending = trending;
+    }
+
+    public List<String> getTags() {
+        return tags == null ? new ArrayList<>() : tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    // --- Attendance / winner lists ---
 
     public List<String> getEnrolledUserIds() {
         return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
+    }
+
+    public void setEnrolledUserIds(List<String> enrolledUserIds) {
+        this.enrolledUserIds = enrolledUserIds;
     }
 
     public List<String> getChosenUserIds() {
         return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
     }
 
-    public List<String> getWaitlistUserIds() { return waitlistUserIds; }
-    public List<String> getSelectedUserIds() { return selectedUserIds; }
-    public List<String> getCancelledUserIds() { return cancelledUserIds; }
-    public Map<String, String> getInvitationStatus() { return invitationStatus; }
+    public void setChosenUserIds(List<String> chosenUserIds) {
+        this.chosenUserIds = chosenUserIds;
+    }
+
+    public int getMaxAttendees() {
+        return maxAttendees;
+    }
+
+    public void setMaxAttendees(int maxAttendees) {
+        this.maxAttendees = maxAttendees;
+    }
+
+    public List<String> getWaitlistUserIds() {
+        return waitlistUserIds == null ? new ArrayList<>() : waitlistUserIds;
+    }
+
+    public void setWaitlistUserIds(List<String> waitlistUserIds) {
+        this.waitlistUserIds = waitlistUserIds;
+    }
+
+    public List<String> getSelectedUserIds() {
+        return selectedUserIds == null ? new ArrayList<>() : selectedUserIds;
+    }
+
+    public void setSelectedUserIds(List<String> selectedUserIds) {
+        this.selectedUserIds = selectedUserIds;
+    }
+
+    public List<String> getCancelledUserIds() {
+        return cancelledUserIds == null ? new ArrayList<>() : cancelledUserIds;
+    }
+
+    public void setCancelledUserIds(List<String> cancelledUserIds) {
+        this.cancelledUserIds = cancelledUserIds;
+    }
+
+    public Map<String, String> getInvitationStatus() {
+        return invitationStatus == null ? new HashMap<>() : invitationStatus;
+    }
+
+    public void setInvitationStatus(Map<String, String> invitationStatus) {
+        this.invitationStatus = invitationStatus;
+    }
+
+    public long getRegistrationOpenAtMillis() {
+        return registrationOpenAtMillis;
+    }
+
+    public void setRegistrationOpenAtMillis(long registrationOpenAtMillis) {
+        this.registrationOpenAtMillis = registrationOpenAtMillis;
+    }
+
+    public long getRegistrationCloseAtMillis() {
+        return registrationCloseAtMillis;
+    }
+
+    public void setRegistrationCloseAtMillis(long registrationCloseAtMillis) {
+        this.registrationCloseAtMillis = registrationCloseAtMillis;
+    }
 
     // -----------------------------
     // Lottery Helper Methods
@@ -117,8 +305,8 @@ public class Event implements Parcelable {
 
     /** True if user accepted their invitation */
     public boolean isUserConfirmed(String userId) {
-        return invitationStatus != null &&
-                "accepted".equals(invitationStatus.get(userId));
+        return getInvitationStatus() != null &&
+                "accepted".equals(getInvitationStatus().get(userId));
     }
 
     /** True if registration window is active */
@@ -129,8 +317,9 @@ public class Event implements Parcelable {
     }
 
     // -----------------------------
-    // Parcelable Constructor
+    // Parcelable constructor
     // -----------------------------
+
     protected Event(Parcel in) {
         id = in.readString();
 
@@ -159,6 +348,7 @@ public class Event implements Parcelable {
         cancelledUserIds = in.createStringArrayList();
 
         // Read invitationStatus map
+        invitationStatus = new HashMap<>();
         int mapSize = in.readInt();
         for (int i = 0; i < mapSize; i++) {
             String key = in.readString();
@@ -171,8 +361,9 @@ public class Event implements Parcelable {
     }
 
     // -----------------------------
-    // Parcelable Writer
+    // Parcelable writer
     // -----------------------------
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(id);
@@ -200,8 +391,9 @@ public class Event implements Parcelable {
         dest.writeStringList(cancelledUserIds);
 
         // Write map
-        dest.writeInt(invitationStatus.size());
-        for (Map.Entry<String, String> entry : invitationStatus.entrySet()) {
+        Map<String, String> map = getInvitationStatus();
+        dest.writeInt(map.size());
+        for (Map.Entry<String, String> entry : map.entrySet()) {
             dest.writeString(entry.getKey());
             dest.writeString(entry.getValue());
         }
@@ -211,13 +403,19 @@ public class Event implements Parcelable {
     }
 
     @Override
-    public int describeContents() { return 0; }
+    public int describeContents() {
+        return 0;
+    }
 
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
-        public Event createFromParcel(Parcel in) { return new Event(in); }
+        public Event createFromParcel(Parcel in) {
+            return new Event(in);
+        }
 
         @Override
-        public Event[] newArray(int size) { return new Event[size]; }
+        public Event[] newArray(int size) {
+            return new Event[size];
+        }
     };
 }

@@ -13,42 +13,51 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
 /**
- * Adapter for displaying a list of {@link NotificationLog} entries.
- * Supports standard notifications AND invitation-style notifications.
+ * Adapter that supports two item types:
+ * - Notification  (Firestore)
+ * - NotificationLog (static + invite)
  */
 public class NotificationLogsAdapter
-        extends ListAdapter<NotificationLog, NotificationLogsAdapter.VH> {
+        extends ListAdapter<Object, NotificationLogsAdapter.VH> {
 
-    /** Listener interface for notification log actions. */
     public interface OnItemAction {
-        void onMarkRead(NotificationLog log);
-        void onOpen(NotificationLog log);
-        void onAcceptInvite(NotificationLog log);
-        void onRejectInvite(NotificationLog log);
+        void onMarkRead(Object item);
+        void onOpen(Object item);
+        void onAcceptInvite(Object item);
+        void onRejectInvite(Object item);
     }
 
     private final OnItemAction actions;
+
+    // Formatter for Notification timestamps (Date -> String)
+    private final SimpleDateFormat timeFormat =
+            new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
 
     public NotificationLogsAdapter(OnItemAction actions) {
         super(DIFF_CALLBACK);
         this.actions = actions;
     }
 
-    /** Improved diff callback merging both versions */
-    private static final DiffUtil.ItemCallback<NotificationLog> DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<NotificationLog>() {
+    private static final DiffUtil.ItemCallback<Object> DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<Object>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull NotificationLog a, @NonNull NotificationLog b) {
-                    return a.id.equals(b.id);
+                public boolean areItemsTheSame(@NonNull Object a, @NonNull Object b) {
+                    if (a instanceof Notification && b instanceof Notification) {
+                        return ((Notification) a).getId().equals(((Notification) b).getId());
+                    }
+                    if (a instanceof NotificationLog && b instanceof NotificationLog) {
+                        return ((NotificationLog) a).id.equals(((NotificationLog) b).id);
+                    }
+                    return false;
                 }
 
                 @Override
-                public boolean areContentsTheSame(@NonNull NotificationLog a, @NonNull NotificationLog b) {
-                    return a.isRead == b.isRead
-                            && a.title.equals(b.title)
-                            && a.timestamp.equals(b.timestamp)
-                            && a.avatarRes == b.avatarRes;
+                public boolean areContentsTheSame(@NonNull Object a, @NonNull Object b) {
+                    return a.equals(b);
                 }
             };
 
@@ -56,58 +65,87 @@ public class NotificationLogsAdapter
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_notification_row, parent, false); // Keep your layout
+                .inflate(R.layout.item_notification_row, parent, false);
         return new VH(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
-        NotificationLog n = getItem(position);
+        Object item = getItem(position);
 
-        h.ivAvatar.setImageResource(n.avatarRes);
-        h.tvMessage.setText(n.title);
-        h.tvTime.setText(n.timestamp);
+        // --------- Firestore Notification ---------
+        if (item instanceof Notification) {
+            Notification notif = (Notification) item;
 
-        // Invitation type notification
-        if (n.isInvitation) {
-            h.btnMarkRead.setText("Accept");
-            h.btnOpen.setText("Reject");
+            h.ivAvatar.setImageResource(R.drawable.ic_notification_alert);
 
-            h.btnMarkRead.setTextColor(Color.parseColor("#4CAF50"));
-            h.btnOpen.setTextColor(Color.parseColor("#F44336"));
+            // You can choose title or message here depending on UI design.
+            // Using message for main body:
+            h.tvMessage.setText(notif.getMessage());
 
-            h.btnMarkRead.setOnClickListener(v -> actions.onAcceptInvite(n));
-            h.btnOpen.setOnClickListener(v -> actions.onRejectInvite(n));
+            // FIX: format Date -> String
+            if (notif.getTimestamp() != null) {
+                h.tvTime.setText(timeFormat.format(notif.getTimestamp()));
+            } else {
+                h.tvTime.setText("–");
+            }
 
-            h.unreadDot.setVisibility(View.VISIBLE);
-            h.actionsRow.setVisibility(View.VISIBLE);
+            h.unreadDot.setVisibility(notif.isRead() ? View.INVISIBLE : View.VISIBLE);
 
-        } else {
-            // Regular notification
             h.btnMarkRead.setText("Mark Read");
             h.btnOpen.setText("Open");
 
-            h.btnMarkRead.setTextColor(Color.GRAY);
-            h.btnOpen.setTextColor(Color.GRAY);
+            h.btnMarkRead.setTextColor(Color.BLACK);
+            h.btnOpen.setTextColor(Color.BLACK);
 
-            h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
-            h.btnOpen.setOnClickListener(v -> actions.onOpen(n));
+            h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(notif));
+            h.btnOpen.setOnClickListener(v -> actions.onOpen(notif));
 
-            // show unread indicator dot
-            h.unreadDot.setVisibility(n.isRead ? View.INVISIBLE : View.VISIBLE);
+            h.itemView.setOnClickListener(v -> actions.onOpen(notif));
+            return;
         }
 
-        // Entire row opens notification (from the main branch)
-        h.itemView.setOnClickListener(v -> actions.onOpen(n));
+        // --------- Static NotificationLog (e.g., demo / invite) ---------
+        if (item instanceof NotificationLog) {
+            NotificationLog log = (NotificationLog) item;
+
+            h.ivAvatar.setImageResource(log.avatarRes);
+            h.tvMessage.setText(log.title);
+            h.tvTime.setText(log.timestamp);   // already a String
+
+            if (log.isInvitation) {
+                h.unreadDot.setVisibility(View.VISIBLE);
+
+                h.btnMarkRead.setText("Accept");
+                h.btnOpen.setText("Reject");
+
+                h.btnMarkRead.setTextColor(Color.parseColor("#4CAF50"));
+                h.btnOpen.setTextColor(Color.parseColor("#F44336"));
+
+                h.btnMarkRead.setOnClickListener(v -> actions.onAcceptInvite(log));
+                h.btnOpen.setOnClickListener(v -> actions.onRejectInvite(log));
+            } else {
+                h.unreadDot.setVisibility(log.isRead ? View.INVISIBLE : View.VISIBLE);
+
+                h.btnMarkRead.setText("Mark Read");
+                h.btnOpen.setText("Open");
+
+                h.btnMarkRead.setTextColor(Color.BLACK);
+                h.btnOpen.setTextColor(Color.BLACK);
+
+                h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(log));
+                h.btnOpen.setOnClickListener(v -> actions.onOpen(log));
+            }
+
+            h.itemView.setOnClickListener(v -> actions.onOpen(log));
+        }
     }
 
-    /** ViewHolder for notification rows */
     static class VH extends RecyclerView.ViewHolder {
-        final ImageView ivAvatar;
-        final TextView tvMessage;
-        final TextView tvTime;
-        final Button btnMarkRead, btnOpen;
-        final View actionsRow, unreadDot;
+        ImageView ivAvatar;
+        TextView tvMessage, tvTime;
+        Button btnMarkRead, btnOpen;
+        View unreadDot;
 
         VH(@NonNull View v) {
             super(v);
@@ -116,7 +154,6 @@ public class NotificationLogsAdapter
             tvTime = v.findViewById(R.id.tvTime);
             btnMarkRead = v.findViewById(R.id.btnMarkRead);
             btnOpen = v.findViewById(R.id.btnOpen);
-            actionsRow = v.findViewById(R.id.actionsRow);
             unreadDot = v.findViewById(R.id.unreadDot);
         }
     }
