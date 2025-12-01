@@ -123,6 +123,7 @@ public class DetailsActivity extends AppCompatActivity {
         boolean isWaitlisted = mEvent.getWaitlistUserIds() != null && mEvent.getWaitlistUserIds().contains(currentUserId);
         boolean isSelected = mEvent.getSelectedUserIds() != null && mEvent.getSelectedUserIds().contains(currentUserId);
         boolean isCancelled = mEvent.getCancelledUserIds() != null && mEvent.getCancelledUserIds().contains(currentUserId);
+        boolean isFull = mEvent.getWaitlistUserIds() != null && (mEvent.getMaxAttendees() == mEvent.getWaitlistUserIds().size());
 
         String status = "unknown";
         if (mEvent.getInvitationStatus() != null) {
@@ -156,12 +157,17 @@ public class DetailsActivity extends AppCompatActivity {
             binding.tvStatusMessage.setText("You declined this invitation.");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
             binding.tvStatusMessage.setTextColor(getColor(android.R.color.holo_red_dark));
+        } else if (isFull) {
+            // FULL
+            binding.tvStatusMessage.setText("The waitlist is currently full!");
+            binding.tvStatusMessage.setVisibility(View.VISIBLE);
         } else {
-            // NEW USER
-            binding.btnJoinWaitlist.setVisibility(View.VISIBLE);
-            binding.btnJoinWaitlist.setText("Join Waitlist");
+                // NEW USER
+                binding.btnJoinWaitlist.setVisibility(View.VISIBLE);
+                binding.btnJoinWaitlist.setText("Join Waitlist");
+            }
         }
-    }
+
 
     private void setupButtons() {
         // Back Button Logic
