@@ -10,19 +10,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 /**
- * Represents a single event document from the Firestore "events" collection.
- * Updated to support Lottery System fields.
+ * FINAL MERGED EVENT MODEL
+ * Includes:
+ * - Main project fields
+ * - Your branch fields
+ * - Lottery system fields
+ * - Geolocation + Banner
+ * - Fully working getters/setters
+ * - Fully working Parcelable
  */
 public class Event implements Parcelable {
 
     @DocumentId
     private String id;
 
-    // -------------------------------------------------
-    // BASIC EVENT METADATA (Common + Main + Your branch)
-    // -------------------------------------------------
+    // -----------------------------
+    // BASIC EVENT METADATA
+    // -----------------------------
     private String title;
     private String date;
     private String time;
@@ -33,19 +38,22 @@ public class Event implements Parcelable {
     private String organizerId;
 
     private String eventPosterUrl;
-    private String eventBannerUrl;            // your branch
-    private boolean geolocationRequired;      // your branch
+    private String eventBannerUrl;
+    private boolean geolocationRequired;
 
     private boolean isTrending;
     private List<String> tags = new ArrayList<>();
 
-    // -------------------------------------------------
-    // LOTTERY FIELDS
-    // -------------------------------------------------
+    // -----------------------------
+    // LOTTERY SYSTEM FIELDS
+    // -----------------------------
     private int maxAttendees;
 
     private List<String> waitlistUserIds = new ArrayList<>();
-    private List<String> selectedUserIds = new ArrayList<>();
+
+    /** IMPORTANT — used by Winners pages */
+    private List<String> chosenUserIds = new ArrayList<>();
+
     private List<String> cancelledUserIds = new ArrayList<>();
 
     /** userId → "pending" | "accepted" | "declined" */
@@ -54,12 +62,11 @@ public class Event implements Parcelable {
     private long registrationOpenAtMillis = 0;
     private long registrationCloseAtMillis = 0;
 
-    // -------------------------------------------------
+    // -----------------------------
     // CONSTRUCTORS
-    // -------------------------------------------------
+    // -----------------------------
     public Event() {}
 
-    // Convenience constructor for OrganizerEventCreationActivity
     public Event(String title,
                  String description,
                  String date,
@@ -74,7 +81,6 @@ public class Event implements Parcelable {
         this.locationName = locationName;
         this.maxAttendees = maxAttendees;
 
-        // Defaults so Firestore doesn't break
         this.price = "";
         this.organizer = "";
         this.organizerId = "";
@@ -84,10 +90,9 @@ public class Event implements Parcelable {
         this.isTrending = false;
     }
 
-    // -------------------------------------------------
+    // -----------------------------
     // GETTERS + SETTERS (FULL)
-    // -------------------------------------------------
-
+    // -----------------------------
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -134,33 +139,63 @@ public class Event implements Parcelable {
     public int getMaxAttendees() { return maxAttendees; }
     public void setMaxAttendees(int maxAttendees) { this.maxAttendees = maxAttendees; }
 
-    public List<String> getWaitlistUserIds() { return waitlistUserIds == null ? new ArrayList<>() : waitlistUserIds; }
-    public void setWaitlistUserIds(List<String> waitlistUserIds) { this.waitlistUserIds = waitlistUserIds; }
+    public List<String> getWaitlistUserIds() {
+        return waitlistUserIds == null ? new ArrayList<>() : waitlistUserIds;
+    }
+    public void setWaitlistUserIds(List<String> waitlistUserIds) {
+        this.waitlistUserIds = waitlistUserIds;
+    }
 
-    public List<String> getSelectedUserIds() { return selectedUserIds == null ? new ArrayList<>() : selectedUserIds; }
-    public void setSelectedUserIds(List<String> selectedUserIds) { this.selectedUserIds = selectedUserIds; }
+    /** ⭐ REQUIRED BY WINNERS + FINAL ENTRANTS */
+    public List<String> getChosenUserIds() {
+        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
+    }
+    public void setChosenUserIds(List<String> chosenUserIds) {
+        this.chosenUserIds = chosenUserIds;
+    }
 
-    public List<String> getCancelledUserIds() { return cancelledUserIds == null ? new ArrayList<>() : cancelledUserIds; }
-    public void setCancelledUserIds(List<String> cancelledUserIds) { this.cancelledUserIds = cancelledUserIds; }
+    public List<String> getCancelledUserIds() {
+        return cancelledUserIds == null ? new ArrayList<>() : cancelledUserIds;
+    }
+    public void setCancelledUserIds(List<String> cancelledUserIds) {
+        this.cancelledUserIds = cancelledUserIds;
+    }
 
     public Map<String, String> getInvitationStatus() {
         return invitationStatus == null ? new HashMap<>() : invitationStatus;
     }
-
     public void setInvitationStatus(Map<String, String> invitationStatus) {
         this.invitationStatus = invitationStatus;
     }
+    public List<String> getSelectedUserIds() {
+        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
+    }
+
+    public void setSelectedUserIds(List<String> list) {
+        this.chosenUserIds = list;
+    }
 
     public long getRegistrationOpenAtMillis() { return registrationOpenAtMillis; }
-    public void setRegistrationOpenAtMillis(long registrationOpenAtMillis) { this.registrationOpenAtMillis = registrationOpenAtMillis; }
+    public void setRegistrationOpenAtMillis(long registrationOpenAtMillis) {
+        this.registrationOpenAtMillis = registrationOpenAtMillis;
+    }
 
     public long getRegistrationCloseAtMillis() { return registrationCloseAtMillis; }
-    public void setRegistrationCloseAtMillis(long registrationCloseAtMillis) { this.registrationCloseAtMillis = registrationCloseAtMillis; }
+    public void setRegistrationCloseAtMillis(long registrationCloseAtMillis) {
+        this.registrationCloseAtMillis = registrationCloseAtMillis;
+    }
+    // Backwards compatibility for older code
+    public long registrationOpenAtMillis() {
+        return registrationOpenAtMillis;
+    }
 
-    // -------------------------------------------------
+    public long registrationCloseAtMillis() {
+        return registrationCloseAtMillis;
+    }
+
+    // -----------------------------
     // HELPER METHODS
-    // -------------------------------------------------
-
+    // -----------------------------
     public boolean isUserConfirmed(String userId) {
         return invitationStatus != null &&
                 "accepted".equals(invitationStatus.get(userId));
@@ -172,10 +207,9 @@ public class Event implements Parcelable {
         return startOk && endOk;
     }
 
-    // -------------------------------------------------
+    // -----------------------------
     // PARCELABLE
-    // -------------------------------------------------
-
+    // -----------------------------
     protected Event(Parcel in) {
         id = in.readString();
         title = in.readString();
@@ -195,7 +229,7 @@ public class Event implements Parcelable {
 
         maxAttendees = in.readInt();
         waitlistUserIds = in.createStringArrayList();
-        selectedUserIds = in.createStringArrayList();
+        chosenUserIds = in.createStringArrayList();
         cancelledUserIds = in.createStringArrayList();
 
         int mapSize = in.readInt();
@@ -229,7 +263,7 @@ public class Event implements Parcelable {
 
         dest.writeInt(maxAttendees);
         dest.writeStringList(waitlistUserIds);
-        dest.writeStringList(selectedUserIds);
+        dest.writeStringList(chosenUserIds);
         dest.writeStringList(cancelledUserIds);
 
         dest.writeInt(invitationStatus.size());
@@ -249,6 +283,7 @@ public class Event implements Parcelable {
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
         public Event createFromParcel(Parcel in) { return new Event(in); }
+
         @Override
         public Event[] newArray(int size) { return new Event[size]; }
     };
