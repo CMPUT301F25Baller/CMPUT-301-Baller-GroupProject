@@ -29,31 +29,19 @@ import java.util.stream.Collectors;
  * <p>Features include:</p>
  * <ul>
  * <li>Updating Name, "About Me" bio, and Interests.</li>
- * <li>Uploading or changing the profile picture using the system image picker.</li>
- * <li>Deleting the account permanently (Firestore data + Auth).</li>
+ * <li><b>Opting out of Notifications</b> (US 01.04.03).</li>
+ * <li>Uploading or changing the profile picture.</li>
+ * <li>Deleting the account.</li>
  * </ul>
  */
 public class EditProfileActivity extends AppCompatActivity {
 
-    /** View binding for the activity layout. */
     private ActivityEditProfileBinding binding;
-
-    /** Firestore instance for database operations. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth instance for user management. */
     private FirebaseAuth auth;
-
-    /** The UID of the currently logged-in user. */
     private String currentUserId;
-
-    /** Stores the URI string of a newly selected profile image, if any. */
     private String newProfileImageUriString;
 
-    /**
-     * Launcher for the image picker activity result.
-     * When an image is selected, it loads it into the ImageView using Glide.
-     */
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
@@ -62,13 +50,6 @@ public class EditProfileActivity extends AppCompatActivity {
                 }
             });
 
-    /**
-     * Called when the activity is first created.
-     * Initializes Firebase, sets up button listeners, and loads existing user data.
-     *
-     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
-     * this Bundle contains the data it most recently supplied in onSaveInstanceState.
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -98,6 +79,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
     /**
      * Fetches the current user's data from Firestore and populates the UI fields.
+     * Includes checking the 'notificationsEnabled' preference.
      */
     private void loadUserData() {
         db.collection("users").document(currentUserId).get()
@@ -108,19 +90,28 @@ public class EditProfileActivity extends AppCompatActivity {
                             binding.etName.setText(user.getName());
                             binding.etAboutMe.setText(user.getAboutMe());
 
-                            // Join interests list into a comma-separated string
+                            // Load Interests
                             if (user.getInterests() != null && !user.getInterests().isEmpty()) {
                                 String interestsJoined = TextUtils.join(", ", user.getInterests());
                                 binding.etInterests.setText(interestsJoined);
                             }
 
-                            // Load profile picture
+                            // Load Profile Image
                             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
                                 Glide.with(this).load(user.getProfilePictureUrl())
                                         .placeholder(R.drawable.placeholder_avatar1)
                                         .circleCrop()
                                         .into(binding.ivProfileImage);
                                 newProfileImageUriString = user.getProfilePictureUrl();
+                            }
+
+                            // Load Notification Preference (US 01.04.03)
+                            // Assuming default is TRUE if field is missing
+                            Boolean notifEnabled = documentSnapshot.getBoolean("notificationsEnabled");
+                            if (notifEnabled != null) {
+                                binding.switchNotifications.setChecked(notifEnabled);
+                            } else {
+                                binding.switchNotifications.setChecked(true);
                             }
                         }
                     }
@@ -129,12 +120,13 @@ public class EditProfileActivity extends AppCompatActivity {
 
     /**
      * Validates input fields and updates the user's profile in Firestore.
-     * Parses the comma-separated interests string into a List.
+     * Saves the 'notificationsEnabled' boolean.
      */
     private void saveProfile() {
         String newName = binding.etName.getText().toString().trim();
         String newAboutMe = binding.etAboutMe.getText().toString().trim();
         String newInterestsString = binding.etInterests.getText().toString().trim();
+        boolean notificationsEnabled = binding.switchNotifications.isChecked();
 
         if (TextUtils.isEmpty(newName)) {
             binding.etName.setError("Name required");
@@ -162,6 +154,7 @@ public class EditProfileActivity extends AppCompatActivity {
         updates.put("name", newName);
         updates.put("aboutMe", newAboutMe);
         updates.put("interests", newInterests);
+        updates.put("notificationsEnabled", notificationsEnabled); // Save Preference
 
         if (newProfileImageUriString != null) {
             updates.put("profilePictureUrl", newProfileImageUriString);
@@ -177,9 +170,6 @@ public class EditProfileActivity extends AppCompatActivity {
                 );
     }
 
-    /**
-     * Displays an alert dialog asking the user to confirm account deletion.
-     */
     private void confirmDeleteAccount() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Account")
@@ -189,21 +179,15 @@ public class EditProfileActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Deletes the user's Firestore document and their Firebase Authentication record.
-     * If successful, redirects to the Login screen.
-     */
     private void performAccountDeletion() {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) return;
 
         String uid = user.getUid();
 
-        // 1. Delete Firestore Document
         db.collection("users").document(uid)
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    // 2. Delete Authentication User
                     user.delete()
                             .addOnSuccessListener(aVoid1 -> {
                                 Toast.makeText(this, "Account deleted.", Toast.LENGTH_SHORT).show();
@@ -218,9 +202,6 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Navigates back to the LoginActivity and clears the task stack.
-     */
     private void navigateToLogin() {
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

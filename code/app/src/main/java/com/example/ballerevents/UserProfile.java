@@ -117,4 +117,8 @@ public class UserProfile {
     public int getFollowerCount() {
         return (followerIds != null) ? followerIds.size() : 0;
     }
+    private boolean notificationsEnabled = true; // Default to true
+
+    public boolean isNotificationsEnabled() { return notificationsEnabled; }
+    public void setNotificationsEnabled(boolean notificationsEnabled) { this.notificationsEnabled = notificationsEnabled; }
 }
