@@ -1,6 +1,5 @@
 package com.example.ballerevents;
 
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -10,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.EntrantEventDetailsBinding;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -17,7 +17,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Entrant's view of an Event.
@@ -50,6 +50,8 @@ public class DetailsActivity extends AppCompatActivity {
     private String eventId;
     private String currentUserId;
     private Event mEvent;
+    private UserProfile organizerProfile;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,6 +107,19 @@ public class DetailsActivity extends AppCompatActivity {
         binding.tvDescription.setText(mEvent.getDescription());
         binding.tvDate.setText(mEvent.getDate() + " at " + mEvent.getTime());
         binding.tvLocation.setText(mEvent.getLocationName());
+        DocumentReference userRef = db.collection("users").document(mEvent.getOrganizerId());
+        userRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                organizerProfile = documentSnapshot.toObject(UserProfile.class);
+            }
+            if (organizerProfile != null) {
+                binding.tvOrganizerName.setText(organizerProfile.getName());
+            } else if (mEvent.getOrganizer() != null) {
+                binding.tvOrganizerName.setText(mEvent.getOrganizer());
+            } else {
+                binding.tvOrganizerName.setText("Unknown Organizer");
+            }
+        });
 
         Glide.with(this)
                 .load(mEvent.getEventPosterUrl())
@@ -113,6 +128,7 @@ public class DetailsActivity extends AppCompatActivity {
 
         updateStatusUI();
     }
+
 
     /**
      * Determines which buttons/status text to show based on User's lottery status.
