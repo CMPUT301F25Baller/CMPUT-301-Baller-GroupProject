@@ -11,15 +11,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * FINAL MERGED EVENT MODEL
- * Includes:
- * - Main project fields
- * - Your branch fields
- * - Lottery system fields
- * - Geolocation + Banner
- * - Fully working getters/setters
- * - Fully working Parcelable
+ * Represents a single event stored in Firestore.
+ * Contains all standard event fields, media, tags, and organizer info.
+ * Includes full lottery support: waitlist, selected users, cancellations,
+ * invitation statuses, and registration windows.
+ * Used throughout the app for loading, creating, and updating events.
+ *
+ * Related classes: OrganizerEventCreationActivity, DetailsActivity,
+ * OrganizerWaitlistActivity, Firestore "events" collection.
  */
+
 public class Event implements Parcelable {
 
     @DocumentId

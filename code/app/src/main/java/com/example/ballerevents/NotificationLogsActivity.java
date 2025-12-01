@@ -19,13 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * FINAL VERSION — fully compatible with:
- * • NotificationItem (your model)
- * • NotificationAdapter (your RecyclerView adapter)
- * • Firestore Notification model
- * • Your XML layout: activity_notification_logs.xml
- */
+
 public class NotificationLogsActivity extends AppCompatActivity
         implements NotificationAdapter.OnNotificationActionListener {
 
