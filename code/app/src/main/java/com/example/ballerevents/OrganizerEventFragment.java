@@ -128,14 +128,18 @@ public class OrganizerEventFragment extends Fragment {
 
         new AlertDialog.Builder(getContext())
                 .setTitle(event.getTitle())
-                .setItems(new String[]{"Edit event", "Send winner notifications"},
+                .setItems(new String[]{"View Details", "Edit event", "Send Winner Notifications"},
                         (dialog, which) -> {
-                            if (which == 0) {
+                            if (which == 0){
+                                Intent intent = new Intent(getActivity(), DetailsActivity.class);
+                                intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
+                                startActivity(intent);
+                            } else if (which == 1) {
                                 // Edit event (existing behavior)
                                 Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
                                 intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
                                 startActivity(intent);
-                            } else if (which == 1) {
+                            } else if (which == 2) {
                                 // New behavior: send notifications
                                 sendWinnerNotificationsForEvent(event);
                             }
