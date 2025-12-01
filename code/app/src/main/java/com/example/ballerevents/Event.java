@@ -26,6 +26,8 @@ public class Event implements Parcelable {
     public String organizer;     // Organizer Name
     public String organizerId;   // Organizer UID
     public String eventPosterUrl;
+    public String eventBannerUrl;
+    public boolean geolocationRequired;
     public List<String> tags = new ArrayList<>();
 
     // --- Lottery & Registration Fields ---
@@ -74,7 +76,11 @@ public class Event implements Parcelable {
     public String getPrice() { return price; }
     public String getOrganizer() { return organizer; }
     public String getOrganizerId() { return organizerId; }
+
+    public boolean isGeolocationRequired() {return geolocationRequired;}
+
     public String getEventPosterUrl() { return eventPosterUrl; }
+    public String getEventBannerUrl() { return eventBannerUrl; }
     public List<String> getTags() { return tags; }
 
     public boolean isTrending() { return isTrending; }
@@ -117,7 +123,9 @@ public class Event implements Parcelable {
         price = in.readString();
         organizer = in.readString();
         organizerId = in.readString();
+        geolocationRequired = in.readBoolean();
         eventPosterUrl = in.readString();
+        eventBannerUrl = in.readString();
         tags = in.createStringArrayList();
         maxAttendees = in.readInt();
         waitlistUserIds = in.createStringArrayList();
@@ -156,7 +164,9 @@ public class Event implements Parcelable {
         dest.writeString(price);
         dest.writeString(organizer);
         dest.writeString(organizerId);
+        dest.writeBoolean(geolocationRequired);
         dest.writeString(eventPosterUrl);
+        dest.writeString(eventBannerUrl);
         dest.writeStringList(tags);
         dest.writeInt(maxAttendees);
         dest.writeStringList(waitlistUserIds);
