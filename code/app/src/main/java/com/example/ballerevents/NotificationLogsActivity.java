@@ -3,158 +3,202 @@ package com.example.ballerevents;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Displays the user's notification log.
- * Fetches real data from users/{uid}/notifications.
- */
-public class NotificationLogsActivity extends AppCompatActivity {
+ * Admin view of notification logs.
+ * Pulls ALL notifications sent to entrants by organizers using a
+ * collection group query on users/*notifications, ordered by time.
+ *
+         * Note: Uses findViewById() to avoid requiring ViewBinding.
+        */
+        public class NotificationLogsActivity extends AppCompatActivity implements NotificationLogsAdapter.Callbacks {
 
-    private ActivityNotificationLogsBinding binding;
-    private NotificationLogsAdapter adapter;
-    private FirebaseFirestore db;
-    private FirebaseAuth auth;
-    private ListenerRegistration notifListener;
+            // UI
+            private ImageButton btnBack;
+            private RecyclerView rvLogs;
+            private Chip chipNew, chipAll;
+            private MaterialButton btnMarkAll;
+            private TextView tvEmpty;
 
-    private List<Notification> allNotifications = new ArrayList<>();
+            // Data
+            private FirebaseFirestore db;
+            private ListenerRegistration listener;
+            private NotificationLogsAdapter adapter;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+            private final List<NotificationLog> all = new ArrayList<>();
+            private final List<NotificationLog> onlyUnread = new ArrayList<>();
 
-        db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
-
-        // --- NEW: Handle Custom Back Button ---
-        if (binding.btnBack != null) {
-            binding.btnBack.setOnClickListener(v -> finish());
-        }
-
-        setupRecyclerView();
-
-        if (auth.getCurrentUser() != null) {
-            setupRealtimeListener();
-        } else {
-            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
-        }
-
-        binding.btnMarkAll.setOnClickListener(v -> markAllAsRead());
-    }
-
-    private void setupRecyclerView() {
-        binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-
-        // Initialize adapter with action callbacks
-        adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
             @Override
-            public void onAcceptInvite(Notification notif) {
-                respondToInvite(notif, "accepted");
+            protected void onCreate(@Nullable Bundle savedInstanceState) {
+                super.onCreate(savedInstanceState);
+                setContentView(R.layout.activity_notification_logs); // layout has these IDs. :contentReference[oaicite:3]{index=3}
+
+                // Init Firestore
+                db = FirebaseFirestore.getInstance();
+
+                // Find views
+                btnBack = findViewById(R.id.btnBack);
+                rvLogs = findViewById(R.id.rvLogs);
+                chipNew = findViewById(R.id.chipNew);
+                chipAll = findViewById(R.id.chipAll);
+                btnMarkAll = findViewById(R.id.btnMarkAll);
+                tvEmpty = findViewById(R.id.tvEmpty);
+
+                // Back
+                btnBack.setOnClickListener(v -> finish());
+
+                // Recycler
+                rvLogs.setLayoutManager(new LinearLayoutManager(this));
+                adapter = new NotificationLogsAdapter(this);
+                rvLogs.setAdapter(adapter);
+
+                // Chips
+                chipAll.setChecked(true);
+                chipNew.setOnClickListener(v -> publish());
+                chipAll.setOnClickListener(v -> publish());
+
+                // Mark all
+                btnMarkAll.setOnClickListener(v -> markAllAsRead());
+
+                startListening();
+            }
+
+            private void startListening() {
+                stopListening();
+
+                tvEmpty.setVisibility(View.GONE);
+
+                // Read from every user's notifications subcollection
+                listener = db.collectionGroup("notifications")
+                        .orderBy("timestamp", Query.Direction.DESCENDING)
+                        .limit(500) // safety cap
+                        .addSnapshotListener((snap, err) -> {
+                            if (err != null) {
+                                Log.e("NotificationLogs", "listen failed", err);
+                                Toast.makeText(this, "Failed to load logs", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            if (snap == null) return;
+
+                            all.clear();
+                            onlyUnread.clear();
+
+                            for (QueryDocumentSnapshot d : snap) {
+                                NotificationLog log = d.toObject(NotificationLog.class);
+
+                                // Only logs sent by organizers to entrants (accept legacy field names)
+                                String toRole = asString(d, "toRole", "recipientRole", "roleTo");
+                                String fromRole = asString(d, "fromRole", "senderRole", "roleFrom");
+                                boolean okTo = toRole == null || toRole.equalsIgnoreCase("entrant");
+                                boolean okFrom = fromRole == null || fromRole.equalsIgnoreCase("organizer");
+                                if (!(okTo && okFrom)) continue;
+
+                                // Backfill missing id/timestamp/title/message defensively
+                                if (log.getId() == null) {
+                                    log = new NotificationLog(
+                                            d.getId(),
+                                            log.getTitle(),
+                                            log.getMessage(),
+                                            d.contains("timestamp") ? d.getTimestamp("timestamp") : Timestamp.now()
+                                    );
+                                }
+                                all.add(log);
+                                if (!log.isRead()) onlyUnread.add(log);
+                            }
+                            publish();
+                        });
+            }
+
+            private void publish() {
+                List<NotificationLog> data = chipNew.isChecked() ? onlyUnread : all;
+                adapter.submitList(new ArrayList<>(data));
+                tvEmpty.setVisibility(data.isEmpty() ? View.VISIBLE : View.GONE);
             }
 
             @Override
-            public void onDeclineInvite(Notification notif) {
-                respondToInvite(notif, "declined");
+            public void onOpen(NotificationLog log) {
+                // In admin review, "Open" simply marks as read (or could deep-link later)
+                onMarkRead(log);
             }
 
             @Override
-            public void onDelete(Notification notif) {
-                deleteNotification(notif);
+            public void onMarkRead(NotificationLog log) {
+                // Admin review should NOT affect entrant read state
+                db.collectionGroup("notifications")
+                        .whereEqualTo(FieldPath.documentId(), log.getId())
+                        .limit(1)
+                        .get()
+                        .addOnSuccessListener(q -> {
+                            if (!q.isEmpty()) {
+                                q.getDocuments().get(0).getReference().update("adminReviewed", true);
+                            }
+                        });
             }
-        });
 
-        binding.rvLogs.setAdapter(adapter);
-    }
 
-    private void setupRealtimeListener() {
-        String userId = auth.getCurrentUser().getUid();
+            private void markAllAsRead() {
+                db.collectionGroup("notifications")
+                        .whereEqualTo("read", false)
+                        .limit(500)
+                        .get()
+                        .addOnSuccessListener(q -> db.runBatch(b -> q.forEach(doc -> b.update(doc.getReference(), "read", true))))
+                        .addOnSuccessListener(unused -> Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show());
+            }
 
-        notifListener = db.collection("users").document(userId).collection("notifications")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .addSnapshotListener((snapshots, e) -> {
-                    if (e != null) {
-                        Log.w("NotifActivity", "Listen failed.", e);
-                        return;
-                    }
+            private void markAllAsReviewed() {
+                db.collectionGroup("notifications")
+                        .whereEqualTo("adminReviewed", null)
+                        .limit(500)
+                        .get()
+                        .addOnSuccessListener(q ->
+                                db.runBatch(b -> q.forEach(doc ->
+                                        b.update(doc.getReference(), "adminReviewed", true)
+                                ))
+                        )
+                        .addOnSuccessListener(unused ->
+                                Toast.makeText(this, "All notifications marked as reviewed", Toast.LENGTH_SHORT).show()
+                        );
+            }
 
-                    if (snapshots != null) {
-                        allNotifications = snapshots.toObjects(Notification.class);
-                        // Manually set IDs because toObjects doesn't always do it automatically
-                        // unless using custom getters/setters specifically.
-                        // We iterate to map IDs just in case.
-                        for (int i = 0; i < snapshots.size(); i++) {
-                            allNotifications.get(i).setId(snapshots.getDocuments().get(i).getId());
-                        }
 
-                        adapter.submitList(allNotifications);
-                        binding.tvEmpty.setVisibility(allNotifications.isEmpty() ? View.VISIBLE : View.GONE);
-                    }
-                });
-    }
+            private static String asString(QueryDocumentSnapshot d, String... keys) {
+                for (String k : keys) {
+                    Object v = d.get(k);
+                    if (v instanceof String) return (String) v;
+                }
+                return null;
+            }
 
-    private void respondToInvite(Notification notif, String status) {
-        if (notif.getEventId() == null) return;
+            private void stopListening() {
+                if (listener != null) {
+                    listener.remove();
+                    listener = null;
+                }
+            }
 
-        String userId = auth.getCurrentUser().getUid();
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("invitationStatus." + userId, status);
-
-        if ("declined".equals(status)) {
-            updates.put("selectedUserIds", FieldValue.arrayRemove(userId));
-            updates.put("cancelledUserIds", FieldValue.arrayUnion(userId));
+            @Override
+            protected void onDestroy() {
+                super.onDestroy();
+                stopListening();
+            }
         }
-
-        db.collection("events").document(notif.getEventId())
-                .update(updates)
-                .addOnSuccessListener(a -> {
-                    Toast.makeText(this, "Invitation " + status, Toast.LENGTH_SHORT).show();
-                    // Optional: Delete notification after responding
-                    // deleteNotification(notif);
-                    // Or just mark as read
-                    markAsRead(notif);
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Action failed", Toast.LENGTH_SHORT).show());
-    }
-
-    private void deleteNotification(Notification notif) {
-        if (auth.getCurrentUser() == null) return;
-        db.collection("users").document(auth.getCurrentUser().getUid())
-                .collection("notifications").document(notif.getId())
-                .delete();
-    }
-
-    private void markAsRead(Notification notif) {
-        if (auth.getCurrentUser() == null) return;
-        db.collection("users").document(auth.getCurrentUser().getUid())
-                .collection("notifications").document(notif.getId())
-                .update("read", true); // Field matches 'isRead' getter but firestore usually maps 'read' or 'isRead'
-    }
-
-    private void markAllAsRead() {
-        // Implementation for batch update omitted for brevity, but simple enough to iterate and batch write.
-        Toast.makeText(this, "Marked all as read", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (notifListener != null) notifListener.remove();
-    }
-}

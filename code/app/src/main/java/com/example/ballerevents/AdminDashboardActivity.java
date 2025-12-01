@@ -58,7 +58,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 startActivity(new Intent(this, AdminImagesActivity.class)));
 
         binding.chipLogs.setOnClickListener(v ->
-                startActivity(new Intent(this, AdminLogsActivity.class))
+                startActivity(new Intent(this, NotificationLogsActivity.class))
         );
     }
 
