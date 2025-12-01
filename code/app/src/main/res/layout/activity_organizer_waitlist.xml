@@ -1,57 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@android:color/white">
 
+    <!-- HEADER: Back, Title, Export -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:elevation="4dp"
         android:background="@android:color/white">
 
         <ImageButton
             android:id="@+id/btn_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:src="@drawable/ic_arrow_back"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Back" />
+            android:contentDescription="Back"
+            app:tint="@android:color/black" />
 
         <TextView
             android:id="@+id/tv_title"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="Waitlist Management"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Waitlist"
             android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@android:color/black"/>
+
+        <ImageButton
+            android:id="@+id/btnExportCsv"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_menu_save"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Export Accepted to CSV"
+            app:tint="@android:color/black"
+            android:tooltipText="Export CSV"/>
     </LinearLayout>
 
-    <LinearLayout
+    <!-- STATS BAR -->
+    <TextView
+        android:id="@+id/tvCapacityInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#F5F5F5"
-        android:padding="12dp"
-        android:orientation="vertical">
+        android:padding="8dp"
+        android:gravity="center"
+        android:text="Capacity: - | Selected: 0 | Waiting: -"
+        android:textColor="#666666"
+        android:textSize="12sp"/>
 
-        <TextView
-            android:id="@+id/tvCapacityInfo"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="Capacity: 0 | Selected: 0 | Waiting: 0"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="#616161"/>
-    </LinearLayout>
+    <!-- TABS: Waitlist | Invited | Accepted | Declined -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        app:tabMode="fixed"
+        app:tabIndicatorColor="#6200EE"
+        app:tabSelectedTextColor="#6200EE"
+        app:tabTextAppearance="@style/TextAppearance.AppCompat.Caption"/>
 
+    <!-- MAIN CONTENT AREA -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -61,17 +82,20 @@
             android:id="@+id/rvWaitlist"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="visible"/>
+            android:padding="8dp"
+            android:clipToPadding="false"/>
 
+        <!-- Empty State View -->
         <TextView
-            android:id="@+id/tv_empty"
+            android:id="@+id/tvEmpty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Waitlist is empty."
-            android:textColor="@android:color/darker_gray"
+            android:text="No users in this list."
+            android:textColor="#999999"
             android:visibility="gone"/>
 
+        <!-- Progress Indicator -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
@@ -80,44 +104,67 @@
             android:visibility="gone"/>
     </FrameLayout>
 
+    <!-- BOTTOM ACTION AREA -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="16dp"
         android:background="@android:color/white"
-        android:elevation="8dp">
+        android:elevation="16dp"
+        android:outlineProvider="background">
 
+        <!-- Remove Button (Hidden by default, shown only on Waitlist tab) -->
+        <Button
+            android:id="@+id/btnRemove"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Remove Selected"
+            android:backgroundTint="#D32F2F"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"/>
+
+        <!-- Notify Button -->
         <Button
             android:id="@+id/btnNotifyAll"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="50dp"
             android:text="Notify All Waitlist"
             android:backgroundTint="#FF9800"
             android:textColor="@android:color/white"
             android:textStyle="bold"
-            android:textAllCaps="false"
             android:layout_marginBottom="8dp"/>
 
-        <Button
-            android:id="@+id/btnDrawLottery"
+        <!-- Action Row: Lottery & QR -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Run Lottery Draw"
-            android:backgroundTint="#8A2BE2"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:textAllCaps="false"/>
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnGenerateQr"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="Generate &amp; Save QR Code"
-            android:backgroundTint="#000000"
-            android:textColor="@android:color/white"
-            android:textAllCaps="false"
-            android:layout_marginTop="8dp"/>
+            <Button
+                android:id="@+id/btnDrawLottery"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="Lottery Draw"
+                android:backgroundTint="#6200EE"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:layout_marginEnd="4dp"/>
+
+            <Button
+                android:id="@+id/btnGenerateQr"
+                android:layout_width="0dp"
+                android:layout_height="50dp"
+                android:layout_weight="1"
+                android:text="QR Code"
+                android:backgroundTint="#000000"
+                android:textColor="@android:color/white"
+                android:textStyle="bold"
+                android:layout_marginStart="4dp"/>
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

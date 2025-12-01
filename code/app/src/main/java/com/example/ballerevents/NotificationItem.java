@@ -13,7 +13,7 @@ package com.example.ballerevents;
  */
 public class NotificationItem {
 
-    /** Unique identifier for the notification (local or server-generated). */
+    /** Unique identifier for the notification. */
     public final String id;
 
     /** Drawable resource ID for the avatar icon. */
@@ -34,6 +34,12 @@ public class NotificationItem {
     /** Whether the notification has been marked as read by the user. */
     public boolean isRead;
 
+    /** If true, this notification represents an event invitation (Accept/Reject). */
+    public final boolean isInvitation;
+
+    /** The ID of the event associated with this notification (if applicable). */
+    public final String eventId;
+
     /**
      * Constructs a new {@link NotificationItem}.
      *
@@ -51,7 +57,9 @@ public class NotificationItem {
                             String message,
                             String timeLabel,
                             boolean hasActions,
-                            boolean isRead) {
+                            boolean isRead,
+                            boolean isInvitation,
+                            String eventId) {
         this.id = id;
         this.avatarRes = avatarRes;
         this.sender = sender;
@@ -59,5 +67,7 @@ public class NotificationItem {
         this.timeLabel = timeLabel;
         this.hasActions = hasActions;
         this.isRead = isRead;
+        this.isInvitation = isInvitation;
+        this.eventId = eventId;
     }
 }

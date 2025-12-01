@@ -15,8 +15,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ActivityOrganizerEventCreationBinding;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.checkbox.MaterialCheckBox;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
@@ -30,9 +28,11 @@ import java.util.Map;
 /**
  * Activity allowing Organizers to create or edit events.
  * Features:
- * - Date/Time pickers for Event Schedule and Registration Window.
- * - Image pickers for Banner and Poster.
- * - Input for Lottery Capacity (Max Attendees).
+ * - Date/Time pickers
+ * - Image pickers for Banner + Poster
+ * - Full Firebase Storage upload
+ * - Keeps old images when editing
+ * - Supports registration open/close timestamps
  */
 public class OrganizerEventCreationActivity extends AppCompatActivity {
 
@@ -44,20 +44,20 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private String eventIdToEdit;
 
-    // Uri objects for images
+    // New image URIs selected by the user
     private Uri selectedPosterUri = null;
     private Uri selectedBannerUri = null;
 
-    // Track existing URLs for deletion when updating
+    // Original URLs (only used when editing)
     private String existingPosterUrl = null;
     private String existingBannerUrl = null;
 
-    // Calendars to store selected dates/times
-    private final Calendar eventDateCal = Calendar.getInstance();
+    // Date/time storage
+    private final Calendar eventCal = Calendar.getInstance();
     private final Calendar regStartCal = Calendar.getInstance();
     private final Calendar regEndCal = Calendar.getInstance();
 
-    // Formatters for display
+    // Formatters
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.US);
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.US);
 
@@ -78,6 +78,7 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                 }
             });
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -94,7 +95,6 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         if (eventIdToEdit != null) {
             loadExistingEvent();
         } else {
-            // Default: clear registration calendars to current time
             regStartCal.setTimeInMillis(System.currentTimeMillis());
             regEndCal.setTimeInMillis(System.currentTimeMillis());
         }
@@ -103,45 +103,52 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         binding.btnBack.setOnClickListener(v -> finish());
     }
 
-    private void setupImageUploads() {
-        // Top Banner Click
-        binding.ivPageHeader.setOnClickListener(v -> bannerPicker.launch("image/*"));
 
-        // Poster Click
+    // ---------------------------------------------
+    // IMAGE UPLOAD CLICKS
+    // ---------------------------------------------
+    private void setupImageUploads() {
+        binding.ivPageHeader.setOnClickListener(v -> bannerPicker.launch("image/*"));
         binding.ivEventPoster.setOnClickListener(v -> posterPicker.launch("image/*"));
     }
 
-    private void setupPickers() {
-        // Event Date/Time
-        binding.etDate.setOnClickListener(v -> showDatePicker(binding.etDate, eventDateCal));
-        binding.etTime.setOnClickListener(v -> showTimePicker(binding.etTime, eventDateCal));
 
-        // Registration Start
+    // ---------------------------------------------
+    // DATE/TIME PICKERS
+    // ---------------------------------------------
+    private void setupPickers() {
+
+        binding.etDate.setOnClickListener(v -> showDatePicker(binding.etDate, eventCal));
+        binding.etTime.setOnClickListener(v -> showTimePicker(binding.etTime, eventCal));
+
         binding.etRegStartDate.setOnClickListener(v -> showDatePicker(binding.etRegStartDate, regStartCal));
         binding.etRegStartTime.setOnClickListener(v -> showTimePicker(binding.etRegStartTime, regStartCal));
 
-        // Registration End
         binding.etRegEndDate.setOnClickListener(v -> showDatePicker(binding.etRegEndDate, regEndCal));
         binding.etRegEndTime.setOnClickListener(v -> showTimePicker(binding.etRegEndTime, regEndCal));
     }
 
     private void showDatePicker(EditText target, Calendar cal) {
-        new DatePickerDialog(this, (view, year, month, day) -> {
-            cal.set(Calendar.YEAR, year);
-            cal.set(Calendar.MONTH, month);
-            cal.set(Calendar.DAY_OF_MONTH, day);
+        new DatePickerDialog(this, (view, y, m, d) -> {
+            cal.set(Calendar.YEAR, y);
+            cal.set(Calendar.MONTH, m);
+            cal.set(Calendar.DAY_OF_MONTH, d);
             target.setText(dateFormat.format(cal.getTime()));
         }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void showTimePicker(EditText target, Calendar cal) {
-        new TimePickerDialog(this, (view, hour, minute) -> {
-            cal.set(Calendar.HOUR_OF_DAY, hour);
-            cal.set(Calendar.MINUTE, minute);
+        new TimePickerDialog(this, (view, h, min) -> {
+            cal.set(Calendar.HOUR_OF_DAY, h);
+            cal.set(Calendar.MINUTE, min);
             target.setText(timeFormat.format(cal.getTime()));
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show();
     }
 
+
+    // ---------------------------------------------
+    // LOAD EXISTING EVENT (EDIT MODE)
+    // ---------------------------------------------
     private void loadExistingEvent() {
         binding.tvPageTitle.setText("Edit Event");
         binding.btnSaveEvent.setText("Update Event");
@@ -149,88 +156,92 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         db.collection("events").document(eventIdToEdit).get()
                 .addOnSuccessListener(doc -> {
                     Event e = doc.toObject(Event.class);
-                    if (e != null) {
-                        binding.etTitle.setText(e.getTitle());
-                        binding.etDescription.setText(e.getDescription());
-                        binding.etLocation.setText(e.getLocationName());
-                        binding.etDate.setText(e.getDate());
-                        binding.etTime.setText(e.getTime());
+                    if (e == null) return;
 
-                        if (e.getMaxAttendees() > 0) {
-                            binding.etMaxAttendees.setText(String.valueOf(e.getMaxAttendees()));
-                        }
-                        binding.etGeolocation.setChecked(e.isGeolocationRequired());
+                    binding.etTitle.setText(e.getTitle());
+                    binding.etDescription.setText(e.getDescription());
+                    binding.etLocation.setText(e.getLocationName());
+                    binding.etDate.setText(e.getDate());
+                    binding.etTime.setText(e.getTime());
 
+                    if (e.getMaxAttendees() > 0) {
+                        binding.etMaxAttendees.setText(String.valueOf(e.getMaxAttendees()));
+                    }
 
-                        // Load Poster
-                        if (e.getEventPosterUrl() != null && !e.getEventPosterUrl().isEmpty()) {
-                            existingPosterUrl = e.getEventPosterUrl();
-                            Glide.with(this).load(e.getEventPosterUrl()).into(binding.ivEventPoster);
-                        }
-                        // Load Banner
-                        if (e.getEventBannerUrl() != null && !e.getEventBannerUrl().isEmpty()) {
-                            existingBannerUrl = e.getEventBannerUrl();
-                            Glide.with(this).load(e.getEventBannerUrl()).centerCrop().into(binding.ivPageHeader);
-                        }
+                    binding.etGeolocation.setChecked(e.isGeolocationRequired());
 
-                        // Load registration timestamps back into calendars
-                        if (e.registrationOpenAtMillis > 0) {
-                            regStartCal.setTimeInMillis(e.registrationOpenAtMillis);
-                            binding.etRegStartDate.setText(dateFormat.format(regStartCal.getTime()));
-                            binding.etRegStartTime.setText(timeFormat.format(regStartCal.getTime()));
-                        }
+                    // Poster
+                    if (e.getEventPosterUrl() != null && !e.getEventPosterUrl().isEmpty()) {
+                        existingPosterUrl = e.getEventPosterUrl();
+                        Glide.with(this).load(existingPosterUrl).into(binding.ivEventPoster);
+                    }
 
-                        if (e.registrationCloseAtMillis > 0) {
-                            regEndCal.setTimeInMillis(e.registrationCloseAtMillis);
-                            binding.etRegEndDate.setText(dateFormat.format(regEndCal.getTime()));
-                            binding.etRegEndTime.setText(timeFormat.format(regEndCal.getTime()));
-                        }
+                    // Banner
+                    if (e.getEventBannerUrl() != null && !e.getEventBannerUrl().isEmpty()) {
+                        existingBannerUrl = e.getEventBannerUrl();
+                        Glide.with(this).load(existingBannerUrl).centerCrop().into(binding.ivPageHeader);
+                    }
+
+                    // Registration window
+                    if (e.registrationOpenAtMillis() > 0) {
+                        regStartCal.setTimeInMillis(e.registrationOpenAtMillis());
+                        binding.etRegStartDate.setText(dateFormat.format(regStartCal.getTime()));
+                        binding.etRegStartTime.setText(timeFormat.format(regStartCal.getTime()));
+                    }
+
+                    if (e.registrationCloseAtMillis() > 0) {
+                        regEndCal.setTimeInMillis(e.registrationCloseAtMillis());
+                        binding.etRegEndDate.setText(dateFormat.format(regEndCal.getTime()));
+                        binding.etRegEndTime.setText(timeFormat.format(regEndCal.getTime()));
                     }
                 })
-                .addOnFailureListener(ex -> {
-                    Toast.makeText(this, "Failed to load event: " + ex.getMessage(), Toast.LENGTH_LONG).show();
+                .addOnFailureListener(err -> {
+                    Toast.makeText(this, "Failed to load event", Toast.LENGTH_LONG).show();
                     finish();
                 });
     }
 
+
+    // ---------------------------------------------
+    // SAVE EVENT
+    // ---------------------------------------------
     private void saveEvent() {
+
         String title = binding.etTitle.getText().toString().trim();
         String description = binding.etDescription.getText().toString().trim();
-        String dateStr = binding.etDate.getText().toString().trim();
-        String timeStr = binding.etTime.getText().toString().trim();
+        String date = binding.etDate.getText().toString().trim();
+        String time = binding.etTime.getText().toString().trim();
         String location = binding.etLocation.getText().toString().trim();
         String capacityStr = binding.etMaxAttendees.getText().toString().trim();
-        boolean geolocationRequirement = binding.etGeolocation.isChecked();
+        boolean geolocationRequired = binding.etGeolocation.isChecked();
 
-        if (TextUtils.isEmpty(title)) {
-            binding.etTitle.setError("Title required");
+        if (title.isEmpty() || date.isEmpty() || time.isEmpty() || location.isEmpty()) {
+            Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int maxAttendees = 0;
-        if (!TextUtils.isEmpty(capacityStr)) {
+        int capacity = 0;
+        if (!capacityStr.isEmpty()) {
             try {
-                maxAttendees = Integer.parseInt(capacityStr);
-            } catch (NumberFormatException e) {
+                capacity = Integer.parseInt(capacityStr);
+            } catch (Exception e) {
                 binding.etMaxAttendees.setError("Invalid number");
                 return;
             }
         }
 
-        // Disable save button and show progress
         binding.btnSaveEvent.setEnabled(false);
         binding.btnSaveEvent.setText("Saving...");
 
         Map<String, Object> data = new HashMap<>();
         data.put("title", title);
         data.put("description", description);
-        data.put("date", dateStr);
-        data.put("time", timeStr);
+        data.put("date", date);
+        data.put("time", time);
         data.put("locationName", location);
-        data.put("maxAttendees", maxAttendees);
-        data.put("geolocationRequired", geolocationRequirement);
+        data.put("maxAttendees", capacity);
+        data.put("geolocationRequired", geolocationRequired);
 
-        // Save timestamps for Lottery Logic
         if (!TextUtils.isEmpty(binding.etRegStartDate.getText())) {
             data.put("registrationOpenAtMillis", regStartCal.getTimeInMillis());
         }
@@ -242,149 +253,109 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
             data.put("organizerId", auth.getCurrentUser().getUid());
         }
 
-        // Handle image uploads
         uploadImagesAndSave(data);
     }
 
-    /**
-     * Uploads poster and banner images to Firebase Storage, then saves the event.
-     */
+
+    // ---------------------------------------------
+    // UPLOAD IMAGES (poster + banner)
+    // ---------------------------------------------
     private void uploadImagesAndSave(Map<String, Object> data) {
-        // Track upload completion
-        final int[] uploadsRemaining = {0};
 
-        // Count how many uploads we need
-        if (selectedPosterUri != null) uploadsRemaining[0]++;
-        if (selectedBannerUri != null) uploadsRemaining[0]++;
+        int uploadCount = 0;
 
-        // If no new images, save immediately with existing URLs
-        if (uploadsRemaining[0] == 0) {
-            if (existingPosterUrl != null) {
-                data.put("eventPosterUrl", existingPosterUrl);
-            }
-            if (existingBannerUrl != null) {
-                data.put("eventBannerUrl", existingBannerUrl);
-            }
+        if (selectedPosterUri != null) uploadCount++;
+        if (selectedBannerUri != null) uploadCount++;
+
+        final int[] remaining = {uploadCount};
+
+        // No uploads needed → save directly
+        if (uploadCount == 0) {
+
+            if (existingPosterUrl != null) data.put("eventPosterUrl", existingPosterUrl);
+            if (existingBannerUrl != null) data.put("eventBannerUrl", existingBannerUrl);
+
             saveEventToFirestore(data);
             return;
         }
 
-        // Upload poster if selected
+        // Upload poster
         if (selectedPosterUri != null) {
             ImageUploadHelper.uploadEventPoster(selectedPosterUri, new ImageUploadHelper.UploadCallback() {
                 @Override
                 public void onSuccess(String downloadUrl) {
                     data.put("eventPosterUrl", downloadUrl);
 
-                    // Delete old poster if we're updating
                     if (existingPosterUrl != null && !existingPosterUrl.isEmpty()) {
-                        ImageUploadHelper.deleteImage(existingPosterUrl, new ImageUploadHelper.DeleteCallback() {
-                            @Override
-                            public void onSuccess() {
-                                Log.d(TAG, "Old poster deleted");
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                Log.w(TAG, "Failed to delete old poster", e);
-                            }
-                        });
+                        ImageUploadHelper.deleteImage(existingPosterUrl, null);
                     }
 
-                    uploadsRemaining[0]--;
-                    checkAndSaveEvent(data, uploadsRemaining[0]);
+                    if (--remaining[0] == 0) {
+                        saveEventToFirestore(data);
+                    }
                 }
 
                 @Override
                 public void onFailure(Exception e) {
                     resetSaveButton();
-                    Toast.makeText(OrganizerEventCreationActivity.this,
-                            "Failed to upload poster: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                    Toast.makeText(OrganizerEventCreationActivity.this, "Poster upload failed", Toast.LENGTH_LONG).show();
                 }
             });
         }
 
-        // Upload banner if selected
+        // Upload banner
         if (selectedBannerUri != null) {
             ImageUploadHelper.uploadEventBanner(selectedBannerUri, new ImageUploadHelper.UploadCallback() {
                 @Override
                 public void onSuccess(String downloadUrl) {
                     data.put("eventBannerUrl", downloadUrl);
 
-                    // Delete old banner if we're updating
                     if (existingBannerUrl != null && !existingBannerUrl.isEmpty()) {
-                        ImageUploadHelper.deleteImage(existingBannerUrl, new ImageUploadHelper.DeleteCallback() {
-                            @Override
-                            public void onSuccess() {
-                                Log.d(TAG, "Old banner deleted");
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                Log.w(TAG, "Failed to delete old banner", e);
-                            }
-                        });
+                        ImageUploadHelper.deleteImage(existingBannerUrl, null);
                     }
 
-                    uploadsRemaining[0]--;
-                    checkAndSaveEvent(data, uploadsRemaining[0]);
+                    if (--remaining[0] == 0) {
+                        saveEventToFirestore(data);
+                    }
                 }
 
                 @Override
                 public void onFailure(Exception e) {
                     resetSaveButton();
-                    Toast.makeText(OrganizerEventCreationActivity.this,
-                            "Failed to upload banner: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                    Toast.makeText(OrganizerEventCreationActivity.this, "Banner upload failed", Toast.LENGTH_LONG).show();
                 }
             });
         }
     }
-    /**
-     * Checks if all image uploads are complete, then saves the event.
-     */
-    private void checkAndSaveEvent(Map<String, Object> data, int remaining) {
-        if (remaining == 0) {
-            saveEventToFirestore(data);
-        }
-    }
 
-    /**
-     * Saves the event data to Firestore (create or update).
-     */
+
     private void saveEventToFirestore(Map<String, Object> data) {
+
         if (eventIdToEdit != null) {
-            // Update existing event
             db.collection("events").document(eventIdToEdit)
                     .set(data, SetOptions.merge())
                     .addOnSuccessListener(a -> {
-                        Toast.makeText(this, "Event Updated!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Event updated!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
                     .addOnFailureListener(e -> {
                         resetSaveButton();
-                        Toast.makeText(this, "Update failed: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Update failed", Toast.LENGTH_LONG).show();
                     });
         } else {
-            // Create new event
             db.collection("events").add(data)
                     .addOnSuccessListener(a -> {
-                        Toast.makeText(this, "Event Created!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Event created!", Toast.LENGTH_SHORT).show();
                         finish();
                     })
                     .addOnFailureListener(e -> {
                         resetSaveButton();
-                        Toast.makeText(this, "Creation failed: " + e.getMessage(),
-                                Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Creation failed", Toast.LENGTH_LONG).show();
                     });
         }
     }
 
-    /**
-     * Re-enables the save button after an error.
-     */
+
     private void resetSaveButton() {
         binding.btnSaveEvent.setEnabled(true);
         binding.btnSaveEvent.setText(eventIdToEdit != null ? "Update Event" : "Save Event");

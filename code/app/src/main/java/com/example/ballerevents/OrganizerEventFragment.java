@@ -8,7 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import android.app.AlertDialog;                   // NEW
+import android.app.AlertDialog;    // for simple dialogs
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,39 +23,25 @@ import com.google.firebase.firestore.Query;
 import java.util.List;
 
 /**
- * Fragment displaying all events created by the currently authenticated organizer.
- * <p>
- * This screen is accessible through the organizer dashboard and shows event cards
- * in a vertical list using {@link TrendingEventAdapter}. When an organizer taps
- * an event, the fragment navigates to {@link OrganizerEventCreationActivity} in
- * edit mode, passing the Firestore document ID.
- * </p>
- *
- * <p>The fragment automatically refreshes events in {@link #onResume()} so any
- * changes made in the editor screen are immediately reflected when returning.</p>
+ * Displays all events created by the logged-in organizer. Uses the team’s
+ * TrendingEventAdapter to show event cards, and tapping a card opens an options
+ * dialog. Includes editing, viewing waitlist, and sending winner notifications.
+ * Automatically refreshes in onResume and updates OrganizerActivity with the
+ * selected event ID.
  */
 public class OrganizerEventFragment extends Fragment {
 
-    /** Logging tag for debugging event loading. */
     private static final String TAG = "OrganizerEventFragment";
 
-    /** ViewBinding for accessing layout views. */
     private FragmentOrganizerEventBinding binding;
-
-    /** Firestore instance for reading event documents. */
     private FirebaseFirestore db;
+    private FirebaseAuth auth;
 
-    /** FirebaseAuth instance for identifying the current organizer. */
-    private FirebaseAuth mAuth;
-
-    /** Adapter used to render the organizer's event cards. */
     private TrendingEventAdapter adapter;
-
-    /** ID of the currently authenticated organizer. */
     private String currentUserId;
 
-    /** Repository for extra event operations (sending notifications). */   // NEW
-    private FirestoreEventRepository eventRepository;                       // NEW
+    /** Repository for sending notifications to winners. */
+    private FirestoreEventRepository eventRepository;
 
     @Nullable
     @Override
@@ -71,14 +57,15 @@ public class OrganizerEventFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
 
-        if (mAuth.getCurrentUser() != null) {
-            currentUserId = mAuth.getCurrentUser().getUid();
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+
+        if (auth.getCurrentUser() != null) {
+            currentUserId = auth.getCurrentUser().getUid();
         }
 
-        eventRepository = new FirestoreEventRepository();   // NEW
+        eventRepository = new FirestoreEventRepository();
     }
 
     @Override
@@ -94,7 +81,6 @@ public class OrganizerEventFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-        // Reload list after returning from creation/editing screens
         if (currentUserId != null) {
             loadOrganizerEvents();
         } else {
@@ -104,13 +90,18 @@ public class OrganizerEventFragment extends Fragment {
         }
     }
 
-    /**
-     * Sets up the RecyclerView and attaches a {@link TrendingEventAdapter} where
-     * clicking an item opens a dialog with actions for that event.
-     */
+    // -------------------------------------------------------------
+    // RECYCLER SETUP
+    // -------------------------------------------------------------
     private void setupRecyclerView() {
+
         adapter = new TrendingEventAdapter(event -> {
-            // NEW: show options instead of immediately editing
+
+            // When selecting an event → update OrganizerActivity's selected event
+            if (getActivity() instanceof OrganizerActivity) {
+                ((OrganizerActivity) getActivity()).setSelectedEventId(event.getId());
+            }
+
             showEventOptionsDialog(event);
         });
 
@@ -118,43 +109,88 @@ public class OrganizerEventFragment extends Fragment {
         binding.rvOrganizerEvents.setAdapter(adapter);
     }
 
-    /**
-     * Dialog with actions for an event:
-     *  - Edit event
-     *  - Send winner notifications
-     */
-    private void showEventOptionsDialog(Event event) {                // NEW
+    // -------------------------------------------------------------
+    // EVENT OPTIONS DIALOG (FULL MERGE)
+    // -------------------------------------------------------------
+    private void showEventOptionsDialog(Event event) {
+
         if (getContext() == null) return;
+
+        // FINAL MERGED OPTIONS (ALL FEATURES):
+        CharSequence[] options = new CharSequence[]{
+                "View Details",
+                "Edit Event",
+                "View Waitlist",
+                "Send Winner Notifications"
+        };
 
         new AlertDialog.Builder(getContext())
                 .setTitle(event.getTitle())
-                .setItems(new String[]{"View Details", "Edit Event", "View Waitlist"},
-                        (dialog, which) -> {
-                            if (which == 0) {
-                                // View details
-                                Intent intent = new Intent(getActivity(), DetailsActivity.class);
-                                intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
-                                startActivity(intent);
-                            } else if (which == 1) {
-                                // Edit event (existing behavior)
-                                Intent intent = new Intent(getActivity(), OrganizerEventCreationActivity.class);
-                                intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
-                                startActivity(intent);
-                            } else if (which == 2) {
-                                // View Waitlist
-                                Intent waitlistIntent = new Intent(getActivity(), OrganizerWaitlistActivity.class);
-                                waitlistIntent.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, event.getId());
-                                startActivity(waitlistIntent);
-                            }
-                        })
+                .setItems(options, (dialog, which) -> {
+
+                    switch (which) {
+
+                        case 0: // View Details
+                            Intent details = new Intent(getActivity(), DetailsActivity.class);
+                            details.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
+                            startActivity(details);
+                            break;
+
+                        case 1: // Edit
+                            Intent edit = new Intent(getActivity(), OrganizerEventCreationActivity.class);
+                            edit.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
+                            startActivity(edit);
+                            break;
+
+                        case 2: // View Waitlist
+                            Intent waitlist = new Intent(getActivity(), OrganizerWaitlistActivity.class);
+                            waitlist.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, event.getId());
+                            startActivity(waitlist);
+                            break;
+
+                        case 3: // Send Winner Notifications
+                            sendWinnerNotifications(event);
+                            break;
+                    }
+
+                })
                 .show();
     }
 
+    // -------------------------------------------------------------
+    // SEND WINNER NOTIFICATIONS (YOUR BRANCH FEATURE)
+    // -------------------------------------------------------------
+    private void sendWinnerNotifications(Event event) {
+        if (eventRepository == null) return;
 
-    /**
-     * Loads all events from Firestore where {@code organizerId} matches the current organizer.
-     * Updates the RecyclerView and handles empty or failure states.
-     */
+        eventRepository.sendWinnerNotifications(
+                event.getId(),
+                new FirestoreEventRepository.VoidCallback() {
+                    @Override
+                    public void onSuccess() {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Winner notifications sent.",
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        if (getContext() != null) {
+                            Toast.makeText(getContext(),
+                                    "Failed: " + e.getMessage(),
+                                    Toast.LENGTH_LONG).show();
+                        }
+                        Log.e(TAG, "sendWinnerNotifications error", e);
+                    }
+                }
+        );
+    }
+
+    // -------------------------------------------------------------
+    // LOAD ORGANIZER EVENTS
+    // -------------------------------------------------------------
     private void loadOrganizerEvents() {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.tvNoEvents.setVisibility(View.GONE);
@@ -163,30 +199,36 @@ public class OrganizerEventFragment extends Fragment {
                 .whereEqualTo("organizerId", currentUserId)
                 .orderBy("date", Query.Direction.DESCENDING)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(snapshot -> {
+
                     binding.progressBar.setVisibility(View.GONE);
 
-                    List<Event> events = queryDocumentSnapshots.toObjects(Event.class);
+                    List<Event> events = snapshot.toObjects(Event.class);
 
                     if (events.isEmpty()) {
                         binding.tvNoEvents.setVisibility(View.VISIBLE);
                     } else {
                         adapter.submitList(events);
+
+                        // Your branch: auto-select first event
+                        if (getActivity() instanceof OrganizerActivity) {
+                            ((OrganizerActivity) getActivity())
+                                    .setSelectedEventId(events.get(0).getId());
+                        }
                     }
 
-                    Log.d(TAG, "Loaded " + events.size() + " events for organizer " + currentUserId);
                 })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    binding.tvNoEvents.setText("Error loading events.");
                     binding.tvNoEvents.setVisibility(View.VISIBLE);
-                    Log.w(TAG, "Error loading organizer events", e);
+                    binding.tvNoEvents.setText("Error loading events.");
+                    Log.e(TAG, "Error loading organizer events", e);
                 });
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null; // Avoid memory leaks
+        binding = null; // Prevent memory leaks
     }
 }

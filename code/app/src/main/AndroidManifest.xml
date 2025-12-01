@@ -72,6 +72,14 @@
         <activity
             android:name=".AdminDashboardActivity"
             android:exported="false" />
+
+
+        <activity
+            android:name=".OrganizerFinalEntrantsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".OrganizerLotteryWinnersActivity"
+            android:exported="false" />
         <activity
             android:name=".PortraitCaptureActivity"
             android:screenOrientation="portrait"
@@ -80,4 +88,7 @@
     </application>
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Storage permission for saving CSV (Android 9 and below) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 </manifest>

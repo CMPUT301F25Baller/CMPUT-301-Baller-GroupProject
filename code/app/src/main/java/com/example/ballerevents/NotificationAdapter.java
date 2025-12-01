@@ -16,98 +16,40 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * RecyclerView adapter for displaying notification rows. Each item represents a
- * single notification with a sender, message content, timestamp, and optional
- * action buttons (e.g., "Mark as Read" and "Open").
- *
- * <p>This adapter uses a simple internal list and does not use DiffUtil, as
- * most notification displays do not require complex item animations.</p>
+ * RecyclerView adapter for displaying notification rows.
+ * <p>
+ * Supports standard notifications (Mark Read/Open) and interactive Invitations (Accept/Reject).
+ * This adapter uses the standalone {@link NotificationItem} class.
+ * </p>
  */
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.VH> {
 
-    /**
-     * Represents the UI model for a single notification row.
-     * <p>
-     * Includes metadata about sender, content, time, avatar image, and whether
-     * additional actions should be displayed.
-     * </p>
-     */
-    public static class NotificationItem {
-        /** Name or identifier of the sender. */
-        public final String sender;
-        /** Notification body/content text. */
-        public final String message;
-        /** Display-friendly timestamp (e.g., "Just now"). */
-        public final String time;
-        /** Drawable resource ID for the sender avatar. */
-        public final int avatarResId;
-        /** Whether this notification row should display action buttons. */
-        public final boolean hasActions;
-
-        /**
-         * Creates a notification UI model.
-         *
-         * @param sender     Name of notification source.
-         * @param message    Notification content text.
-         * @param time       Display timestamp string.
-         * @param avatarResId Drawable resource for avatar.
-         * @param hasActions  Whether to show action buttons.
-         */
-        public NotificationItem(String sender, String message, String time, int avatarResId, boolean hasActions) {
-            this.sender = sender;
-            this.message = message;
-            this.time = time;
-            this.avatarResId = avatarResId;
-            this.hasActions = hasActions;
-        }
-    }
-
-    /** Backing list used for rendering notification rows. */
-    private final List<NotificationItem> items = new ArrayList<>();
-
-    /** Optional listener for notification action callbacks. */
-    private OnActionListener onActionListener;
+    private List<NotificationItem> items = new ArrayList<>();
+    private final OnNotificationActionListener actionListener;
 
     /**
-     * Listener interface for action button interactions.
+     * Interface to handle button clicks from the Activity/Fragment.
      */
-    public interface OnActionListener {
-        /**
-         * Invoked when the "Mark as Read" button is pressed.
-         *
-         * @param position Adapter position.
-         * @param item     Notification item associated with the action.
-         */
-        void onMarkRead(int position, NotificationItem item);
-
-        /**
-         * Invoked when the "Open" button is pressed.
-         *
-         * @param position Adapter position.
-         * @param item     Notification item associated with the action.
-         */
-        void onOpen(int position, NotificationItem item);
+    public interface OnNotificationActionListener {
+        void onAccept(NotificationItem item);
+        void onReject(NotificationItem item);
+        void onMarkRead(NotificationItem item);
     }
 
     /**
-     * Assigns a listener for notification row actions.
-     *
-     * @param l Listener implementation.
+     * Constructs a new NotificationAdapter.
+     * @param actionListener Listener for handling button actions.
      */
-    public void setOnActionListener(OnActionListener l) { this.onActionListener = l; }
+    public NotificationAdapter(OnNotificationActionListener actionListener) {
+        this.actionListener = actionListener;
+    }
 
     /**
-     * Replaces the current list of notifications with a new one.
-     * <p>
-     * This method clears internal data and calls {@link #notifyDataSetChanged()},
-     * making it suitable for moderate-sized notification lists.
-     * </p>
-     *
-     * @param newItems A new list of {@link NotificationItem} objects.
+     * Updates the list of items and refreshes the RecyclerView.
+     * @param newItems The new list of notifications to display.
      */
     public void submitList(List<NotificationItem> newItems) {
-        items.clear();
-        if (newItems != null) items.addAll(newItems);
+        this.items = newItems;
         notifyDataSetChanged();
     }
 
@@ -120,61 +62,70 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VH h, int position) {
-        NotificationItem it = items.get(position);
+    public void onBindViewHolder(@NonNull VH holder, int position) {
+        NotificationItem item = items.get(position);
 
-        h.tvSender.setText(it.sender);
-        h.tvMessage.setText(it.message);
-        h.tvTime.setText(it.time);
-        h.ivAvatar.setImageResource(
-                it.avatarResId != 0 ? it.avatarResId : R.drawable.placeholder_avatar1
-        );
+        holder.tvSender.setText(item.sender);
+        holder.tvMessage.setText(item.message);
+        holder.tvTime.setText(item.timeLabel);
+        holder.ivAvatar.setImageResource(item.avatarRes);
 
-        // Show or hide action row
-        h.actionsRow.setVisibility(it.hasActions ? View.VISIBLE : View.GONE);
+        // Handle Action Buttons visibility and logic
+        if (item.hasActions) {
+            holder.actionsRow.setVisibility(View.VISIBLE);
 
-        h.btnMarkRead.setOnClickListener(v -> {
-            if (onActionListener != null) {
-                onActionListener.onMarkRead(h.getBindingAdapterPosition(), it);
+            if (item.isInvitation) {
+                // Configure for Invitation (Accept / Reject)
+                holder.btnAction1.setText("Accept");
+                holder.btnAction2.setText("Reject");
+
+                // Bind invitation actions
+                holder.btnAction1.setOnClickListener(v -> actionListener.onAccept(item));
+                holder.btnAction2.setOnClickListener(v -> actionListener.onReject(item));
+
+                // Ensure buttons are enabled for invites
+                holder.btnAction1.setEnabled(true);
+
+            } else {
+                // Configure for Standard Notification (Mark Read / Open)
+                holder.btnAction1.setText("Mark as Read");
+                holder.btnAction2.setText("Open");
+
+                // Disable "Mark Read" if already read
+                if (item.isRead) {
+                    holder.btnAction1.setEnabled(false);
+                    holder.btnAction1.setText("Read");
+                } else {
+                    holder.btnAction1.setEnabled(true);
+                }
+
+                holder.btnAction1.setOnClickListener(v -> actionListener.onMarkRead(item));
+                // Define 'Open' logic if needed, or hide button
             }
-        });
-
-        h.btnOpen.setOnClickListener(v -> {
-            if (onActionListener != null) {
-                onActionListener.onOpen(h.getBindingAdapterPosition(), it);
-            }
-        });
+        } else {
+            holder.actionsRow.setVisibility(View.GONE);
+        }
     }
 
     @Override
-    public int getItemCount() { return items.size(); }
+    public int getItemCount() {
+        return items.size();
+    }
 
     /**
-     * ViewHolder for a single notification row, holding references to the avatar,
-     * text fields, and optional action buttons.
+     * ViewHolder for notification rows.
      */
     static class VH extends RecyclerView.ViewHolder {
-
-        /** Sender's avatar image view. */
         final ShapeableImageView ivAvatar;
-        /** Sender name text. */
         final TextView tvSender;
-        /** Message text body. */
         final TextView tvMessage;
-        /** Timestamp text (e.g., "2m ago"). */
         final TextView tvTime;
-        /** Row containing "Mark as Read" and "Open" buttons. */
         final LinearLayout actionsRow;
-        /** Action button for marking a notification as read. */
-        final Button btnMarkRead;
-        /** Action button for opening the notification. */
-        final Button btnOpen;
 
-        /**
-         * Constructs a ViewHolder around the notification row layout.
-         *
-         * @param itemView The root inflated layout view.
-         */
+        // Generic references to the two buttons
+        final Button btnAction1; // Left button (Accept / Mark Read)
+        final Button btnAction2; // Right button (Reject / Open)
+
         VH(@NonNull View itemView) {
             super(itemView);
             ivAvatar    = itemView.findViewById(R.id.ivAvatar);
@@ -182,8 +133,10 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             tvMessage   = itemView.findViewById(R.id.tvMessage);
             tvTime      = itemView.findViewById(R.id.tvTime);
             actionsRow  = itemView.findViewById(R.id.actionsRow);
-            btnMarkRead = itemView.findViewById(R.id.btnMarkRead);
-            btnOpen     = itemView.findViewById(R.id.btnOpen);
+
+            // Map buttons to layout IDs
+            btnAction1 = itemView.findViewById(R.id.btnMarkRead);
+            btnAction2 = itemView.findViewById(R.id.btnOpen);
         }
     }
 }
