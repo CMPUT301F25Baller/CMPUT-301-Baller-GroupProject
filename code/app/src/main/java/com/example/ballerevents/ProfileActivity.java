@@ -51,12 +51,19 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        binding.btnBackProfile.setOnClickListener(v -> finish());
+        // Back Button
+        if (binding.btnBackProfile != null) {
+            binding.btnBackProfile.setOnClickListener(v -> finish());
+        }
 
-        binding.btnEditProfile.setOnClickListener(v ->
-                startActivity(new Intent(this, EditProfileActivity.class))
-        );
+        // Edit Button
+        if (binding.btnEditProfile != null) {
+            binding.btnEditProfile.setOnClickListener(v ->
+                    startActivity(new Intent(this, EditProfileActivity.class))
+            );
+        }
 
+        // Logout Button
         binding.btnLogout.setOnClickListener(v -> {
             auth.signOut();
             Intent intent = new Intent(this, LoginActivity.class);

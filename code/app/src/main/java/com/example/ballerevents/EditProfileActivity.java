@@ -23,14 +23,37 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Activity that allows a user to edit their profile information.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ * <li>Updating Name, "About Me" bio, and Interests.</li>
+ * <li>Uploading or changing the profile picture using the system image picker.</li>
+ * <li>Deleting the account permanently (Firestore data + Auth).</li>
+ * </ul>
+ */
 public class EditProfileActivity extends AppCompatActivity {
 
+    /** View binding for the activity layout. */
     private ActivityEditProfileBinding binding;
+
+    /** Firestore instance for database operations. */
     private FirebaseFirestore db;
+
+    /** FirebaseAuth instance for user management. */
     private FirebaseAuth auth;
+
+    /** The UID of the currently logged-in user. */
     private String currentUserId;
+
+    /** Stores the URI string of a newly selected profile image, if any. */
     private String newProfileImageUriString;
 
+    /**
+     * Launcher for the image picker activity result.
+     * When an image is selected, it loads it into the ImageView using Glide.
+     */
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
@@ -39,6 +62,13 @@ public class EditProfileActivity extends AppCompatActivity {
                 }
             });
 
+    /**
+     * Called when the activity is first created.
+     * Initializes Firebase, sets up button listeners, and loads existing user data.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
+     * this Bundle contains the data it most recently supplied in onSaveInstanceState.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,6 +84,11 @@ public class EditProfileActivity extends AppCompatActivity {
         }
         currentUserId = auth.getCurrentUser().getUid();
 
+        // Handle Custom Back Button
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
+
         loadUserData();
 
         binding.ivProfileImage.setOnClickListener(v -> imagePicker.launch("image/*"));
@@ -61,6 +96,9 @@ public class EditProfileActivity extends AppCompatActivity {
         binding.btnDeleteProfile.setOnClickListener(v -> confirmDeleteAccount());
     }
 
+    /**
+     * Fetches the current user's data from Firestore and populates the UI fields.
+     */
     private void loadUserData() {
         db.collection("users").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -70,12 +108,13 @@ public class EditProfileActivity extends AppCompatActivity {
                             binding.etName.setText(user.getName());
                             binding.etAboutMe.setText(user.getAboutMe());
 
-                            // Join interests
+                            // Join interests list into a comma-separated string
                             if (user.getInterests() != null && !user.getInterests().isEmpty()) {
                                 String interestsJoined = TextUtils.join(", ", user.getInterests());
                                 binding.etInterests.setText(interestsJoined);
                             }
 
+                            // Load profile picture
                             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
                                 Glide.with(this).load(user.getProfilePictureUrl())
                                         .placeholder(R.drawable.placeholder_avatar1)
@@ -88,6 +127,10 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Validates input fields and updates the user's profile in Firestore.
+     * Parses the comma-separated interests string into a List.
+     */
     private void saveProfile() {
         String newName = binding.etName.getText().toString().trim();
         String newAboutMe = binding.etAboutMe.getText().toString().trim();
@@ -100,6 +143,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
+        // Parse interests string to List
         List<String> newInterests;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             newInterests = Arrays.stream(newInterestsString.split(","))
@@ -133,6 +177,9 @@ public class EditProfileActivity extends AppCompatActivity {
                 );
     }
 
+    /**
+     * Displays an alert dialog asking the user to confirm account deletion.
+     */
     private void confirmDeleteAccount() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Account")
@@ -142,6 +189,10 @@ public class EditProfileActivity extends AppCompatActivity {
                 .show();
     }
 
+    /**
+     * Deletes the user's Firestore document and their Firebase Authentication record.
+     * If successful, redirects to the Login screen.
+     */
     private void performAccountDeletion() {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) return;
@@ -167,6 +218,9 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Navigates back to the LoginActivity and clears the task stack.
+     */
     private void navigateToLogin() {
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

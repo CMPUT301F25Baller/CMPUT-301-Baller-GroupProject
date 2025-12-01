@@ -16,36 +16,44 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 /**
- * Main activity for organizers, hosting a tab-based layout with the following
- * sections:
- * <ul>
- * <li>About – displays profile details</li>
- * <li>Event – lists events created by the organizer</li>
- * <li>Following – shows followed entrants or other entities (prototype)</li>
- * </ul>
+ * Main activity for users with the Organizer role.
  *
- * <p>Updated to use consistent navigation styling (CardView Back Button).</p>
+ * <p>This activity displays the organizer's profile header (Name, Bio, Stats)
+ * designed to be visually consistent with the Entrant profile. It hosts a
+ * {@link ViewPager2} with three tabs:</p>
+ * <ul>
+ * <li><b>About</b>: Detailed profile information.</li>
+ * <li><b>Event</b>: List of events managed by the organizer.</li>
+ * <li><b>Following</b>: Lists of followers and following users.</li>
+ * </ul>
  */
 public class OrganizerActivity extends AppCompatActivity {
 
-    /** Logging tag for debugging organizer screen behavior. */
+    /** Tag for logging errors and debug info. */
     private static final String TAG = "OrganizerActivity";
 
-    /** Titles for the ViewPager tabs. */
+    /** Titles for the tabs displayed in the TabLayout. */
     private static final String[] TAB_TITLES = {"About", "Event", "Following"};
 
-    /** ViewBinding reference for accessing layout views. */
+    /** View binding for the activity layout. */
     private ActivityOrganizerBinding binding;
 
-    /** Firestore instance for retrieving organizer profile data. */
+    /** Firestore instance for fetching profile data. */
     private FirebaseFirestore db;
 
-    /** FirebaseAuth instance for checking logged-in user. */
+    /** FirebaseAuth instance for authentication checks. */
     private FirebaseAuth mAuth;
 
-    /** Currently authenticated organizer's user ID. */
+    /** The UID of the current organizer. */
     private String currentUserId;
 
+    /**
+     * Called when the activity is first created.
+     * Initializes views, sets up the ViewPager/TabLayout, and loads profile data.
+     *
+     * @param savedInstanceState If the activity is being re-initialized after previously being shut down,
+     * this Bundle contains the data it most recently supplied in onSaveInstanceState.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,7 +63,6 @@ public class OrganizerActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
-        // Ensure user is authenticated
         if (mAuth.getCurrentUser() == null) {
             Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
             finish();
@@ -63,50 +70,49 @@ public class OrganizerActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
-        // --- NEW: Custom Back Button Logic ---
-        // Replaces old Toolbar navigation logic to match Event Details style
+        // Handle Custom Back Button
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
 
-        // Setup ViewPager and page adapter
+        // Setup ViewPager
         binding.viewPager.setAdapter(new OrganizerPagerAdapter(this));
         binding.viewPager.setOffscreenPageLimit(2);
+        binding.viewPager.setCurrentItem(1, false); // Default to Event tab
 
-        // Default to middle tab (Event tab)
-        binding.viewPager.setCurrentItem(1, false);
-
-        // Connect TabLayout and ViewPager
+        // Connect TabLayout to ViewPager
         new TabLayoutMediator(binding.tabLayout, binding.viewPager,
                 (tab, position) -> tab.setText(TAB_TITLES[position])
         ).attach();
 
-        // Create event button
+        // "New Event" Button Listener
         binding.btnNewEvent.setOnClickListener(v ->
                 startActivity(new Intent(this, OrganizerEventCreationActivity.class))
         );
 
-        // Messaging button (prototype only)
+        // "Message" Button Listener (Prototype)
         binding.btnMessage.setOnClickListener(v ->
                 Toast.makeText(this, "Messaging prototype coming soon.", Toast.LENGTH_SHORT).show()
         );
 
-        // Load organizer header info (name + profile image)
         loadOrganizerHeaderInfo();
     }
 
+    /**
+     * Called when the activity resumes.
+     * Reloads the header info to ensure stats/bio are up-to-date if changed elsewhere.
+     */
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh profile header when returning from edit screen
         if (currentUserId != null) {
             loadOrganizerHeaderInfo();
         }
     }
 
     /**
-     * Loads the organizer’s profile data from Firestore and updates the header
-     * elements (organizer name and profile image).
+     * Fetches the organizer's profile document from Firestore.
+     * Updates the header UI elements: Name, Bio (About Me), Profile Picture, and Follower/Following counts.
      */
     private void loadOrganizerHeaderInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
@@ -116,26 +122,36 @@ public class OrganizerActivity extends AppCompatActivity {
                 UserProfile userProfile = documentSnapshot.toObject(UserProfile.class);
 
                 if (userProfile != null) {
-                    // Update organizer name
-                    if (binding.tvOrganizerName != null) {
-                        binding.tvOrganizerName.setText(userProfile.getName());
+                    // Update Name
+                    binding.tvOrganizerName.setText(userProfile.getName());
+
+                    // Update About Me (Bio)
+                    if (binding.tvOrganizerAboutMe != null) {
+                        binding.tvOrganizerAboutMe.setText(userProfile.getAboutMe());
                     }
 
-                    // Update profile picture
-                    if (binding.ivOrganizerProfile != null) {
-                        Glide.with(this)
-                                .load(userProfile.getProfilePictureUrl())
-                                .placeholder(R.drawable.placeholder_avatar1)
-                                .error(R.drawable.placeholder_avatar1)
-                                .into(binding.ivOrganizerProfile);
+                    // Update Profile Image
+                    Glide.with(this)
+                            .load(userProfile.getProfilePictureUrl())
+                            .placeholder(R.drawable.placeholder_avatar1)
+                            .error(R.drawable.placeholder_avatar1)
+                            .into(binding.ivOrganizerProfile);
+
+                    // Update Stats
+                    int following = userProfile.getFollowingIds() != null ? userProfile.getFollowingIds().size() : 0;
+                    int followers = userProfile.getFollowerIds() != null ? userProfile.getFollowerIds().size() : 0;
+
+                    if (binding.tvFollowingCount != null) {
+                        binding.tvFollowingCount.setText(String.valueOf(following));
+                    }
+                    if (binding.tvFollowersCount != null) {
+                        binding.tvFollowersCount.setText(String.valueOf(followers));
                     }
                 }
             } else {
                 Toast.makeText(this, "Could not find organizer profile.", Toast.LENGTH_SHORT).show();
-                Log.w(TAG, "Organizer profile not found for ID: " + currentUserId);
             }
         }).addOnFailureListener(e -> {
-            Toast.makeText(this, "Error fetching organizer data.", Toast.LENGTH_SHORT).show();
             Log.e(TAG, "Error fetching user profile", e);
         });
     }
