@@ -114,12 +114,17 @@ public class DetailsActivity extends AppCompatActivity {
             }
             if (organizerProfile != null) {
                 binding.tvOrganizerName.setText(organizerProfile.getName());
+                Glide.with(this)
+                        .load(organizerProfile.getProfilePictureUrl())
+                        .placeholder(R.drawable.placeholder_avatar1)
+                        .into(binding.ivOrganizerAvatar);
             } else if (mEvent.getOrganizer() != null) {
                 binding.tvOrganizerName.setText(mEvent.getOrganizer());
             } else {
                 binding.tvOrganizerName.setText("Unknown Organizer");
             }
         });
+
 
         Glide.with(this)
                 .load(mEvent.getEventPosterUrl())
