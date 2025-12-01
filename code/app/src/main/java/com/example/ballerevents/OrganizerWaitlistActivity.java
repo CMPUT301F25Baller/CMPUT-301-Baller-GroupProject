@@ -1,7 +1,9 @@
 package com.example.ballerevents;
 
+import android.app.AlertDialog;
+import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -12,27 +14,35 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.ballerevents.databinding.ActivityOrganizerWaitlistBinding;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FieldPath;
+import com.google.firebase.firestore.WriteBatch;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.common.BitMatrix;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
-/**
- * Displays the current waitlist (entrants who applied to the event lottery)
- * for a given event to an organizer or admin.
- */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
 
-    /** Intent extra key for the event whose waitlist we are showing. */
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
-
     private static final String TAG = "OrganizerWaitlistActivity";
 
     private ActivityOrganizerWaitlistBinding binding;
     private FirebaseFirestore db;
-
     private String eventId;
-    private final List<UserProfile> entrants = new ArrayList<>();
-    private WaitlistUserAdapter adapter;
+    private Event currentEvent;
+
+    // Adapters
+    private WaitlistUserAdapter waitlistAdapter;
+    private WaitlistUserAdapter selectedAdapter;
+
+    // Data Lists
+    private final List<UserProfile> waitlistProfiles = new ArrayList<>();
+    private final List<UserProfile> selectedProfiles = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,56 +51,210 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
-
         eventId = getIntent().getStringExtra(EXTRA_EVENT_ID);
-        if (TextUtils.isEmpty(eventId)) {
-            Toast.makeText(this, "Invalid event ID", Toast.LENGTH_SHORT).show();
+
+        if (eventId == null) {
+            Toast.makeText(this, "Event ID missing", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
+        setupRecyclerViews();
+        setupTabs();
+        setupButtons();
+
+        loadEventAndEntrants();
+    }
+
+    private void setupRecyclerViews() {
+        binding.rvWaitlist.setLayoutManager(new LinearLayoutManager(this));
+        waitlistAdapter = new WaitlistUserAdapter(waitlistProfiles, this);
+        binding.rvWaitlist.setAdapter(waitlistAdapter);
+
+        binding.rvSelected.setLayoutManager(new LinearLayoutManager(this));
+        selectedAdapter = new WaitlistUserAdapter(selectedProfiles, this);
+        binding.rvSelected.setAdapter(selectedAdapter);
+    }
+
+    private void setupTabs() {
+        binding.btnShowWaitlist.setOnClickListener(v -> {
+            binding.rvWaitlist.setVisibility(View.VISIBLE);
+            binding.rvSelected.setVisibility(View.GONE);
+            binding.btnShowWaitlist.setEnabled(false);
+            binding.btnShowSelected.setEnabled(true);
+        });
+
+        binding.btnShowSelected.setOnClickListener(v -> {
+            binding.rvWaitlist.setVisibility(View.GONE);
+            binding.rvSelected.setVisibility(View.VISIBLE);
+            binding.btnShowWaitlist.setEnabled(true);
+            binding.btnShowSelected.setEnabled(false);
+        });
+        binding.btnShowWaitlist.performClick();
+    }
+
+    private void setupButtons() {
+        binding.btnDrawLottery.setOnClickListener(v -> handleDrawClick());
+        binding.btnGenerateQr.setOnClickListener(v -> generateAndSaveQRCode());
         binding.btnBack.setOnClickListener(v -> finish());
-        binding.tvTitle.setText("Waitlist"); // you can move this to strings.xml later
+    }
 
-        adapter = new WaitlistUserAdapter(entrants, this);
-        binding.recyclerWaitlist.setLayoutManager(new LinearLayoutManager(this));
-        binding.recyclerWaitlist.setAdapter(adapter);
+    private void handleDrawClick() {
+        if (currentEvent == null) return;
 
-        loadWaitlist();
+        int max = currentEvent.getMaxAttendees();
+        int currentSelected = currentEvent.getSelectedUserIds().size();
+        int spotsAvailable = max - currentSelected;
+
+        if (spotsAvailable <= 0) {
+            Toast.makeText(this, "Event is full!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        if (currentEvent.getWaitlistUserIds().isEmpty()) {
+            Toast.makeText(this, "Waitlist is empty.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Draw Lottery")
+                .setMessage("Draw " + Math.min(spotsAvailable, currentEvent.getWaitlistUserIds().size()) + " entrants?")
+                .setPositiveButton("Draw", (d, w) -> performLotteryDraw(spotsAvailable))
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     /**
-     * Queries Firestore for all users who have this event in their appliedEventIds array
-     * and displays them in the list.
+     * Generates a QR Code encoding the Event ID and saves it to the device Gallery.
      */
-    private void loadWaitlist() {
+    private void generateAndSaveQRCode() {
+        try {
+            MultiFormatWriter writer = new MultiFormatWriter();
+            // Encode the Event ID as the content of the QR code
+            BitMatrix matrix = writer.encode(eventId, BarcodeFormat.QR_CODE, 500, 500);
+
+            BarcodeEncoder encoder = new BarcodeEncoder();
+            Bitmap bitmap = encoder.createBitmap(matrix);
+
+            // Save to MediaStore (Gallery)
+            String savedImageURL = MediaStore.Images.Media.insertImage(
+                    getContentResolver(),
+                    bitmap,
+                    "EventQR_" + currentEvent.getTitle(),
+                    "Check-in QR Code for " + currentEvent.getTitle()
+            );
+
+            if(savedImageURL != null) {
+                Toast.makeText(this, "QR Code saved to Gallery!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Failed to save QR Code", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch (Exception e) {
+            Log.e(TAG, "QR Gen Error", e);
+            Toast.makeText(this, "Error generating QR Code", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void loadEventAndEntrants() {
         binding.progressBar.setVisibility(View.VISIBLE);
-        binding.tvEmpty.setVisibility(View.GONE);
+        db.collection("events").document(eventId).get()
+                .addOnSuccessListener(snap -> {
+                    currentEvent = snap.toObject(Event.class);
+                    if (currentEvent != null) {
+                        currentEvent.setId(snap.getId());
+                        updateUIHeader();
+                        fetchProfiles();
+                    }
+                });
+    }
+
+    private void updateUIHeader() {
+        int max = currentEvent.getMaxAttendees();
+        int selected = currentEvent.getSelectedUserIds().size();
+        int waiting = currentEvent.getWaitlistUserIds().size();
+        binding.tvCapacityInfo.setText(String.format("Capacity: %d | Selected: %d | Waiting: %d", max, selected, waiting));
+    }
+
+    private void fetchProfiles() {
+        List<String> allIds = new ArrayList<>();
+        allIds.addAll(currentEvent.getWaitlistUserIds());
+        allIds.addAll(currentEvent.getSelectedUserIds());
+
+        if (allIds.isEmpty()) {
+            waitlistProfiles.clear();
+            selectedProfiles.clear();
+            waitlistAdapter.notifyDataSetChanged();
+            selectedAdapter.notifyDataSetChanged();
+            binding.progressBar.setVisibility(View.GONE);
+            return;
+        }
 
         db.collection("users")
-                .whereArrayContains("appliedEventIds", eventId)
+                .whereIn(FieldPath.documentId(), allIds.subList(0, Math.min(allIds.size(), 10)))
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    entrants.clear();
-                    if (querySnapshot != null && !querySnapshot.isEmpty()) {
-                        for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                            UserProfile profile = doc.toObject(UserProfile.class);
-                            if (profile != null) {
-                                entrants.add(profile);
-                            }
+                .addOnSuccessListener(snap -> {
+                    waitlistProfiles.clear();
+                    selectedProfiles.clear();
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        UserProfile p = doc.toObject(UserProfile.class);
+                        if (p == null) continue;
+                        if (currentEvent.getSelectedUserIds().contains(p.getId())) {
+                            selectedProfiles.add(p);
+                        } else if (currentEvent.getWaitlistUserIds().contains(p.getId())) {
+                            waitlistProfiles.add(p);
                         }
                     }
-
-                    adapter.notifyDataSetChanged();
-
+                    waitlistAdapter.notifyDataSetChanged();
+                    selectedAdapter.notifyDataSetChanged();
                     binding.progressBar.setVisibility(View.GONE);
-                    binding.tvEmpty.setVisibility(entrants.isEmpty() ? View.VISIBLE : View.GONE);
-                })
-                .addOnFailureListener(e -> {
-                    Log.w(TAG, "Error loading waitlist", e);
-                    Toast.makeText(this, "Failed to load waitlist", Toast.LENGTH_SHORT).show();
-                    binding.progressBar.setVisibility(View.GONE);
-                    binding.tvEmpty.setVisibility(View.VISIBLE);
                 });
+    }
+
+    private void performLotteryDraw(int spotsToFill) {
+        List<String> pool = new ArrayList<>(currentEvent.getWaitlistUserIds());
+        List<String> winners = new ArrayList<>();
+        Collections.shuffle(pool);
+
+        int count = 0;
+        while (count < spotsToFill && !pool.isEmpty()) {
+            winners.add(pool.remove(0));
+            count++;
+        }
+
+        currentEvent.getWaitlistUserIds().removeAll(winners);
+        currentEvent.getSelectedUserIds().addAll(winners);
+
+        if (currentEvent.getInvitationStatus() == null) {
+            currentEvent.invitationStatus = new HashMap<>();
+        }
+        for (String winnerId : winners) {
+            currentEvent.getInvitationStatus().put(winnerId, "pending");
+        }
+
+        WriteBatch batch = db.batch();
+
+        batch.update(db.collection("events").document(eventId),
+                "waitlistUserIds", currentEvent.getWaitlistUserIds(),
+                "selectedUserIds", currentEvent.getSelectedUserIds(),
+                "invitationStatus", currentEvent.getInvitationStatus());
+
+        for (String winnerId : winners) {
+            String notifId = db.collection("users").document(winnerId).collection("notifications").document().getId();
+            Notification notif = new Notification(
+                    "You Won the Lottery! \uD83C\uDF89",
+                    "You have been selected for " + currentEvent.getTitle() + ". Please accept or decline your invitation.",
+                    eventId,
+                    "invitation"
+            );
+            batch.set(db.collection("users").document(winnerId).collection("notifications").document(notifId), notif);
+        }
+
+        batch.commit()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Draw complete. Notifications sent!", Toast.LENGTH_SHORT).show();
+                    loadEventAndEntrants();
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Draw failed.", Toast.LENGTH_SHORT).show());
     }
 }

@@ -20,49 +20,16 @@ import com.google.firebase.firestore.FieldPath;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Activity displaying the authenticated user's profile, including:
- *
- * <ul>
- *     <li>Profile picture</li>
- *     <li>Name and "About Me"</li>
- *     <li>Interests (as chips)</li>
- *     <li>Follower/Following counts</li>
- *     <li>List of events the user has joined</li>
- * </ul>
- *
- * <p>
- * A real-time Firestore listener updates the UI whenever the user's
- * profile document changes, ensuring that profile edits or count changes
- * are reflected immediately.
- * </p>
- */
 public class ProfileActivity extends AppCompatActivity {
 
-    /** Log tag for debugging. */
     private static final String TAG = "ProfileActivity";
-
-    /** ViewBinding for accessing UI elements. */
     private ActivityProfileBinding binding;
-
-    /** RecyclerView adapter for the user's joined events. */
-    private NearEventAdapter joinedEventsAdapter;
-
-    /** Firestore database reference. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth instance for identifying the current user. */
-    private FirebaseAuth mAuth;
-
-    /** Authenticated user's UID. */
+    private FirebaseAuth auth;
+    private ListenerRegistration userListener;
+    private NearEventAdapter joinedEventsAdapter;
     private String currentUserId;
 
-    /** Active snapshot listener for the user document. */
-    private ListenerRegistration userListener;
-
-    /**
-     * Initializes Firebase instances, ViewBinding, and UI listeners.
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,102 +37,35 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
+        auth = FirebaseAuth.getInstance();
 
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "You must be logged in", Toast.LENGTH_SHORT).show();
+        if (auth.getCurrentUser() != null) {
+            currentUserId = auth.getCurrentUser().getUid();
+            setupRecyclerView();
+            setupRealtimeProfileListener();
+            setupButtons();
+        } else {
+            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
             finish();
-            return;
-        }
-        currentUserId = mAuth.getCurrentUser().getUid();
-
-        setupListeners();
-        setupRecyclerView();
-    }
-
-    /**
-     * Attaches a Firestore listener each time the activity starts.
-     * Ensures the profile is always refreshed after editing.
-     */
-    @Override
-    protected void onStart() {
-        super.onStart();
-        loadProfileData();
-    }
-
-    /**
-     * Removes the Firestore listener to avoid memory leaks.
-     */
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (userListener != null) {
-            userListener.remove();
         }
     }
 
-    /**
-     * Sets click listeners for "Back" and "Edit Profile" buttons.
-     */
-    private void setupListeners() {
+    private void setupButtons() {
         binding.btnBackProfile.setOnClickListener(v -> finish());
+
         binding.btnEditProfile.setOnClickListener(v ->
                 startActivity(new Intent(this, EditProfileActivity.class))
         );
-    }
 
-    /**
-     * Subscribes to real-time updates on the current user's Firestore document.
-     * When the user profile changes, the UI is updated accordingly.
-     */
-    private void loadProfileData() {
-        DocumentReference userRef = db.collection("users").document(currentUserId);
-
-        userListener = userRef.addSnapshotListener(this, (snapshot, e) -> {
-            if (e != null) {
-                Log.w(TAG, "Listen failed.", e);
-                return;
-            }
-
-            if (snapshot != null && snapshot.exists()) {
-                UserProfile userProfile = snapshot.toObject(UserProfile.class);
-
-                if (userProfile != null) {
-                    binding.tvProfileName.setText(userProfile.getName());
-                    binding.tvFollowingCount.setText(String.valueOf(userProfile.getFollowingCount()));
-                    binding.tvFollowerCount.setText(String.valueOf(userProfile.getFollowerCount()));
-                    binding.tvAboutMe.setText(userProfile.getAboutMe());
-
-                    // Load profile picture
-                    Glide.with(this)
-                            .load(userProfile.getProfilePictureUrl())
-                            .placeholder(R.drawable.placeholder_avatar1)
-                            .error(R.drawable.placeholder_avatar1)
-                            .into(binding.ivProfilePicture);
-
-                    // Render interests
-                    binding.chipGroupInterests.removeAllViews();
-                    List<String> interests = userProfile.getInterests();
-                    if (interests != null) {
-                        for (String interest : interests) {
-                            Chip chip = new Chip(this);
-                            chip.setText(interest);
-                            binding.chipGroupInterests.addView(chip);
-                        }
-                    }
-
-                    // Load joined events after profile is processed
-                    loadJoinedEvents(userProfile.getAppliedEventIds());
-                }
-            } else {
-                Log.d(TAG, "No such document");
-            }
+        binding.btnLogout.setOnClickListener(v -> {
+            auth.signOut();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 
-    /**
-     * Sets up the RecyclerView that displays the user's joined events.
-     */
     private void setupRecyclerView() {
         joinedEventsAdapter = new NearEventAdapter(event -> {
             Intent intent = new Intent(this, DetailsActivity.class);
@@ -177,26 +77,74 @@ public class ProfileActivity extends AppCompatActivity {
         binding.rvJoinedEvents.setAdapter(joinedEventsAdapter);
     }
 
-    /**
-     * Fetches full event documents for all events the user has joined.
-     *
-     * @param eventIds List of Firestore document IDs for joined events.
-     */
+    private void setupRealtimeProfileListener() {
+        DocumentReference userRef = db.collection("users").document(currentUserId);
+
+        userListener = userRef.addSnapshotListener((snapshot, e) -> {
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e);
+                return;
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                UserProfile userProfile = snapshot.toObject(UserProfile.class);
+                if (userProfile != null) {
+                    updateUI(userProfile);
+                    loadJoinedEvents(userProfile.getAppliedEventIds());
+                }
+            } else {
+                Log.d(TAG, "Current data: null");
+            }
+        });
+    }
+
+    private void updateUI(UserProfile user) {
+        binding.tvName.setText(user.getName());
+        binding.tvAboutMe.setText(user.getAboutMe());
+        binding.tvFollowersCount.setText(String.valueOf(user.getFollowerIds().size()));
+        binding.tvFollowingCount.setText(String.valueOf(user.getFollowingIds().size()));
+
+        Glide.with(this)
+                .load(user.getProfilePictureUrl())
+                .placeholder(R.drawable.placeholder_avatar1)
+                .error(R.drawable.placeholder_avatar1)
+                .into(binding.ivProfileImage);
+
+        // Update chips
+        binding.chipGroupInterests.removeAllViews();
+        for (String interest : user.getInterests()) {
+            Chip chip = new Chip(this);
+            chip.setText(interest);
+            chip.setCheckable(false);
+            binding.chipGroupInterests.addView(chip);
+        }
+    }
+
     private void loadJoinedEvents(List<String> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
             joinedEventsAdapter.submitList(new ArrayList<>());
-            Log.d(TAG, "User has no joined events.");
             return;
         }
 
+        // Firestore 'in' query supports max 10 items.
+        // For production apps, you'd batch this or structure data differently.
+        List<String> subset = eventIds.subList(0, Math.min(eventIds.size(), 10));
+
         db.collection("events")
-                .whereIn(FieldPath.documentId(), eventIds)
+                .whereIn(FieldPath.documentId(), subset)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Event> joinedEvents = queryDocumentSnapshots.toObjects(Event.class);
                     joinedEventsAdapter.submitList(joinedEvents);
-                    Log.d(TAG, "Loaded " + joinedEvents.size() + " joined events.");
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error loading joined events", e));
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (userListener != null) {
+            userListener.remove();
+        }
     }
 }

@@ -22,13 +22,12 @@ import java.util.List;
  * The data is currently mocked in-memory and demonstrates:
  *
  * <ul>
- *     <li>Switching between “New” and “All” logs using Material Chips</li>
- *     <li>Simple list rendering via {@link SimpleTextAdapter}</li>
- *     <li>“Mark all as read” button behavior</li>
+ * <li>Switching between “New” and “All” logs using Material Chips</li>
+ * <li>Simple list rendering via {@link SimpleTextAdapter}</li>
+ * <li>“Mark all as read” button behavior</li>
  * </ul>
  *
- * <p>In the future, this activity can be wired to a Firestore-backed
- * notification repository using {@code NotificationLogsStore}.
+ * <p>Updated to support the shared custom header layout used by NotificationLogsActivity.</p>
  */
 public class AdminLogsActivity extends AppCompatActivity {
 
@@ -50,18 +49,15 @@ public class AdminLogsActivity extends AppCompatActivity {
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        setupToolbar();
+        // --- NEW: Handle Custom Back Button ---
+        // Replaces the old setupToolbar() logic
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
+
         initializeMockData();
         setupRecycler();
         setupChipsAndActions();
-    }
-
-    /**
-     * Configures the top app bar and back navigation.
-     */
-    private void setupToolbar() {
-        setSupportActionBar(binding.topAppBar);
-        binding.topAppBar.setNavigationOnClickListener(v -> finish());
     }
 
     /**

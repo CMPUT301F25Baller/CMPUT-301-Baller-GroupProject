@@ -76,6 +76,9 @@ public class UserProfile {
     //  easier to use and safer for UI implementations.)
     // ----------------------------------------------------------------------
 
+    /** Sets the document ID. Required for manual assignment in loops. */
+    public void setId(String id) { this.id = id; }
+
     /** @return the user’s Firestore document ID (FirebaseAuth UID). */
     public String getId() { return id; }
 

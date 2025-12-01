@@ -8,20 +8,53 @@
     android:background="#FFFFFF"
     tools:context=".OrganizerActivity">
 
-    <!-- Top app bar -->
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:navigationIcon="@drawable/ic_arrow_back_24"
-        app:title="Organizer Profile"
-        app:titleCentered="true"
+    <!-- Header container with back button and title (THEIRS) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/header_container"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_marginTop="16dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <!-- Header (profile image + name) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cv_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="#5A00FF"
+                android:background="?attr/selectableItemBackground"
+                android:contentDescription="Back" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Organizer Profile"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Profile header (BOTH) -->
     <LinearLayout
         android:id="@+id/profileHeader"
         android:layout_width="0dp"
@@ -31,7 +64,7 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         android:paddingTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintTop_toBottomOf="@id/header_container"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -55,7 +88,7 @@
 
     </LinearLayout>
 
-    <!-- Row 1: New Event + Message -->
+    <!-- Row 1: New Event + Message (YOURS + THEIRS) -->
     <LinearLayout
         android:id="@+id/actionRow"
         android:layout_width="0dp"
@@ -94,7 +127,7 @@
             android:insetBottom="10dp" />
     </LinearLayout>
 
-    <!-- Row 2: Final Entrants + Run Lottery -->
+    <!-- Row 2: Final Entrants + Winners + Run Lottery (YOURS) -->
     <LinearLayout
         android:id="@+id/lotteryRow"
         android:layout_width="0dp"
@@ -119,6 +152,7 @@
             android:textColor="#5A00FF"
             android:insetTop="10dp"
             android:insetBottom="10dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnViewLotteryWinners"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -126,12 +160,11 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:text="View Winners"
             app:strokeColor="#5A00FF"
             android:textColor="#5A00FF"
-            android:text="View Winners"
             android:insetTop="10dp"
-            android:insetBottom="10dp"/>
-
+            android:insetBottom="10dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRunLottery"
@@ -146,7 +179,7 @@
             android:insetBottom="10dp" />
     </LinearLayout>
 
-    <!-- Tabs -->
+    <!-- Tabs (now below lotteryRow) -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="0dp"

@@ -20,107 +20,55 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.List;
 
-/**
- * Fragment that displays the authenticated organizer’s profile information,
- * including the "About Me" section and a dynamic list of interest chips.
- * <p>
- * This fragment attaches a real-time Firestore listener to the user's
- * document, keeping the profile information updated automatically. A button
- * is provided to navigate to {@link EditProfileActivity} for editing profile
- * details.
- * </p>
- */
 public class OrganizerAboutFragment extends Fragment {
 
-    /** Logging tag for debugging Firestore updates. */
     private static final String TAG = "OrganizerAboutFragment";
-
-    /** ViewBinding for interacting with fragment UI elements. */
     private FragmentOrganizerAboutBinding binding;
-
-    /** Firestore instance for reading profile data. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth used to retrieve the currently authenticated user. */
-    private FirebaseAuth mAuth;
-
-    /** UID of the currently authenticated user (organizer). */
-    private String currentUserId;
-
-    /** Active listener registration for the user document. */
+    private FirebaseAuth auth;
     private ListenerRegistration userListener;
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-
-        if (mAuth.getCurrentUser() != null) {
-            currentUserId = mAuth.getCurrentUser().getUid();
-        }
-    }
-
-    @Nullable
-    @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState
-    ) {
-        // Inflate the layout using ViewBinding
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
         binding = FragmentOrganizerAboutBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
     @Override
-    public void onViewCreated(
-            @NonNull View view,
-            @Nullable Bundle savedInstanceState
-    ) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Edit Profile button opens EditProfileActivity
-        binding.btnEditProfile.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), EditProfileActivity.class);
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+
+        if (auth.getCurrentUser() != null) {
+            setupRealtimeProfileListener();
+        }
+
+        binding.btnEditProfile.setOnClickListener(v ->
+                startActivity(new Intent(getActivity(), EditProfileActivity.class))
+        );
+
+        binding.btnLogout.setOnClickListener(v -> {
+            auth.signOut();
+            Intent intent = new Intent(getActivity(), LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
+            // If the hosting activity needs to close, we can call finish() on it
+            if (getActivity() != null) {
+                getActivity().finish();
+            }
         });
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-
-        // Attach Firestore listener when fragment becomes visible
-        if (currentUserId != null) {
-            loadOrganizerInfo();
-        } else {
-            binding.tvAboutMe.setText("Could not load profile. Please log in again.");
-        }
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        // Detach Firestore listener to avoid memory leaks
-        if (userListener != null) {
-            userListener.remove();
-        }
-    }
-
-    /**
-     * Attaches a real-time listener to the organizer's Firestore document and
-     * updates the UI whenever profile data changes.
-     */
-    private void loadOrganizerInfo() {
-        DocumentReference userRef = db.collection("users").document(currentUserId);
+    private void setupRealtimeProfileListener() {
+        String userId = auth.getCurrentUser().getUid();
+        DocumentReference userRef = db.collection("users").document(userId);
 
         userListener = userRef.addSnapshotListener((snapshot, e) -> {
             if (e != null) {
                 Log.w(TAG, "Listen failed.", e);
-                binding.tvAboutMe.setText("Error loading profile.");
                 return;
             }
 
@@ -128,10 +76,7 @@ public class OrganizerAboutFragment extends Fragment {
                 UserProfile userProfile = snapshot.toObject(UserProfile.class);
 
                 if (userProfile != null && binding != null) {
-                    // Update About Me
                     binding.tvAboutMe.setText(userProfile.getAboutMe());
-
-                    // Update Interests chip group
                     binding.chipGroupInterests.removeAllViews();
                     List<String> interests = userProfile.getInterests();
 
@@ -143,9 +88,6 @@ public class OrganizerAboutFragment extends Fragment {
                         }
                     }
                 }
-            } else {
-                Log.d(TAG, "No such document");
-                binding.tvAboutMe.setText("Profile not found.");
             }
         });
     }
@@ -153,7 +95,9 @@ public class OrganizerAboutFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Avoid memory leaks by clearing binding reference
         binding = null;
+        if (userListener != null) {
+            userListener.remove();
+        }
     }
 }

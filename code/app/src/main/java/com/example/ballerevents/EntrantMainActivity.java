@@ -8,40 +8,36 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 // The binding class name must match your layout file name.
-// Your file is 'activity_main.xml', so this is correct.
 import com.example.ballerevents.databinding.EntrantMainBinding;
 import com.google.android.material.chip.Chip;
+import com.google.firebase.firestore.DocumentSnapshot; // Added for role check
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.ListenerRegistration; // Import for listener
-import com.google.firebase.firestore.FirebaseFirestoreException; // Import for listener
+import com.google.firebase.firestore.ListenerRegistration;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
+
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Main home screen for users with the <b>entrant</b> role.
+ * Main home screen for users (Entrants and Organizers).
  *
  * <p>This activity is responsible for:
  * <ul>
- *     <li>Showing horizontally scrolling lists of trending and "near you" events.</li>
- *     <li>Providing a search bar and category chips to filter all events.</li>
- *     <li>Listening in real-time to the {@code events} collection in Firestore.</li>
- *     <li>Navigating to {@link DetailsActivity} when an event card is tapped.</li>
- *     <li>Navigating to {@link ProfileActivity} from the top-left menu button.</li>
+ * <li>Showing horizontally scrolling lists of trending and "near you" events.</li>
+ * <li>Providing a search bar and category chips to filter all events.</li>
+ * <li>Listening in real-time to the {@code events} collection in Firestore.</li>
+ * <li>Navigating to {@link DetailsActivity} when an event card is tapped.</li>
+ * <li>Navigating to the appropriate Profile/Organizer Dashboard from the top-left menu button based on role.</li>
  * </ul>
- *
- * <p>Data Flow:
- * <ol>
- *     <li>{@link #loadAllEvents()} attaches a Firestore snapshot listener on {@code events}.</li>
- *     <li>All events are cached in {@link #allEvents} for client-side search/filter.</li>
- *     <li>Trending vs Near-You separation is based on {@link Event#isTrending()}.</li>
- *     <li>{@link #performSearchAndFilter()} delegates filtering logic to {@code EventFilter.performSearchAndFilter}.</li>
- * </ol>
  */
 public class EntrantMainActivity extends AppCompatActivity {
 
@@ -62,6 +58,8 @@ public class EntrantMainActivity extends AppCompatActivity {
     /** Firestore instance used to read the {@code events} collection. */
     private FirebaseFirestore db;
 
+    private FirebaseAuth auth;
+
     /**
      * In-memory cache of all events loaded from Firestore.
      * Used by the search and chip filtering logic.
@@ -73,6 +71,24 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     /** Active Firestore snapshot listener for the {@code events} collection. */
     private ListenerRegistration allEventsListener;
+
+    // QR Code Scanner Launcher
+    private final ActivityResultLauncher<ScanOptions> barcodeLauncher = registerForActivityResult(new ScanContract(),
+            result -> {
+                if(result.getContents() != null) {
+                    String scannedEventId = result.getContents();
+                    Log.d(TAG, "Scanned QR Code: " + scannedEventId);
+
+                    if (scannedEventId != null && !scannedEventId.isEmpty()) {
+                        // Navigate directly to the event details
+                        Intent intent = new Intent(EntrantMainActivity.this, DetailsActivity.class);
+                        intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, scannedEventId);
+                        startActivity(intent);
+                    } else {
+                        Toast.makeText(this, "Invalid QR Code", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
 
     /**
      * Called when the activity is first created.
@@ -88,9 +104,24 @@ public class EntrantMainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance(); // Initialize Auth
 
         setupRecyclerViews();
         setupListeners();
+
+        // QR Code Button Logic
+        binding.fabQr.setOnClickListener(v -> {
+            ScanOptions options = new ScanOptions();
+            options.setPrompt("Scan Event QR Code");
+            options.setBeepEnabled(false);
+
+            // Use our custom Activity to force portrait mode
+            options.setCaptureActivity(PortraitCaptureActivity.class);
+            options.setOrientationLocked(true); // Locks to the Activity's orientation (Portrait)
+
+            options.setBarcodeImageEnabled(true);
+            barcodeLauncher.launch(options);
+        });
     }
 
     /**
@@ -115,15 +146,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Configures the RecyclerViews for:
-     * <ul>
-     *     <li>Trending events (horizontal)</li>
-     *     <li>Near-You events (horizontal)</li>
-     *     <li>Search results (vertical)</li>
-     * </ul>
-     *
-     * Adapters are initialized with a click callback that opens
-     * {@link DetailsActivity} for the selected event.
+     * Configures the RecyclerViews for trending, near-you, and search results.
      */
     private void setupRecyclerViews() {
         // Trending
@@ -146,14 +169,6 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     /**
      * Attaches a real-time snapshot listener to the Firestore {@code events} collection.
-     *
-     * <p>Behavior:
-     * <ul>
-     *     <li>Removes any existing listener before attaching a new one.</li>
-     *     <li>Orders events by title for stable UI ordering.</li>
-     *     <li>Splits results into "Trending" and "Near You" lists based on {@link Event#isTrending()}.</li>
-     *     <li>Re-applies search/filter conditions after every snapshot via {@link #performSearchAndFilter()}.</li>
-     * </ul>
      */
     private void loadAllEvents() {
         if (allEventsListener != null) {
@@ -197,24 +212,16 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Configures UI listeners:
-     * <ul>
-     *     <li>Menu button → opens {@link ProfileActivity}.</li>
-     *     <li>Search EditText → triggers {@link #performSearchAndFilter()} on text change.</li>
-     *     <li>Category chips → toggles tags and re-filters.</li>
-     * </ul>
+     * Configures UI listeners.
+     * Modified: The menu button now performs a role check to determine the destination.
      */
     private void setupListeners() {
-        // Open Profile screen when the menu button is tapped
-        binding.btnMenu.setOnClickListener(v -> {
-            startActivity(new Intent(this, ProfileActivity.class));
-        });
+        // Menu button logic: Check role then navigate
+        binding.btnMenu.setOnClickListener(v -> handleMenuNavigation());
 
-        // 🔔 Open notifications when bell icon is tapped
+        // Open notifications when bell icon is tapped
         binding.btnNotifications.setOnClickListener(v -> {
-            // TODO: pick the correct activity for your notifications UI
             Intent intent = new Intent(this, NotificationLogsActivity.class);
-            // or: new Intent(this, NotificationLogsActivity.class);
             startActivity(intent);
         });
 
@@ -237,17 +244,43 @@ public class EntrantMainActivity extends AppCompatActivity {
         setupChipListener(binding.chipTheater);
     }
 
+    /**
+     * Checks the current user's role in Firestore and navigates to the
+     * appropriate profile activity:
+     * <ul>
+     * <li><b>Organizer</b> -> {@link OrganizerActivity}</li>
+     * <li><b>Entrant</b> -> {@link ProfileActivity}</li>
+     * </ul>
+     */
+    private void handleMenuNavigation() {
+        if (auth.getCurrentUser() == null) return;
+
+        String uid = auth.getCurrentUser().getUid();
+        db.collection("users").document(uid).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String role = documentSnapshot.getString("role");
+
+                        if ("organizer".equals(role)) {
+                            // If user is an organizer, go to the Organizer Dashboard
+                            startActivity(new Intent(EntrantMainActivity.this, OrganizerActivity.class));
+                        } else {
+                            // Default for entrants (and admin browsing as entrant)
+                            startActivity(new Intent(EntrantMainActivity.this, ProfileActivity.class));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to fetch user role", e);
+                    // Fallback to basic profile on error
+                    startActivity(new Intent(EntrantMainActivity.this, ProfileActivity.class));
+                });
+    }
 
     /**
      * Helper method that attaches a checked-change listener to a single filter chip.
-     *
-     * <p>When checked, the chip's text is added to {@link #selectedTags}.
-     * When unchecked, it is removed. The filter is reapplied immediately.</p>
-     *
-     * @param chip the {@link Chip} to configure
      */
     private void setupChipListener(Chip chip) {
-        // Use setOnCheckedChangeListener for filter chips
         chip.setOnCheckedChangeListener((button, isChecked) -> {
             String tag = chip.getText().toString();
             if (isChecked) {
@@ -260,38 +293,25 @@ public class EntrantMainActivity extends AppCompatActivity {
     }
 
     /**
-     * Applies search and tag filters to the cached events and updates the UI:
-     * <ul>
-     *     <li>If no query and no tags are active, shows the "original content" layout.</li>
-     *     <li>Otherwise, shows the search results container.</li>
-     *     <li>Filtering logic is delegated to {@link EventFilter#performSearchAndFilter(List, String, List)}.</li>
-     *     <li>Displays or hides a "No Results" message accordingly.</li>
-     * </ul>
+     * Applies search and tag filters to the cached events and updates the UI.
      */
     private void performSearchAndFilter() {
-        // Get the raw query. The filter class will normalize it.
         String query = binding.etSearch.getText().toString();
 
-        // If query and tags are empty, show original content
         if (query.isEmpty() && selectedTags.isEmpty()) {
             binding.originalContentLayout.setVisibility(View.VISIBLE);
             binding.searchResultsLayout.setVisibility(View.GONE);
             return;
         }
 
-        // Show search results
         binding.originalContentLayout.setVisibility(View.GONE);
         binding.searchResultsLayout.setVisibility(View.VISIBLE);
 
-        // --- REFACTORED PART ---
-        // Call the static helper method from our testable class
         List<Event> filteredResults =
                 EventFilter.performSearchAndFilter(allEvents, query, selectedTags);
-        // --- END OF REFACTOR ---
 
         searchAdapter.submitList(filteredResults);
 
-        // Show "No Results" message
         if (filteredResults.isEmpty()) {
             binding.tvNoResults.setVisibility(View.VISIBLE);
         } else {
@@ -301,12 +321,10 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     /**
      * Launches {@link DetailsActivity} for the given event.
-     *
-     * @param event the {@link Event} whose details should be displayed
      */
     private void launchDetailsActivity(Event event) {
         Intent intent = new Intent(this, DetailsActivity.class);
-        intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId()); // Pass String ID
+        intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
         startActivity(intent);
     }
 }

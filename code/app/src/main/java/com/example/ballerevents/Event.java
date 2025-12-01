@@ -6,206 +6,218 @@ import android.os.Parcelable;
 import com.google.firebase.firestore.DocumentId;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Represents a single event document from the Firestore {@code "events"} collection.
+ * Final merged Event model combining:
+ * - Main branch fields
+ * - Lottery system fields
+ * - Full Parcelable support
  */
 public class Event implements Parcelable {
 
     @DocumentId
     private String id;
 
-    // -------------------------------------------------------------------------
-    // Public fields used directly by Firestore during serialization.
-    // -------------------------------------------------------------------------
-
-    /** The main title of the event. */
+    // -----------------------------
+    // Standard Event Metadata
+    // -----------------------------
     public String title;
-
-    /** The date of the event (e.g., "November 15 2023"). */
     public String date;
-
-    /** The scheduled time range of the event (e.g., "8:00PM - 11:00PM"). */
     public String time;
-
-    /** The display name of the event venue. */
     public String locationName;
-
-    /** The full street address of the venue. */
-    public String locationAddress;
-
-    /** The ticket price or entry cost for the event. */
-    public String price;
-
-    /** A list of classification tags for filtering and search. */
-    public List<String> tags;
-
-    /** The display name of the organizer hosting the event. */
-    public String organizer;
-
-    /** Firestore document ID of the organizer (from the {@code users} collection). */
-    public String organizerId;
-
-    /** A descriptive summary or detailed information about the event. */
+    public String locationAddress;        // MAIN branch
     public String description;
-
-    /** URL pointing to the event’s main poster image. */
+    public String price;
+    public String organizer;
+    public String organizerId;
     public String eventPosterUrl;
-
-    /** URL for the organizer's profile image or icon. */
-    public String organizerIconUrl;
-
-    /** Whether the event should be shown as a trending event. */
+    public String organizerIconUrl;       // MAIN branch
     public boolean isTrending;
 
-    /** IDs of users who are enrolled / final entrants (optional, other story). */
-    public List<String> enrolledUserIds;
+    public List<String> tags = new ArrayList<>();
 
-    /** IDs of users who have been chosen in the lottery (invited to apply). */
-    public List<String> chosenUserIds;
+    // -----------------------------
+    // MAIN Branch Attendance Fields
+    // -----------------------------
 
-    // -------------------------------------------------------------------------
-    // Constructors
-    // -------------------------------------------------------------------------
+    /** Enrolled / confirmed attendees */
+    public List<String> enrolledUserIds = new ArrayList<>();
 
-    /** Empty constructor required for Firestore automatic deserialization. */
-    public Event() {
-        tags = new ArrayList<>();
-        enrolledUserIds = new ArrayList<>();
-        chosenUserIds = new ArrayList<>();
+    /** Final chosen winner IDs (old main field) */
+    public List<String> chosenUserIds = new ArrayList<>();
+
+    // -----------------------------
+    // Lottery System Fields (Your version)
+    // -----------------------------
+
+    /** Maximum number of attendees allowed */
+    public int maxAttendees = 0;
+
+    /** Users waiting to be drawn in lottery */
+    public List<String> waitlistUserIds = new ArrayList<>();
+
+    /** Users selected in lottery or manually invited */
+    public List<String> selectedUserIds = new ArrayList<>();
+
+    /** Users who declined an invite */
+    public List<String> cancelledUserIds = new ArrayList<>();
+
+    /** Map userId → status ("pending", "accepted", "declined") */
+    public Map<String, String> invitationStatus = new HashMap<>();
+
+    /** Registration windows */
+    public long registrationOpenAtMillis = 0;
+    public long registrationCloseAtMillis = 0;
+
+    // -----------------------------
+    // Constructor
+    // -----------------------------
+    public Event() {}
+
+    // -----------------------------
+    // Getters
+    // -----------------------------
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getTitle() { return title; }
+    public String getDate() { return date; }
+    public String getTime() { return time; }
+    public String getLocationName() { return locationName; }
+    public String getLocationAddress() { return locationAddress; }
+    public String getDescription() { return description; }
+    public String getPrice() { return price; }
+    public String getOrganizer() { return organizer; }
+    public String getOrganizerId() { return organizerId; }
+    public String getEventPosterUrl() { return eventPosterUrl; }
+    public String getOrganizerIconUrl() { return organizerIconUrl; }
+    public boolean isTrending() { return isTrending; }
+
+    public List<String> getTags() { return tags == null ? new ArrayList<>() : tags; }
+
+    public List<String> getEnrolledUserIds() {
+        return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
     }
 
-    /** Reconstructs an Event from a Parcel. */
+    public List<String> getChosenUserIds() {
+        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
+    }
+
+    public List<String> getWaitlistUserIds() { return waitlistUserIds; }
+    public List<String> getSelectedUserIds() { return selectedUserIds; }
+    public List<String> getCancelledUserIds() { return cancelledUserIds; }
+    public Map<String, String> getInvitationStatus() { return invitationStatus; }
+
+    // -----------------------------
+    // Lottery Helper Methods
+    // -----------------------------
+
+    /** True if user accepted their invitation */
+    public boolean isUserConfirmed(String userId) {
+        return invitationStatus != null &&
+                "accepted".equals(invitationStatus.get(userId));
+    }
+
+    /** True if registration window is active */
+    public boolean isRegistrationOpenAt(long nowMillis) {
+        boolean startOk = registrationOpenAtMillis == 0 || nowMillis >= registrationOpenAtMillis;
+        boolean endOk = registrationCloseAtMillis == 0 || nowMillis <= registrationCloseAtMillis;
+        return startOk && endOk;
+    }
+
+    // -----------------------------
+    // Parcelable Constructor
+    // -----------------------------
     protected Event(Parcel in) {
         id = in.readString();
+
+        // Standard fields
         title = in.readString();
         date = in.readString();
         time = in.readString();
         locationName = in.readString();
         locationAddress = in.readString();
+        description = in.readString();
         price = in.readString();
-        tags = in.createStringArrayList();
         organizer = in.readString();
         organizerId = in.readString();
-        description = in.readString();
         eventPosterUrl = in.readString();
         organizerIconUrl = in.readString();
         isTrending = in.readByte() != 0;
 
+        tags = in.createStringArrayList();
         enrolledUserIds = in.createStringArrayList();
         chosenUserIds = in.createStringArrayList();
 
-        if (tags == null) tags = new ArrayList<>();
-        if (enrolledUserIds == null) enrolledUserIds = new ArrayList<>();
-        if (chosenUserIds == null) chosenUserIds = new ArrayList<>();
+        // Lottery
+        maxAttendees = in.readInt();
+        waitlistUserIds = in.createStringArrayList();
+        selectedUserIds = in.createStringArrayList();
+        cancelledUserIds = in.createStringArrayList();
+
+        // Read invitationStatus map
+        int mapSize = in.readInt();
+        for (int i = 0; i < mapSize; i++) {
+            String key = in.readString();
+            String val = in.readString();
+            invitationStatus.put(key, val);
+        }
+
+        registrationOpenAtMillis = in.readLong();
+        registrationCloseAtMillis = in.readLong();
     }
 
-    // -------------------------------------------------------------------------
-    // Parcelable
-    // -------------------------------------------------------------------------
-
+    // -----------------------------
+    // Parcelable Writer
+    // -----------------------------
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(id);
+
         dest.writeString(title);
         dest.writeString(date);
         dest.writeString(time);
         dest.writeString(locationName);
         dest.writeString(locationAddress);
+        dest.writeString(description);
         dest.writeString(price);
-        dest.writeStringList(tags != null ? tags : new ArrayList<>());
         dest.writeString(organizer);
         dest.writeString(organizerId);
-        dest.writeString(description);
         dest.writeString(eventPosterUrl);
         dest.writeString(organizerIconUrl);
         dest.writeByte((byte) (isTrending ? 1 : 0));
 
-        dest.writeStringList(enrolledUserIds != null ? enrolledUserIds : new ArrayList<>());
-        dest.writeStringList(chosenUserIds != null ? chosenUserIds : new ArrayList<>());
+        dest.writeStringList(tags);
+        dest.writeStringList(enrolledUserIds);
+        dest.writeStringList(chosenUserIds);
+
+        dest.writeInt(maxAttendees);
+        dest.writeStringList(waitlistUserIds);
+        dest.writeStringList(selectedUserIds);
+        dest.writeStringList(cancelledUserIds);
+
+        // Write map
+        dest.writeInt(invitationStatus.size());
+        for (Map.Entry<String, String> entry : invitationStatus.entrySet()) {
+            dest.writeString(entry.getKey());
+            dest.writeString(entry.getValue());
+        }
+
+        dest.writeLong(registrationOpenAtMillis);
+        dest.writeLong(registrationCloseAtMillis);
     }
 
     @Override
-    public int describeContents() {
-        return 0;
-    }
+    public int describeContents() { return 0; }
 
     public static final Creator<Event> CREATOR = new Creator<Event>() {
         @Override
-        public Event createFromParcel(Parcel in) {
-            return new Event(in);
-        }
+        public Event createFromParcel(Parcel in) { return new Event(in); }
 
         @Override
-        public Event[] newArray(int size) {
-            return new Event[size];
-        }
+        public Event[] newArray(int size) { return new Event[size]; }
     };
-
-    // -------------------------------------------------------------------------
-    // Getters (these are what all your adapters & activities are calling)
-    // -------------------------------------------------------------------------
-
-    /** @return the Firestore document ID of this event. */
-    public String getId() { return id; }
-
-    public void setId(String id) { this.id = id; }
-
-    /** @return the event title. */
-    public String getTitle() { return title; }
-
-    /** @return the event date. */
-    public String getDate() { return date; }
-
-    /** @return the event time or time range. */
-    public String getTime() { return time; }
-
-    /** @return the display name of the event venue. */
-    public String getLocationName() { return locationName; }
-
-    /** @return the full venue address. */
-    public String getLocationAddress() { return locationAddress; }
-
-    /** @return the event price text. */
-    public String getPrice() { return price; }
-
-    /** @return list of tag labels associated with the event. */
-    public List<String> getTags() { return tags; }
-
-    /** @return display name of the event organizer. */
-    public String getOrganizer() { return organizer; }
-
-    /** @return Firestore ID referencing the organizer in the users collection. */
-    public String getOrganizerId() { return organizerId; }
-
-    /** @return full event description. */
-    public String getDescription() { return description; }
-
-    /** @return URL for the event poster image. */
-    public String getEventPosterUrl() { return eventPosterUrl; }
-
-    /** @return URL for the organizer avatar/icon. */
-    public String getOrganizerIconUrl() { return organizerIconUrl; }
-
-    /** @return true if the event is marked as trending. */
-    public boolean isTrending() { return isTrending; }
-
-    /** @return enrolled user IDs list (never null). */
-    public List<String> getEnrolledUserIds() {
-        return enrolledUserIds == null ? new ArrayList<>() : enrolledUserIds;
-    }
-
-    public void setEnrolledUserIds(List<String> enrolledUserIds) {
-        this.enrolledUserIds = enrolledUserIds;
-    }
-
-    /** @return chosen user IDs list (never null). */
-    public List<String> getChosenUserIds() {
-        return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
-    }
-
-    public void setChosenUserIds(List<String> chosenUserIds) {
-        this.chosenUserIds = chosenUserIds;
-    }
 }

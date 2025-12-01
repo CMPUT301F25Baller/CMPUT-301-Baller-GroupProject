@@ -12,7 +12,9 @@
         android:layout_height="?attr/actionBarSize"
         android:gravity="center_vertical"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="16dp"
+        android:elevation="4dp"
+        android:background="@android:color/white">
 
         <ImageButton
             android:id="@+id/btn_back"
@@ -26,35 +28,120 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:text="Waitlist"
+            android:text="Waitlist Management"
             android:textSize="20sp"
+            android:textStyle="bold"
             android:textColor="@android:color/black"/>
     </LinearLayout>
 
-    <!-- List -->
+    <!-- Capacity Stats -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#F5F5F5"
+        android:padding="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvCapacityInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Capacity: 0 | Selected: 0 | Waiting: 0"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#616161"/>
+    </LinearLayout>
+
+    <!-- Tabs for Waitlist vs Selected -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/btnShowWaitlist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Waitlist"
+            android:layout_marginEnd="4dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+        <Button
+            android:id="@+id/btnShowSelected"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Selected"
+            android:layout_marginStart="4dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+    </LinearLayout>
+
+    <!-- List Container -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_waitlist"
+            android:id="@+id/rvWaitlist"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            android:visibility="visible"/>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSelected"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/tv_empty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="No entrants on waitlist."
+            android:text="List is empty."
             android:textColor="@android:color/darker_gray"
             android:visibility="gone"/>
 
         <ProgressBar
-            android:id="@+id/progress_bar"
+            android:id="@+id/progressBar"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center"
+            android:visibility="gone"/>
     </FrameLayout>
+
+    <!-- Action Buttons Footer -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        android:elevation="8dp">
+
+        <Button
+            android:id="@+id/btnDrawLottery"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Run Lottery Draw"
+            android:backgroundTint="#8A2BE2"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
+            android:textAllCaps="false"/>
+
+        <Button
+            android:id="@+id/btnGenerateQr"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Generate &amp; Save QR Code"
+            android:backgroundTint="#000000"
+            android:textColor="@android:color/white"
+            android:textAllCaps="false"
+            android:layout_marginTop="8dp"/>
+    </LinearLayout>
+
 </LinearLayout>
