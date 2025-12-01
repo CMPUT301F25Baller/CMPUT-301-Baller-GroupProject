@@ -128,9 +128,10 @@ public class OrganizerEventFragment extends Fragment {
 
         new AlertDialog.Builder(getContext())
                 .setTitle(event.getTitle())
-                .setItems(new String[]{"View Details", "Edit event", "Send Winner Notifications"},
+                .setItems(new String[]{"View Details", "Edit Event", "View Waitlist"},
                         (dialog, which) -> {
-                            if (which == 0){
+                            if (which == 0) {
+                                // View details
                                 Intent intent = new Intent(getActivity(), DetailsActivity.class);
                                 intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
                                 startActivity(intent);
@@ -140,43 +141,15 @@ public class OrganizerEventFragment extends Fragment {
                                 intent.putExtra(OrganizerEventCreationActivity.EXTRA_EVENT_ID, event.getId());
                                 startActivity(intent);
                             } else if (which == 2) {
-                                // New behavior: send notifications
-                                sendWinnerNotificationsForEvent(event);
+                                // View Waitlist
+                                Intent waitlistIntent = new Intent(getActivity(), OrganizerWaitlistActivity.class);
+                                waitlistIntent.putExtra(OrganizerWaitlistActivity.EXTRA_EVENT_ID, event.getId());
+                                startActivity(waitlistIntent);
                             }
                         })
                 .show();
     }
 
-    /**
-     * Calls the repository to send notifications for the given event.
-     */
-    private void sendWinnerNotificationsForEvent(Event event) {       // NEW
-        if (eventRepository == null) return;
-
-        eventRepository.sendWinnerNotifications(
-                event.getId(),
-                new FirestoreEventRepository.VoidCallback() {
-                    @Override
-                    public void onSuccess() {
-                        if (getContext() != null) {
-                            Toast.makeText(getContext(),
-                                    "Winner notifications sent.",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    @Override
-                    public void onError(Exception e) {
-                        if (getContext() != null) {
-                            Toast.makeText(getContext(),
-                                    "Failed: " + e.getMessage(),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                        Log.w(TAG, "Error sending winner notifications", e);
-                    }
-                }
-        );
-    }
 
     /**
      * Loads all events from Firestore where {@code organizerId} matches the current organizer.
