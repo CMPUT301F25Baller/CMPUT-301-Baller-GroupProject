@@ -320,6 +320,29 @@
                     android:layout_marginStart="12dp"
                     android:textSize="14sp" />
             </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_input_field"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/etGeolocation"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:buttonTint="#8A2BE2" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:hint="Geolocation Requirement"
+                    android:layout_marginStart="12dp"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <!-- POSTER IMAGE UPLOAD SECTION (Above Description) -->
             <TextView

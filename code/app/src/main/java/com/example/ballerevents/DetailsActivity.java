@@ -14,24 +14,33 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Entrant's view of an Event.
  * <p>
  * This activity displays event details and handles the lottery interaction flow:
  * <ul>
- * <li>Join Waitlist</li>
+ * <li>Join Waitlist (Triggers automatic Guideline Notification - US 01.05.05)</li>
  * <li>Accept Invitation (Win)</li>
  * <li>Decline Invitation (Win)</li>
  * </ul>
- * It also handles navigation back to the previous screen.
  */
 public class DetailsActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "com.example.ballerevents.EVENT_ID";
     private static final String TAG = "DetailsActivity";
+
+    // Standard Guidelines Text (US 01.05.05)
+    private static final String LOTTERY_GUIDELINES =
+            "Welcome to the waitlist! \n\n" +
+                    "1. Random Draw: When registration closes, the system will randomly select attendees.\n" +
+                    "2. Notification: If selected, you will receive an alert to 'Accept' or 'Decline'.\n" +
+                    "3. Second Chance: If a selected user declines, a new entrant is automatically drawn.\n" +
+                    "Good luck!";
 
     private EntrantEventDetailsBinding binding;
     private FirebaseFirestore db;
@@ -68,7 +77,7 @@ public class DetailsActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
-        // Listen to event changes in real-time (to see when lottery is drawn)
+        // Listen to event changes in real-time
         eventListener = db.collection("events").document(eventId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
@@ -111,16 +120,16 @@ public class DetailsActivity extends AppCompatActivity {
     private void updateStatusUI() {
         if (currentUserId == null) return;
 
-        boolean isWaitlisted = mEvent.getWaitlistUserIds().contains(currentUserId);
-        boolean isSelected = mEvent.getSelectedUserIds().contains(currentUserId);
-        boolean isCancelled = mEvent.getCancelledUserIds().contains(currentUserId);
+        boolean isWaitlisted = mEvent.getWaitlistUserIds() != null && mEvent.getWaitlistUserIds().contains(currentUserId);
+        boolean isSelected = mEvent.getSelectedUserIds() != null && mEvent.getSelectedUserIds().contains(currentUserId);
+        boolean isCancelled = mEvent.getCancelledUserIds() != null && mEvent.getCancelledUserIds().contains(currentUserId);
 
         String status = "unknown";
         if (mEvent.getInvitationStatus() != null) {
             status = mEvent.getInvitationStatus().getOrDefault(currentUserId, "pending");
         }
 
-        // Hide all initially
+        // Reset visibility
         binding.btnJoinWaitlist.setVisibility(View.GONE);
         binding.layoutInviteActions.setVisibility(View.GONE);
         binding.tvStatusMessage.setVisibility(View.GONE);
@@ -139,7 +148,7 @@ public class DetailsActivity extends AppCompatActivity {
             }
         } else if (isWaitlisted) {
             // STILL WAITING
-            binding.tvStatusMessage.setText("You are on the waitlist. Crossing fingers! 🤞");
+            binding.tvStatusMessage.setText("You are on the waitlist. Check notifications for rules! 🤞");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
             binding.tvStatusMessage.setTextColor(getColor(android.R.color.darker_gray));
         } else if (isCancelled) {
@@ -155,8 +164,7 @@ public class DetailsActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        // --- NEW: Back Button Navigation ---
-        // Assumes the back button ID in layout/entrant_event_details.xml is "btnBack"
+        // Back Button Logic
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
@@ -165,13 +173,18 @@ public class DetailsActivity extends AppCompatActivity {
         binding.btnJoinWaitlist.setOnClickListener(v -> {
             if (mEvent == null) return;
 
-            // Add to waitlistUserIds & appliedEventIds
+            // 1. Add to Event's waitlist
             db.collection("events").document(eventId)
                     .update("waitlistUserIds", FieldValue.arrayUnion(currentUserId));
 
+            // 2. Add to User's applied list and Trigger Notification
             db.collection("users").document(currentUserId)
                     .update("appliedEventIds", FieldValue.arrayUnion(eventId))
-                    .addOnSuccessListener(a -> Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show());
+                    .addOnSuccessListener(a -> {
+                        Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show();
+                        // Automatically send the guidelines notification (US 01.05.05)
+                        sendLotteryGuidelinesNotification();
+                    });
         });
 
         // Accept Logic
@@ -179,6 +192,28 @@ public class DetailsActivity extends AppCompatActivity {
 
         // Decline Logic
         binding.btnDecline.setOnClickListener(v -> respondToInvite("declined"));
+    }
+
+    /**
+     * Creates a system notification containing the standard lottery guidelines
+     * and writes it to the user's Firestore collection.
+     */
+    private void sendLotteryGuidelinesNotification() {
+        if (currentUserId == null || mEvent == null) return;
+
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("title", "Lottery Guidelines: " + mEvent.getTitle());
+        notification.put("message", LOTTERY_GUIDELINES);
+        notification.put("timestamp", new Date()); // Use server timestamp in production
+        notification.put("eventId", eventId);
+        notification.put("isRead", false);
+        notification.put("type", "system_info");
+
+        db.collection("users").document(currentUserId)
+                .collection("notifications")
+                .add(notification)
+                .addOnSuccessListener(docRef -> Log.d(TAG, "Guidelines notification sent."))
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to send guidelines", e));
     }
 
     private void respondToInvite(String response) {

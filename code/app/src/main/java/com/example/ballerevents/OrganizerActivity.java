@@ -6,6 +6,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ActivityOrganizerBinding;
@@ -18,50 +19,57 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 /**
- * Organizer home screen hosting About, Event, and Following tabs.
- * Includes:
- *  - Profile header
- *  - New Event creation
- *  - Lottery execution
- *  - Viewing final entrants and lottery winners
+ * Main activity for users with the Organizer role.
+ *
+ * <p>This activity displays the organizer's profile header (Name, Bio, Stats)
+ * designed to be visually consistent with the Entrant profile. It hosts a
+ * {@link ViewPager2} with three tabs:</p>
+ * <ul>
+ * <li><b>About</b>: Detailed profile information.</li>
+ * <li><b>Event</b>: List of events managed by the organizer.</li>
+ * <li><b>Following</b>: Lists of followers and following users.</li>
+ * </ul>
  */
+
 public class OrganizerActivity extends AppCompatActivity {
 
     private static final String TAG = "OrganizerActivity";
     private static final String[] TAB_TITLES = {"About", "Event", "Following"};
-    private static final int LOTTERY_SLOTS = 10; // how many winners
 
     private ActivityOrganizerBinding binding;
     private FirebaseFirestore db;
-    private FirebaseAuth auth;
+    private FirebaseAuth mAuth;
 
     private String currentUserId;
+
+    // --- Lottery System ---
+    private static final int LOTTERY_SLOTS = 10;
     private String selectedEventId; // set by OrganizerEventFragment
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityOrganizerBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
-        // Ensure user logged in
-        if (auth.getCurrentUser() == null) {
-            Toast.makeText(this, "Not logged in.", Toast.LENGTH_SHORT).show();
+        // Ensure authentication
+        if (mAuth.getCurrentUser() == null) {
+            Toast.makeText(this, "Error: Not logged in.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
-        currentUserId = auth.getCurrentUser().getUid();
+        currentUserId = mAuth.getCurrentUser().getUid();
 
-        // Back button in your XML (NOT toolbar)
-        binding.btnBack.setOnClickListener(v -> finish());
+        // Custom back button
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
 
-        setupTabs();
+        setupTabsAndPager();
         setupButtons();
         loadOrganizerHeaderInfo();
     }
@@ -69,62 +77,59 @@ public class OrganizerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadOrganizerHeaderInfo(); // update on return
+        loadOrganizerHeaderInfo();
     }
 
-    // ------------------------------
-    // TAB + VIEWPAGER SETUP
-    // ------------------------------
-    private void setupTabs() {
-        OrganizerPagerAdapter pagerAdapter = new OrganizerPagerAdapter(this);
-        binding.viewPager.setAdapter(pagerAdapter);
+    // ----------------------------------------------------------
+    // VIEWPAGER + TABS
+    // ----------------------------------------------------------
+    private void setupTabsAndPager() {
+        binding.viewPager.setAdapter(new OrganizerPagerAdapter(this));
         binding.viewPager.setOffscreenPageLimit(2);
-        binding.viewPager.setCurrentItem(1, false); // Open on Events tab
+        binding.viewPager.setCurrentItem(1, false);  // open Events tab
 
         new TabLayoutMediator(binding.tabLayout, binding.viewPager,
                 (tab, position) -> tab.setText(TAB_TITLES[position])
         ).attach();
     }
 
-    // ------------------------------
-    // BUTTONS
-    // ------------------------------
+    // ----------------------------------------------------------
+    // ALL BUTTONS (Create Event, Message, Lottery actions)
+    // ----------------------------------------------------------
     private void setupButtons() {
-        // Create new event
+
+        // Create New Event
         binding.btnNewEvent.setOnClickListener(v ->
                 startActivity(new Intent(this, OrganizerEventCreationActivity.class))
         );
 
-        // Messaging prototype
+        // Message (prototype)
         binding.btnMessage.setOnClickListener(v ->
                 Toast.makeText(this, "Messaging prototype coming soon.", Toast.LENGTH_SHORT).show()
         );
 
-        // Final Entrants
+        // Open Final Entrants
         binding.btnViewFinalEntrants.setOnClickListener(v -> openFinalEntrantsScreen());
 
-        // Lottery Winners
+        // Open Lottery Winners
         binding.btnViewLotteryWinners.setOnClickListener(v -> openLotteryWinnersScreen());
 
         // Run Lottery
         MaterialButton btnRunLottery = findViewById(R.id.btnRunLottery);
         if (btnRunLottery != null) {
             btnRunLottery.setOnClickListener(v -> runLotteryForSelectedEvent());
-        } else {
-            Log.w(TAG, "btnRunLottery not found in layout");
         }
     }
 
-    // Called from OrganizerEventFragment when an event is selected
+    // Called from OrganizerEventFragment
     public void setSelectedEventId(String eventId) {
         selectedEventId = eventId;
-        Log.d(TAG, "Selected Event: " + eventId);
+        Log.d(TAG, "Selected Event ID: " + eventId);
     }
 
-    // ------------------------------
-    // OPEN SCREENS
-    // ------------------------------
-
+    // ----------------------------------------------------------
+    // OPEN EXTRA SCREENS
+    // ----------------------------------------------------------
     private void openFinalEntrantsScreen() {
         if (selectedEventId == null || selectedEventId.isEmpty()) {
             Toast.makeText(this, "Select an event first.", Toast.LENGTH_SHORT).show();
@@ -147,32 +152,24 @@ public class OrganizerActivity extends AppCompatActivity {
         startActivity(i);
     }
 
-    // ------------------------------
+    // ----------------------------------------------------------
     // LOTTERY LOGIC
-    // ------------------------------
-
+    // ----------------------------------------------------------
     private void runLotteryForSelectedEvent() {
-        if (selectedEventId == null || selectedEventId.isEmpty()) {
+        if (selectedEventId == null) {
             Toast.makeText(this, "Select an event in the Events tab.", Toast.LENGTH_SHORT).show();
             return;
         }
-
         runSimpleLottery(selectedEventId, LOTTERY_SLOTS);
     }
 
-    /**
-     * 1. Get all users with appliedEventIds containing eventId
-     * 2. Shuffle list
-     * 3. Pick up to maxSlots
-     * 4. Save to event.chosenUserIds
-     */
     private void runSimpleLottery(String eventId, int maxSlots) {
         db.collection("users")
                 .whereArrayContains("appliedEventIds", eventId)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addOnSuccessListener(snap -> {
                     List<String> waitlist = new ArrayList<>();
-                    querySnapshot.getDocuments().forEach(doc -> waitlist.add(doc.getId()));
+                    snap.getDocuments().forEach(doc -> waitlist.add(doc.getId()));
 
                     if (waitlist.isEmpty()) {
                         Toast.makeText(this, "No waitlist for this event.", Toast.LENGTH_SHORT).show();
@@ -183,12 +180,11 @@ public class OrganizerActivity extends AppCompatActivity {
                     int winners = Math.min(maxSlots, waitlist.size());
                     List<String> chosen = new ArrayList<>(waitlist.subList(0, winners));
 
-                    db.collection("events").document(eventId)
+                    db.collection("events")
+                            .document(eventId)
                             .update("chosenUserIds", chosen)
                             .addOnSuccessListener(a ->
-                                    Toast.makeText(this,
-                                            "Lottery complete — selected " + chosen.size() + " entrants.",
-                                            Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this, "Lottery complete — " + chosen.size() + " winners selected.", Toast.LENGTH_SHORT).show()
                             )
                             .addOnFailureListener(e ->
                                     Toast.makeText(this, "Failed to save lottery results.", Toast.LENGTH_SHORT).show()
@@ -199,9 +195,9 @@ public class OrganizerActivity extends AppCompatActivity {
                 );
     }
 
-    // ------------------------------
-    // LOAD HEADER (PROFILE)
-    // ------------------------------
+    // ----------------------------------------------------------
+    // LOAD ORGANIZER HEADER
+    // ----------------------------------------------------------
     private void loadOrganizerHeaderInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -214,13 +210,31 @@ public class OrganizerActivity extends AppCompatActivity {
             UserProfile profile = snapshot.toObject(UserProfile.class);
             if (profile == null) return;
 
+            // Name
             binding.tvOrganizerName.setText(profile.getName());
 
+            // About Me
+            if (binding.tvOrganizerAboutMe != null) {
+                binding.tvOrganizerAboutMe.setText(profile.getAboutMe());
+            }
+
+            // Profile Picture
             Glide.with(this)
                     .load(profile.getProfilePictureUrl())
                     .placeholder(R.drawable.placeholder_avatar1)
                     .error(R.drawable.placeholder_avatar1)
                     .into(binding.ivOrganizerProfile);
+
+            // Follow counts
+            int following = profile.getFollowingIds() != null ? profile.getFollowingIds().size() : 0;
+            int followers = profile.getFollowerIds() != null ? profile.getFollowerIds().size() : 0;
+
+            if (binding.tvFollowingCount != null) {
+                binding.tvFollowingCount.setText(String.valueOf(following));
+            }
+            if (binding.tvFollowersCount != null) {
+                binding.tvFollowersCount.setText(String.valueOf(followers));
+            }
 
         }).addOnFailureListener(e ->
                 Toast.makeText(this, "Error loading profile.", Toast.LENGTH_SHORT).show()

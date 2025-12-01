@@ -82,6 +82,20 @@ public class UserProfile {
     /** @return the user’s Firestore document ID (FirebaseAuth UID). */
     public String getId() { return id; }
 
+    // --- FIX FOR COMPILER ERROR: ALIAS METHODS ---
+    /**
+     * Alias for {@link #getId()}.
+     * Added to ensure compatibility with code calling {@code getUid()}.
+     */
+    public String getUid() { return id; }
+
+    /**
+     * Alias for {@link #setId(String)}.
+     * Added to ensure compatibility with code calling {@code setUid()}.
+     */
+    public void setUid(String uid) { this.id = uid; }
+    // ---------------------------------------------
+
     /** @return the user’s display name. */
     public String getName() { return name; }
 
@@ -128,4 +142,12 @@ public class UserProfile {
     public int getFollowerCount() {
         return (followerIds != null) ? followerIds.size() : 0;
     }
+
+    // ----------------------------------------------------------------------
+    // Notification Preferences
+    // ----------------------------------------------------------------------
+    private boolean notificationsEnabled = true; // Default to true
+
+    public boolean isNotificationsEnabled() { return notificationsEnabled; }
+    public void setNotificationsEnabled(boolean notificationsEnabled) { this.notificationsEnabled = notificationsEnabled; }
 }

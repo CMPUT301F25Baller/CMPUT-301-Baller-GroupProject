@@ -23,6 +23,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Activity that allows a user to edit their profile information.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ * <li>Updating Name, "About Me" bio, and Interests.</li>
+ * <li><b>Opting out of Notifications</b> (US 01.04.03).</li>
+ * <li>Uploading or changing the profile picture.</li>
+ * <li>Deleting the account.</li>
+ * </ul>
+ */
 public class EditProfileActivity extends AppCompatActivity {
 
     private ActivityEditProfileBinding binding;
@@ -54,6 +65,11 @@ public class EditProfileActivity extends AppCompatActivity {
         }
         currentUserId = auth.getCurrentUser().getUid();
 
+        // Handle Custom Back Button
+        if (binding.btnBack != null) {
+            binding.btnBack.setOnClickListener(v -> finish());
+        }
+
         loadUserData();
 
         binding.ivProfileImage.setOnClickListener(v -> imagePicker.launch("image/*"));
@@ -61,6 +77,10 @@ public class EditProfileActivity extends AppCompatActivity {
         binding.btnDeleteProfile.setOnClickListener(v -> confirmDeleteAccount());
     }
 
+    /**
+     * Fetches the current user's data from Firestore and populates the UI fields.
+     * Includes checking the 'notificationsEnabled' preference.
+     */
     private void loadUserData() {
         db.collection("users").document(currentUserId).get()
                 .addOnSuccessListener(documentSnapshot -> {
@@ -70,12 +90,13 @@ public class EditProfileActivity extends AppCompatActivity {
                             binding.etName.setText(user.getName());
                             binding.etAboutMe.setText(user.getAboutMe());
 
-                            // Join interests
+                            // Load Interests
                             if (user.getInterests() != null && !user.getInterests().isEmpty()) {
                                 String interestsJoined = TextUtils.join(", ", user.getInterests());
                                 binding.etInterests.setText(interestsJoined);
                             }
 
+                            // Load Profile Image
                             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
                                 Glide.with(this).load(user.getProfilePictureUrl())
                                         .placeholder(R.drawable.placeholder_avatar1)
@@ -83,15 +104,29 @@ public class EditProfileActivity extends AppCompatActivity {
                                         .into(binding.ivProfileImage);
                                 newProfileImageUriString = user.getProfilePictureUrl();
                             }
+
+                            // Load Notification Preference (US 01.04.03)
+                            // Assuming default is TRUE if field is missing
+                            Boolean notifEnabled = documentSnapshot.getBoolean("notificationsEnabled");
+                            if (notifEnabled != null) {
+                                binding.switchNotifications.setChecked(notifEnabled);
+                            } else {
+                                binding.switchNotifications.setChecked(true);
+                            }
                         }
                     }
                 });
     }
 
+    /**
+     * Validates input fields and updates the user's profile in Firestore.
+     * Saves the 'notificationsEnabled' boolean.
+     */
     private void saveProfile() {
         String newName = binding.etName.getText().toString().trim();
         String newAboutMe = binding.etAboutMe.getText().toString().trim();
         String newInterestsString = binding.etInterests.getText().toString().trim();
+        boolean notificationsEnabled = binding.switchNotifications.isChecked();
 
         if (TextUtils.isEmpty(newName)) {
             binding.etName.setError("Name required");
@@ -100,6 +135,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
+        // Parse interests string to List
         List<String> newInterests;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             newInterests = Arrays.stream(newInterestsString.split(","))
@@ -118,6 +154,7 @@ public class EditProfileActivity extends AppCompatActivity {
         updates.put("name", newName);
         updates.put("aboutMe", newAboutMe);
         updates.put("interests", newInterests);
+        updates.put("notificationsEnabled", notificationsEnabled); // Save Preference
 
         if (newProfileImageUriString != null) {
             updates.put("profilePictureUrl", newProfileImageUriString);
@@ -148,11 +185,9 @@ public class EditProfileActivity extends AppCompatActivity {
 
         String uid = user.getUid();
 
-        // 1. Delete Firestore Document
         db.collection("users").document(uid)
                 .delete()
                 .addOnSuccessListener(aVoid -> {
-                    // 2. Delete Authentication User
                     user.delete()
                             .addOnSuccessListener(aVoid1 -> {
                                 Toast.makeText(this, "Account deleted.", Toast.LENGTH_SHORT).show();

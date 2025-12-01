@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@android:color/white"
     tools:context=".OrganizerActivity">
 
     <!-- Header container with back button and title (THEIRS) -->
@@ -56,13 +56,11 @@
 
     <!-- Profile header (BOTH) -->
     <LinearLayout
-        android:id="@+id/profileHeader"
-        android:layout_width="0dp"
+        android:id="@+id/profileInfoContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
         android:paddingTop="16dp"
         app:layout_constraintTop_toBottomOf="@id/header_container"
         app:layout_constraintStart_toStartOf="parent"
@@ -70,32 +68,97 @@
 
         <de.hdodenhof.circleimageview.CircleImageView
             android:id="@+id/ivOrganizerProfile"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:src="@drawable/placeholder_avatar1"
-            app:civ_border_width="2dp"
-            app:civ_border_color="#5A00FF"/>
+            app:civ_border_width="0dp"/>
 
         <TextView
             android:id="@+id/tvOrganizerName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="sans-serif-medium"
+            android:layout_marginTop="16dp"
+            android:fontFamily="sans-serif-bold"
             android:textColor="@android:color/black"
-            android:textSize="20sp"
-            tools:text="Organizer Name" />
+            android:textSize="24sp"
+            tools:text="Jonathan" />
 
+        <TextView
+            android:id="@+id/tvOrganizerAboutMe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:textColor="#757575"
+            android:textSize="14sp"
+            tools:text="I am a nerd" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingHorizontal="24dp">
+                <TextView
+                    android:id="@+id/tv_following_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-bold"
+                    android:text="0"
+                    android:textColor="@android:color/black"
+                    android:textSize="20sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Following"
+                    android:textColor="#9E9E9E"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="40dp"
+                android:background="#E0E0E0" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingHorizontal="24dp">
+                <TextView
+                    android:id="@+id/tv_followers_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-bold"
+                    android:text="0"
+                    android:textColor="@android:color/black"
+                    android:textSize="20sp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Followers"
+                    android:textColor="#9E9E9E"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Row 1: New Event + Message (YOURS + THEIRS) -->
     <LinearLayout
         android:id="@+id/actionRow"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@id/profileHeader"
+        app:layout_constraintTop_toBottomOf="@id/profileInfoContainer"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -106,10 +169,12 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             android:text="New Event"
+            android:textAllCaps="false"
             android:backgroundTint="#5A00FF"
+            app:cornerRadius="12dp"
             app:icon="@drawable/ic_add"
-            android:insetTop="10dp"
-            android:insetBottom="10dp" />
+            android:insetTop="6dp"
+            android:insetBottom="6dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMessage"
@@ -123,8 +188,10 @@
             app:icon="@drawable/ic_arrow_back"
             app:iconTint="#5A00FF"
             android:text="Message"
-            android:insetTop="10dp"
-            android:insetBottom="10dp" />
+            android:textAllCaps="false"
+            app:cornerRadius="12dp"
+            android:insetTop="6dp"
+            android:insetBottom="6dp" />
     </LinearLayout>
 
     <!-- Row 2: Final Entrants + Winners + Run Lottery (YOURS) -->
@@ -182,7 +249,7 @@
     <!-- Tabs (now below lotteryRow) -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:tabIndicatorFullWidth="false"
         app:tabIndicatorColor="#5669FF"
@@ -194,12 +261,10 @@
 
     <View
         android:id="@+id/divider"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E5E5E5"
-        app:layout_constraintTop_toBottomOf="@id/tabLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
     <!-- ViewPager2 -->
     <androidx.viewpager2.widget.ViewPager2
