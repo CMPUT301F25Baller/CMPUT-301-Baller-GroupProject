@@ -107,19 +107,26 @@ public class DetailsActivity extends AppCompatActivity {
         binding.tvDescription.setText(mEvent.getDescription());
         binding.tvDate.setText(mEvent.getDate() + " at " + mEvent.getTime());
         binding.tvLocation.setText(mEvent.getLocationName());
-        DocumentReference userRef = db.collection("users").document(mEvent.getOrganizerId());
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                organizerProfile = documentSnapshot.toObject(UserProfile.class);
-            }
-            if (organizerProfile != null) {
-                binding.tvOrganizerName.setText(organizerProfile.getName());
-            } else if (mEvent.getOrganizer() != null) {
-                binding.tvOrganizerName.setText(mEvent.getOrganizer());
-            } else {
-                binding.tvOrganizerName.setText("Unknown Organizer");
-            }
-        });
+        if (mEvent.getOrganizerId() != null){
+            DocumentReference userRef = db.collection("users").document(mEvent.getOrganizerId());
+            userRef.get().addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    organizerProfile = documentSnapshot.toObject(UserProfile.class);
+                }
+                if (organizerProfile != null) {
+                    binding.tvOrganizerName.setText(organizerProfile.getName());
+                    Glide.with(this)
+                            .load(organizerProfile.getProfilePictureUrl())
+                            .placeholder(R.drawable.placeholder_avatar1)
+                            .into(binding.ivOrganizerAvatar);
+                } else if (mEvent.getOrganizer() != null) {
+                    binding.tvOrganizerName.setText(mEvent.getOrganizer());
+                } else {
+                    binding.tvOrganizerName.setText("Unknown Organizer");
+                }
+            });
+        }
+
 
         Glide.with(this)
                 .load(mEvent.getEventPosterUrl())
