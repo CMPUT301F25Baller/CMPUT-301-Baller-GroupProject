@@ -14,12 +14,17 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.FieldPath;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity displaying the entrant's profile and event history.
+ * <p>
+ * Updated to use {@link EventHistoryAdapter} which displays the user's status
+ * (e.g. "Waitlisted", "Selected") for each event they have joined.
+ */
 public class ProfileActivity extends AppCompatActivity {
 
     private static final String TAG = "ProfileActivity";
@@ -27,7 +32,9 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private ListenerRegistration userListener;
-    private NearEventAdapter joinedEventsAdapter;
+
+    // CHANGED: Use History Adapter instead of NearEventAdapter
+    private EventHistoryAdapter historyAdapter;
     private String currentUserId;
 
     @Override
@@ -51,19 +58,16 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupButtons() {
-        // Back Button
         if (binding.btnBackProfile != null) {
             binding.btnBackProfile.setOnClickListener(v -> finish());
         }
 
-        // Edit Button
         if (binding.btnEditProfile != null) {
             binding.btnEditProfile.setOnClickListener(v ->
                     startActivity(new Intent(this, EditProfileActivity.class))
             );
         }
 
-        // Logout Button
         binding.btnLogout.setOnClickListener(v -> {
             auth.signOut();
             Intent intent = new Intent(this, LoginActivity.class);
@@ -74,14 +78,16 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        joinedEventsAdapter = new NearEventAdapter(event -> {
+        // Initialize History Adapter
+        // We pass currentUserId so the adapter can check if we are Selected/Waitlisted/etc.
+        historyAdapter = new EventHistoryAdapter(currentUserId, event -> {
             Intent intent = new Intent(this, DetailsActivity.class);
             intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
             startActivity(intent);
         });
 
         binding.rvJoinedEvents.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvJoinedEvents.setAdapter(joinedEventsAdapter);
+        binding.rvJoinedEvents.setAdapter(historyAdapter);
     }
 
     private void setupRealtimeProfileListener() {
@@ -129,20 +135,27 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void loadJoinedEvents(List<String> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
-            joinedEventsAdapter.submitList(new ArrayList<>());
+            historyAdapter.submitList(new ArrayList<>());
             return;
         }
 
         // Firestore 'in' query supports max 10 items.
-        // For production apps, you'd batch this or structure data differently.
+        // For production apps, batching logic would go here.
         List<String> subset = eventIds.subList(0, Math.min(eventIds.size(), 10));
 
         db.collection("events")
                 .whereIn(FieldPath.documentId(), subset)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Event> joinedEvents = queryDocumentSnapshots.toObjects(Event.class);
-                    joinedEventsAdapter.submitList(joinedEvents);
+                    List<Event> joinedEvents = new ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                        Event event = doc.toObject(Event.class);
+                        if (event != null) {
+                            event.setId(doc.getId());
+                            joinedEvents.add(event);
+                        }
+                    }
+                    historyAdapter.submitList(joinedEvents);
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error loading joined events", e));
     }

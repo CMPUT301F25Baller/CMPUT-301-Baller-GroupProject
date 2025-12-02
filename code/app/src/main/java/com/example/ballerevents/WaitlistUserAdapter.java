@@ -1,6 +1,5 @@
 package com.example.ballerevents;
 
-import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,39 +18,40 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * RecyclerView adapter displaying a list of {@link UserProfile} entries.
- * <p>
- * Updated Features:
- * <ul>
- * <li>Multi-selection via Checkboxes.</li>
- * <li>Tracks selected User IDs internally.</li>
- * </ul>
+ * Adapter for displaying a list of {@link UserProfile} entries.
+ * Features:
+ * - Multi-selection via Checkboxes.
+ * - Row click listener for detailed actions (Dialog).
  */
 public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapter.ViewHolder> {
 
-    /** Interface to notify the Activity when the selection count changes. */
+    // --- INTERFACES ---
+    public interface OnItemClickListener {
+        void onItemClick(UserProfile user);
+    }
+
     public interface OnSelectionChangeListener {
         void onSelectionChanged(int count);
     }
 
+    // --- FIELDS ---
     private final List<UserProfile> users;
-    private final Context context;
     private final OnSelectionChangeListener selectionListener;
 
-    // Tracks the IDs of currently selected users
+    // Member variable for row click listener
+    private OnItemClickListener itemClickListener;
+
     private final Set<String> selectedUserIds = new HashSet<>();
 
-    /**
-     * Constructor for the adapter.
-     *
-     * @param users             List of UserProfile objects to display.
-     * @param context           Context for Glide and layout inflation.
-     * @param selectionListener Callback for when selection count updates.
-     */
-    public WaitlistUserAdapter(List<UserProfile> users, Context context, OnSelectionChangeListener selectionListener) {
+    // --- CONSTRUCTOR ---
+    public WaitlistUserAdapter(List<UserProfile> users, OnSelectionChangeListener selectionListener) {
         this.users = users;
-        this.context = context;
         this.selectionListener = selectionListener;
+    }
+
+    // --- SETTER FOR ROW CLICK LISTENER (Fixes the compilation error) ---
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.itemClickListener = listener;
     }
 
     @NonNull
@@ -65,30 +65,35 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         UserProfile user = users.get(position);
-        String uid = user.getUid(); // Uses the alias method we added to UserProfile
+        String uid = user.getUid();
 
         holder.tvName.setText(user.getName());
         holder.tvEmail.setText(user.getEmail());
 
-        Glide.with(context)
+        // Use Glide to load image
+        Glide.with(holder.itemView.getContext())
                 .load(user.getProfilePictureUrl())
                 .placeholder(R.drawable.placeholder_avatar1)
                 .error(R.drawable.placeholder_avatar1)
                 .circleCrop()
                 .into(holder.ivAvatar);
 
-        // Set Checkbox state based on internal Set
+        // Set Checkbox state without triggering listener
+        holder.cbSelect.setOnCheckedChangeListener(null);
         holder.cbSelect.setChecked(selectedUserIds.contains(uid));
 
-        // Handle Row Click -> Toggle Selection
-        holder.itemView.setOnClickListener(v -> {
-            if (uid != null) {
-                toggleSelection(uid);
-                notifyItemChanged(holder.getAdapterPosition()); // Refresh UI for this row
+        // Logic 1: Clicking the Checkbox ONLY toggles selection
+        holder.cbSelect.setOnClickListener(v -> {
+            toggleSelection(uid);
+            if (selectionListener != null) {
+                selectionListener.onSelectionChanged(selectedUserIds.size());
+            }
+        });
 
-                if (selectionListener != null) {
-                    selectionListener.onSelectionChanged(selectedUserIds.size());
-                }
+        // Logic 2: Clicking the ROW opens the Options Dialog (Cancel/Message)
+        holder.itemView.setOnClickListener(v -> {
+            if (itemClickListener != null) {
+                itemClickListener.onItemClick(user);
             }
         });
     }
@@ -98,10 +103,6 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         return users.size();
     }
 
-    /**
-     * Toggles the selection state of a user ID.
-     * @param uid The user ID to toggle.
-     */
     private void toggleSelection(String uid) {
         if (selectedUserIds.contains(uid)) {
             selectedUserIds.remove(uid);
@@ -110,9 +111,6 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         }
     }
 
-    /**
-     * @return A list of the full UserProfile objects that are currently selected.
-     */
     public List<UserProfile> getSelectedUsers() {
         List<UserProfile> selectedProfiles = new ArrayList<>();
         for (UserProfile user : users) {
@@ -123,16 +121,12 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         return selectedProfiles;
     }
 
-    /**
-     * Clears all selections and updates the UI.
-     */
     public void clearSelection() {
         selectedUserIds.clear();
         notifyDataSetChanged();
         if (selectionListener != null) selectionListener.onSelectionChanged(0);
     }
 
-    /** ViewHolder class for cacheing view references. */
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivAvatar;
         TextView tvName;

@@ -1,296 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
-    tools:context=".EntrantMainActivity">
+    android:background="#FFFFFF">
 
-    <androidx.core.widget.NestedScrollView
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingBottom="80dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent">
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        app:elevation="0dp">
 
-        <!-- This LinearLayout is the main container -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Top Bar: Menu and Notifications -->
             <RelativeLayout
-                android:id="@+id/top_bar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
 
                 <ImageButton
-                    android:id="@+id/btn_menu"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_menu"
+                    android:id="@+id/btnMenu"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Menu" />
+                    android:src="@drawable/ic_menu"
+                    app:tint="@android:color/black"
+                    android:contentDescription="Menu"/>
 
                 <ImageButton
-                    android:id="@+id/btn_notifications"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_bell"
+                    android:id="@+id/btnNotifications"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:layout_alignParentEnd="true"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Notifications" />
+                    android:src="@drawable/ic_notifications"
+                    app:tint="@android:color/black"
+                    android:contentDescription="Notifications"/>
             </RelativeLayout>
 
-            <!-- Header Text -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Find"
-                android:textSize="32sp"
+                android:text="Find\nTrending Events"
+                android:textSize="28sp"
+                android:textStyle="bold"
                 android:textColor="@android:color/black"
-                android:fontFamily="sans-serif-medium"
-                android:layout_marginTop="16dp"/>
+                android:lineSpacingExtra="4dp"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Trending Events"
-                android:textSize="34sp"
-                android:textColor="#8A2BE2"
-                android:fontFamily="sans-serif-bold"/>
-
-            <!-- Search Bar -->
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp">
-
-                <EditText
-                    android:id="@+id/et_search"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:hint="Search event.."
-                    android:background="@drawable/search_bar_background"
-                    android:paddingStart="48dp"
-                    android:paddingEnd="16dp"
-                    android:layout_toStartOf="@id/btn_filter"
-                    android:layout_marginEnd="8dp"/>
+                android:layout_height="50dp"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_search_bar"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp">
 
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/ic_search"
-                    android:layout_alignStart="@id/et_search"
-                    android:layout_centerVertical="true"
+                    app:tint="#9E9E9E"/>
+
+                <EditText
+                    android:id="@+id/etSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
                     android:layout_marginStart="12dp"
-                    app:tint="#888" />
+                    android:background="@null"
+                    android:hint="Search event.."
+                    android:textColor="@android:color/black"
+                    android:textSize="16sp"/>
+            </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/btn_filter"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
-                    android:src="@drawable/ic_filter"
-                    android:background="@drawable/filter_button_background"
-                    android:layout_alignParentEnd="true"
-                    android:contentDescription="Filter" />
-            </RelativeLayout>
-
-            <!-- Filter Chips -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:layout_marginTop="16dp">
+                android:layout_marginTop="16dp"
+                android:scrollbars="none">
 
-                <com.google.android.material.chip.ChipGroup
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:singleLine="true">
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFilterDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="40dp"
+                        android:text="Date"
+                        android:backgroundTint="#F0F0F0"
+                        android:textColor="#5A00FF"
+                        app:icon="@drawable/ic_calendar"
+                        app:iconTint="#5A00FF"
+                        android:layout_marginEnd="8dp"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"/>
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_music"
+                        android:id="@+id/chipMusic"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Music Concert"
-                        app:chipBackgroundColor="#E6E0FF"
-                        android:textColor="#8A2BE2"
-                        android:checkable="true"
-                        style="@style/Widget.MaterialComponents.Chip.Filter" />
+                        android:layout_marginEnd="8dp"/>
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_exhibition"
+                        android:id="@+id/chipExhibition"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Exhibition"
-                        app:chipBackgroundColor="#FFF8E1"
-                        android:textColor="#FFA000"
-                        android:checkable="true"
-                        style="@style/Widget.MaterialComponents.Chip.Filter" />
+                        android:layout_marginEnd="8dp"/>
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_stand_up"
+                        android:id="@+id/chipStandUp"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Stand Up Show"
-                        app:chipBackgroundColor="#FFE0E6"
-                        android:textColor="#D81B60"
-                        android:checkable="true"
-                        style="@style/Widget.MaterialComponents.Chip.Filter" />
+                        android:layout_marginEnd="8dp"/>
 
                     <com.google.android.material.chip.Chip
-                        android:id="@+id/chip_theater"
+                        android:id="@+id/chipTheater"
+                        style="@style/Widget.MaterialComponents.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Theater"
-                        app:chipBackgroundColor="#E0F7FA"
-                        android:textColor="#00838F"
-                        android:checkable="true"
-                        style="@style/Widget.MaterialComponents.Chip.Filter" />
-
-                </com.google.android.material.chip.ChipGroup>
+                        android:text="Theater"/>
+                </LinearLayout>
             </HorizontalScrollView>
 
-            <!-- This layout will be hidden when searching -->
+        </LinearLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="80dp">
+
             <LinearLayout
-                android:id="@+id/original_content_layout"
+                android:id="@+id/originalContentLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:visibility="visible">
 
-                <!-- Trending Events Section -->
-                <RelativeLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp">
-
+                    android:paddingHorizontal="16dp"
+                    android:layout_marginBottom="12dp">
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:text="Trending Events"
-                        android:textSize="20sp"
-                        android:textColor="@android:color/black"
-                        android:fontFamily="sans-serif-bold"/>
-
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="See all"
-                        android:textSize="16sp"
-                        android:textColor="#8A2BE2"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"/>
-                </RelativeLayout>
+                        android:textColor="#5A00FF"/>
+                </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_trending"
+                    android:id="@+id/rvTrending"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="16dp"
                     android:clipToPadding="false"
-                    tools:listitem="@layout/item_event_trending"
-                    tools:itemCount="2" />
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:layout_marginBottom="24dp"/>
 
-                <!-- Events Near You Section -->
-                <RelativeLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp">
-
+                    android:paddingHorizontal="16dp"
+                    android:layout_marginBottom="12dp">
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:text="Events Near You"
-                        android:textSize="20sp"
-                        android:textColor="@android:color/black"
-                        android:fontFamily="sans-serif-bold"/>
-
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/black"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="See all"
-                        android:textSize="16sp"
-                        android:textColor="#8A2BE2"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"/>
-                </RelativeLayout>
+                        android:textColor="#5A00FF"/>
+                </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_near_you"
+                    android:id="@+id/rvNearYou"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="16dp"
                     android:clipToPadding="false"
-                    tools:listitem="@layout/item_event_near"
-                    tools:itemCount="2"/>
-
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"/>
             </LinearLayout>
 
-            <!-- This layout will be SHOWN when searching -->
             <LinearLayout
-                android:id="@+id/search_results_layout"
+                android:id="@+id/searchResultsLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone"
-                tools:visibility="visible"> <!-- 'tools:visibility' lets you see it in the preview -->
+                android:paddingHorizontal="16dp">
 
                 <TextView
+                    android:id="@+id/tvNoResults"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Search Results"
-                    android:textSize="20sp"
-                    android:textColor="@android:color/black"
-                    android:fontFamily="sans-serif-bold"/>
+                    android:text="No events found."
+                    android:layout_gravity="center"
+                    android:layout_marginTop="32dp"
+                    android:visibility="gone"/>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_search_results"
+                    android:id="@+id/rvSearchResults"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:clipToPadding="false"
-                    tools:listitem="@layout/item_event_trending"
-                    tools:itemCount="1" />
-
-                <TextView
-                    android:id="@+id/tv_no_results"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="No results found."
-                    android:textSize="16sp"
-                    android:textColor="@android:color/darker_gray"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="32dp"
-                    android:visibility="gone"
-                    tools:visibility="visible"/>
-
+                    android:layout_height="wrap_content"/>
             </LinearLayout>
 
         </LinearLayout>
-
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Floating QR Code Button -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_qr"
+        android:id="@+id/fabQr"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
         android:src="@drawable/ic_qr_code"
         app:backgroundTint="#5A00FF"
         app:tint="@android:color/white"
-        app:shapeAppearanceOverlay="@style/FabCutoutShape"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="16dp"
-        android:contentDescription="QR Scanner" />
+        android:contentDescription="Scan QR"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,7 +1,10 @@
 package com.example.ballerevents;
 
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupMenu;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
@@ -10,51 +13,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemAdminProfileBinding;
 
-/**
- * RecyclerView adapter used by the Admin to display a list of user
- * profiles within {@link AdminProfilesActivity}. Each row displays:
- * <ul>
- *     <li>User name</li>
- *     <li>User email</li>
- *     <li>User avatar (loaded using Glide)</li>
- * </ul>
- *
- * <p>The adapter exposes a {@link OnProfileClickListener} callback so that
- * clicking a row allows the admin to initiate actions such as viewing
- * details or deleting the user.
- *
- * <p>This adapter uses {@link ListAdapter} with a {@link DiffUtil.ItemCallback}
- * for efficient, animated list updates when Firestore data changes.
- */
+import java.util.Locale;
+
 public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfilesAdapter.VH> {
 
-    /**
-     * Listener interface for handling row-click events on a user profile.
-     */
-    public interface OnProfileClickListener {
-        /**
-         * Called when the admin taps a profile row.
-         *
-         * @param profile The selected {@link UserProfile}.
-         */
+    public interface OnProfileActionListener {
         void onProfileClick(UserProfile profile);
+        default void onDelete(UserProfile profile) {}
     }
 
-    private final OnProfileClickListener clickListener;
+    private final OnProfileActionListener listener;
 
-    /**
-     * Creates the adapter with a click listener to notify when a profile is tapped.
-     *
-     * @param clickListener callback invoked on profile click
-     */
-    public AdminProfilesAdapter(OnProfileClickListener clickListener) {
+    public AdminProfilesAdapter(OnProfileActionListener listener) {
         super(ProfileDiffCallback);
-        this.clickListener = clickListener;
+        this.listener = listener;
     }
 
-    /**
-     * ViewHolder that binds a single profile row using ViewBinding.
-     */
     static class VH extends RecyclerView.ViewHolder {
         final ItemAdminProfileBinding b;
 
@@ -63,16 +37,17 @@ public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfiles
             this.b = b;
         }
 
-        /**
-         * Binds the given {@link UserProfile} to the row UI elements.
-         * Loads the avatar using Glide and forwards click events.
-         *
-         * @param p        the user profile to bind
-         * @param listener click listener for row selection
-         */
-        void bind(UserProfile p, OnProfileClickListener listener) {
+        void bind(UserProfile p, OnProfileActionListener listener) {
             b.tvName.setText(p.getName());
             b.tvEmail.setText(p.getEmail());
+
+            String role = p.getRole();
+            if (role != null && !role.isEmpty()) {
+                String displayRole = role.substring(0, 1).toUpperCase(Locale.ROOT) + role.substring(1);
+                b.tvRole.setText(displayRole);
+            } else {
+                b.tvRole.setText("Entrant");
+            }
 
             Glide.with(itemView.getContext())
                     .load(p.getProfilePictureUrl())
@@ -81,6 +56,21 @@ public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfiles
                     .into(b.ivAvatar);
 
             itemView.setOnClickListener(v -> listener.onProfileClick(p));
+
+            b.ivMenu.setOnClickListener(v -> {
+                PopupMenu popup = new PopupMenu(v.getContext(), v);
+                // --- FIX: Use correct menu resource for Profiles ---
+                popup.inflate(R.menu.menu_admin_profile_row);
+
+                popup.setOnMenuItemClickListener(item -> {
+                    if (item.getItemId() == R.id.action_delete) {
+                        listener.onDelete(p);
+                        return true;
+                    }
+                    return false;
+                });
+                popup.show();
+            });
         }
     }
 
@@ -95,26 +85,18 @@ public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfiles
     @Override
     public void onBindViewHolder(@NonNull VH holder, int pos) {
         UserProfile p = getItem(pos);
-        if (p != null) {
-            holder.bind(p, clickListener);
-        }
+        if (p != null) holder.bind(p, listener);
     }
 
-    /**
-     * DiffUtil callback used to efficiently compute changes in the list.
-     * Compares user IDs to determine whether items or their contents match.
-     */
     private static final DiffUtil.ItemCallback<UserProfile> ProfileDiffCallback =
             new DiffUtil.ItemCallback<UserProfile>() {
                 @Override
-                public boolean areItemsTheSame(@NonNull UserProfile oldItem, @NonNull UserProfile newItem) {
-                    return oldItem.getId().equals(newItem.getId());
+                public boolean areItemsTheSame(@NonNull UserProfile old, @NonNull UserProfile newItem) {
+                    return old.getId().equals(newItem.getId());
                 }
-
                 @Override
-                public boolean areContentsTheSame(@NonNull UserProfile oldItem, @NonNull UserProfile newItem) {
-                    // Since IDs uniquely map to Firestore docs, equality on ID is enough for contents
-                    return oldItem.getId().equals(newItem.getId());
+                public boolean areContentsTheSame(@NonNull UserProfile old, @NonNull UserProfile newItem) {
+                    return old.getId().equals(newItem.getId());
                 }
             };
 }

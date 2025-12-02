@@ -8,7 +8,6 @@
     android:orientation="vertical"
     android:background="@android:color/white">
 
-    <!-- HEADER: Back, Title, Export -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
@@ -44,12 +43,19 @@
             android:layout_height="48dp"
             android:src="@android:drawable/ic_menu_save"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Export Accepted to CSV"
-            app:tint="@android:color/black"
-            android:tooltipText="Export CSV"/>
+            android:contentDescription="Export CSV"
+            app:tint="@android:color/black"/>
+
+        <ImageButton
+            android:id="@+id/btnFilter"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Filter Views"
+            app:tint="@android:color/black"/>
     </LinearLayout>
 
-    <!-- STATS BAR -->
     <TextView
         android:id="@+id/tvCapacityInfo"
         android:layout_width="match_parent"
@@ -61,18 +67,6 @@
         android:textColor="#666666"
         android:textSize="12sp"/>
 
-    <!-- TABS: Waitlist | Invited | Accepted | Declined -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        app:tabMode="fixed"
-        app:tabIndicatorColor="#6200EE"
-        app:tabSelectedTextColor="#6200EE"
-        app:tabTextAppearance="@style/TextAppearance.AppCompat.Caption"/>
-
-    <!-- MAIN CONTENT AREA -->
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -85,17 +79,15 @@
             android:padding="8dp"
             android:clipToPadding="false"/>
 
-        <!-- Empty State View -->
         <TextView
             android:id="@+id/tvEmpty"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="No users in this list."
+            android:text="List is empty."
             android:textColor="#999999"
             android:visibility="gone"/>
 
-        <!-- Progress Indicator -->
         <ProgressBar
             android:id="@+id/progressBar"
             android:layout_width="wrap_content"
@@ -104,7 +96,6 @@
             android:visibility="gone"/>
     </FrameLayout>
 
-    <!-- BOTTOM ACTION AREA -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -114,19 +105,6 @@
         android:elevation="16dp"
         android:outlineProvider="background">
 
-        <!-- Remove Button (Hidden by default, shown only on Waitlist tab) -->
-        <Button
-            android:id="@+id/btnRemove"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Remove Selected"
-            android:backgroundTint="#D32F2F"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp"
-            android:visibility="gone"/>
-
-        <!-- Notify Button -->
         <Button
             android:id="@+id/btnNotifyAll"
             android:layout_width="match_parent"
@@ -137,7 +115,6 @@
             android:textStyle="bold"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Action Row: Lottery & QR -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -2,6 +2,7 @@ package com.example.ballerevents;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -11,6 +12,7 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -19,7 +21,6 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityOrganizerWaitlistBinding;
-import com.google.android.material.tabs.TabLayout;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -41,13 +42,17 @@ import java.util.Map;
 
 /**
  * Activity for Organizers to manage the waitlist for a specific event.
+ * Allows viewing entrants, drawing lottery winners, and sending notifications.
  */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "EXTRA_EVENT_ID";
-
     private static final String TAG = "OrganizerWaitlistActivity";
     private static final int REQUEST_STORAGE_PERMISSION = 100;
+
+    private enum ViewMode {
+        WAITLIST, SELECTED, CANCELLED, ENROLLED
+    }
 
     private ActivityOrganizerWaitlistBinding binding;
     private FirebaseFirestore db;
@@ -55,11 +60,9 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     private Event currentEvent;
     private ListenerRegistration eventListener;
 
-    private WaitlistUserAdapter waitlistAdapter;
+    private WaitlistUserAdapter listAdapter;
     private final List<UserProfile> displayedProfiles = new ArrayList<>();
-
-    // 0 = Waitlist, 1 = Invited (Pending), 2 = Accepted, 3 = Declined
-    private int currentTabPosition = 0;
+    private ViewMode currentMode = ViewMode.WAITLIST;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,7 +79,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             return;
         }
 
-        setupTabs();
         setupRecyclerView();
         setupButtons();
         requestStoragePermission();
@@ -91,11 +93,12 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (eventListener != null) {
-            eventListener.remove();
-        }
+        if (eventListener != null) eventListener.remove();
     }
 
+    /**
+     * Requests storage permissions for saving QR codes (Android 6.0 to 9.0).
+     */
     private void requestStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -108,122 +111,69 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_STORAGE_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Storage permission granted", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
     /**
-     * Sets up the tabs for filtering the user lists.
-     * Assumes a TabLayout with id 'tabLayout' exists in the binding.
+     * Initializes the RecyclerView and its adapter.
      */
-    private void setupTabs() {
-        if (binding.tabLayout != null) {
-            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Waitlist"));
-            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Invited"));
-            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Accepted"));
-            binding.tabLayout.addTab(binding.tabLayout.newTab().setText("Declined"));
-
-            binding.tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
-                @Override
-                public void onTabSelected(TabLayout.Tab tab) {
-                    currentTabPosition = tab.getPosition();
-                    waitlistAdapter.clearSelection(); // Clear checkboxes when switching tabs
-                    fetchProfilesForCurrentTab();
-                    updateUIForTabState();
-                }
-
-                @Override
-                public void onTabUnselected(TabLayout.Tab tab) {}
-                @Override
-                public void onTabReselected(TabLayout.Tab tab) {}
-            });
-        }
-    }
-
     private void setupRecyclerView() {
         binding.rvWaitlist.setLayoutManager(new LinearLayoutManager(this));
-        waitlistAdapter = new WaitlistUserAdapter(displayedProfiles, this, count -> updateUIBasedOnSelection(count));
-        binding.rvWaitlist.setAdapter(waitlistAdapter);
+
+        // Initialize Adapter (2 arguments: List + Listener)
+        listAdapter = new WaitlistUserAdapter(displayedProfiles, count -> updateUIBasedOnSelection(count));
+
+        // Set Item Click Listener
+        listAdapter.setOnItemClickListener(this::showUserOptions);
+
+        binding.rvWaitlist.setAdapter(listAdapter);
     }
 
     /**
-     * Updates visibility of buttons based on which tab is active.
-     * e.g., "Remove" should only be available on the Waitlist tab.
+     * Updates the UI buttons and text based on how many items are selected.
+     * @param selectedCount Number of currently selected items.
      */
-    private void updateUIForTabState() {
-        if (binding.btnRemove != null) {
-            // Only show Remove button if we are on the Waitlist tab (index 0)
-            binding.btnRemove.setVisibility(currentTabPosition == 0 ? View.VISIBLE : View.GONE);
-        }
-
-        // Hide Lottery button if not on Waitlist tab
-        binding.btnDrawLottery.setVisibility(currentTabPosition == 0 ? View.VISIBLE : View.GONE);
-    }
-
     private void updateUIBasedOnSelection(int selectedCount) {
-        // 1. Update Notification Button
+        String modeName = getModeName(currentMode);
         if (selectedCount > 0) {
             binding.btnNotifyAll.setText("Notify Selected (" + selectedCount + ")");
             binding.btnNotifyAll.setBackgroundColor(getColor(R.color.purple_500));
         } else {
-            // Contextual text based on tab
-            String targetText = "All";
-            switch(currentTabPosition) {
-                case 0: targetText = "Waitlist"; break;
-                case 1: targetText = "Invited"; break;
-                case 2: targetText = "Accepted"; break;
-                case 3: targetText = "Declined"; break;
-            }
-            binding.btnNotifyAll.setText("Notify " + targetText);
-            binding.btnNotifyAll.setBackgroundColor(0xFFFF9800); // Orange
+            binding.btnNotifyAll.setText("Notify All " + modeName);
+            binding.btnNotifyAll.setBackgroundColor(0xFFFF9800);
         }
 
-        // 2. Update Remove Button Text
-        if (binding.btnRemove != null) {
-            if (selectedCount > 0) {
-                binding.btnRemove.setEnabled(true);
-                binding.btnRemove.setText("Remove Selected (" + selectedCount + ")");
-            } else {
-                binding.btnRemove.setEnabled(false);
-                binding.btnRemove.setText("Remove Selected");
-            }
-        }
-
-        // 3. Update Header Stats
         if (currentEvent != null) {
             int max = currentEvent.getMaxAttendees();
             int waiting = (currentEvent.getWaitlistUserIds() != null) ? currentEvent.getWaitlistUserIds().size() : 0;
-            binding.tvCapacityInfo.setText(String.format("Capacity: %d | Selected: %d | Waiting: %d", max, selectedCount, waiting));
+            binding.tvCapacityInfo.setText(String.format("Capacity: %d | Checked: %d | Waiting: %d", max, selectedCount, waiting));
         }
     }
 
+    private String getModeName(ViewMode mode) {
+        switch (mode) {
+            case SELECTED: return "Selected";
+            case CANCELLED: return "Cancelled";
+            case ENROLLED: return "Enrolled";
+            default: return "Waitlist";
+        }
+    }
+
+    /**
+     * Sets up click listeners for all interactive buttons.
+     */
     private void setupButtons() {
         binding.btnDrawLottery.setOnClickListener(v -> handleDrawClick());
         binding.btnGenerateQr.setOnClickListener(v -> generateAndSaveQRCode());
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnExportCsv.setOnClickListener(v -> exportAcceptedEntrantsToCsv());
+        binding.btnFilter.setOnClickListener(this::showFilterMenu);
 
-        // Remove Button Logic
-        if (binding.btnRemove != null) {
-            binding.btnRemove.setOnClickListener(v -> handleRemoveEntrants());
-        }
-
-        // Notify Logic
         binding.btnNotifyAll.setOnClickListener(v -> {
-            List<UserProfile> selectedUsers = waitlistAdapter.getSelectedUsers();
+            List<UserProfile> selectedUsers = listAdapter.getSelectedUsers();
             if (selectedUsers.isEmpty()) {
                 if (displayedProfiles.isEmpty()) {
                     Toast.makeText(this, "List is empty.", Toast.LENGTH_SHORT).show();
                     return;
                 }
-                String targetGroup = "All Displayed Users";
-                promptForNotification(displayedProfiles, targetGroup);
+                promptForNotification(displayedProfiles, "All " + getModeName(currentMode));
             } else {
                 promptForNotification(selectedUsers, "Selected (" + selectedUsers.size() + ")");
             }
@@ -231,175 +181,177 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     }
 
     /**
-     * Removes selected users from the waitlist entirely.
-     * Only valid on the Waitlist tab.
+     * Displays a popup menu to filter the user list by status.
+     * @param v The view to anchor the popup to.
      */
-    private void handleRemoveEntrants() {
-        if (currentTabPosition != 0) return; // Safety check
+    private void showFilterMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenu().add(0, 0, 0, "Show Waitlist");
+        popup.getMenu().add(0, 1, 1, "Show Selected (Invited)");
+        popup.getMenu().add(0, 2, 2, "Show Cancelled");
+        popup.getMenu().add(0, 3, 3, "Show Enrolled (Accepted)");
 
-        List<UserProfile> selectedUsers = waitlistAdapter.getSelectedUsers();
-        if (selectedUsers.isEmpty()) {
-            Toast.makeText(this, "No users selected to remove", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        popup.getMenu().add(1, 4, 4, "View Entrant Map 🗺️");
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 0: currentMode = ViewMode.WAITLIST; break;
+                case 1: currentMode = ViewMode.SELECTED; break;
+                case 2: currentMode = ViewMode.CANCELLED; break;
+                case 3: currentMode = ViewMode.ENROLLED; break;
+                case 4:
+                    Intent intent = new Intent(this, OrganizerMapActivity.class);
+                    intent.putExtra(OrganizerMapActivity.EXTRA_EVENT_ID, eventId);
+                    startActivity(intent);
+                    return true;
+            }
+            binding.tvTitle.setText(getModeName(currentMode));
+            binding.btnDrawLottery.setVisibility(currentMode == ViewMode.WAITLIST ? View.VISIBLE : View.GONE);
+
+            listAdapter.clearSelection();
+            fetchProfilesForCurrentMode();
+            return true;
+        });
+        popup.show();
+    }
+
+    /**
+     * Shows options (Message, Cancel) when a specific user is clicked.
+     * @param user The user profile selected.
+     */
+    private void showUserOptions(UserProfile user) {
+        boolean isCancellable = (currentMode == ViewMode.SELECTED || currentMode == ViewMode.ENROLLED);
+        List<String> options = new ArrayList<>();
+        options.add("Send Message");
+        if (isCancellable) options.add("Cancel Entrant");
 
         new AlertDialog.Builder(this)
-                .setTitle("Remove Entrants?")
-                .setMessage("Are you sure you want to remove " + selectedUsers.size() + " user(s) from the waitlist? This action cannot be undone.")
-                .setPositiveButton("Remove", (dialog, which) -> {
-                    performRemoval(selectedUsers);
+                .setTitle(user.getName())
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    String selection = options.get(which);
+                    if (selection.equals("Send Message")) {
+                        promptForNotification(Collections.singletonList(user), user.getName());
+                    } else if (selection.equals("Cancel Entrant")) {
+                        confirmCancelEntrant(user);
+                    }
                 })
-                .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void performRemoval(List<UserProfile> usersToRemove) {
-        List<String> idsToRemove = new ArrayList<>();
-        for (UserProfile user : usersToRemove) {
-            idsToRemove.add(user.getUid());
-        }
+    private void confirmCancelEntrant(UserProfile user) {
+        new AlertDialog.Builder(this)
+                .setTitle("Cancel Entrant")
+                .setMessage("Remove " + user.getName() + "? This frees a spot.")
+                .setPositiveButton("Yes", (d, w) -> cancelEntrant(user))
+                .setNegativeButton("No", null)
+                .show();
+    }
 
-        binding.progressBar.setVisibility(View.VISIBLE);
+    private void cancelEntrant(UserProfile user) {
+        String uid = user.getUid();
+        if (uid == null) return;
 
-        // Remove these IDs from the 'waitlistUserIds' array in Firestore
-        db.collection("events").document(eventId)
-                .update("waitlistUserIds", FieldValue.arrayRemove(idsToRemove.toArray()))
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Removed successfully", Toast.LENGTH_SHORT).show();
-                    waitlistAdapter.clearSelection();
-                    // The realtime listener will automatically refresh the list
-                })
-                .addOnFailureListener(e -> {
-                    binding.progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Failed to remove: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("selectedUserIds", FieldValue.arrayRemove(uid));
+        updates.put("cancelledUserIds", FieldValue.arrayUnion(uid));
+        updates.put("invitationStatus." + uid, "cancelled");
+
+        db.collection("events").document(eventId).update(updates)
+                .addOnSuccessListener(a -> {
+                    Toast.makeText(this, "Cancelled.", Toast.LENGTH_SHORT).show();
+                    sendCancellationNotification(user);
                 });
     }
 
+    private void sendCancellationNotification(UserProfile user) {
+        DocumentReference notifRef = db.collection("users").document(user.getUid())
+                .collection("notifications").document();
+        Map<String, Object> data = new HashMap<>();
+        data.put("title", "Event Update: " + currentEvent.getTitle());
+        data.put("message", "Your invitation has been cancelled.");
+        data.put("eventId", eventId);
+        data.put("timestamp", new Date());
+        data.put("isRead", false);
+        notifRef.set(data);
+    }
+
+    /**
+     * Exports the list of accepted entrants to a CSV file.
+     */
     private void exportAcceptedEntrantsToCsv() {
-        if (currentEvent == null) {
-            Toast.makeText(this, "Event data not loaded", Toast.LENGTH_SHORT).show();
+        if (currentEvent == null) return;
+        List<String> acceptedIds = new ArrayList<>();
+        if (currentEvent.getInvitationStatus() != null) {
+            for (Map.Entry<String, String> entry : currentEvent.getInvitationStatus().entrySet()) {
+                if ("accepted".equals(entry.getValue())) acceptedIds.add(entry.getKey());
+            }
+        }
+        if (acceptedIds.isEmpty()) {
+            Toast.makeText(this, "No accepted entrants.", Toast.LENGTH_SHORT).show();
             return;
         }
         binding.progressBar.setVisibility(View.VISIBLE);
-
-        List<String> acceptedUserIds = new ArrayList<>();
-        if (currentEvent.getInvitationStatus() != null) {
-            for (Map.Entry<String, String> entry : currentEvent.getInvitationStatus().entrySet()) {
-                if ("accepted".equals(entry.getValue())) {
-                    acceptedUserIds.add(entry.getKey());
-                }
-            }
-        }
-
-        if (acceptedUserIds.isEmpty()) {
-            binding.progressBar.setVisibility(View.GONE);
-            Toast.makeText(this, "No accepted entrants to export", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int batchSize = Math.min(acceptedUserIds.size(), 10);
-        List<String> batchIds = acceptedUserIds.subList(0, batchSize);
-
         db.collection("users")
-                .whereIn(FieldPath.documentId(), batchIds)
+                .whereIn(FieldPath.documentId(), acceptedIds.subList(0, Math.min(acceptedIds.size(), 10)))
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<UserProfile> acceptedProfiles = new ArrayList<>();
-                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                        UserProfile profile = doc.toObject(UserProfile.class);
-                        if (profile != null) {
-                            profile.setUid(doc.getId());
-                            acceptedProfiles.add(profile);
+                .addOnSuccessListener(snap -> {
+                    List<UserProfile> profiles = snap.toObjects(UserProfile.class);
+                    CsvExportHelper.exportAcceptedEntrants(this, currentEvent.getTitle(), profiles, new CsvExportHelper.ExportCallback() {
+                        @Override public void onSuccess(String path) {
+                            Toast.makeText(OrganizerWaitlistActivity.this, "Saved: " + path, Toast.LENGTH_LONG).show();
+                            binding.progressBar.setVisibility(View.GONE);
                         }
-                    }
-                    binding.progressBar.setVisibility(View.GONE);
-
-                    if (acceptedProfiles.isEmpty()) {
-                        Toast.makeText(this, "No profiles found", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    CsvExportHelper.exportAcceptedEntrants(
-                            this,
-                            currentEvent.getTitle(),
-                            acceptedProfiles,
-                            new CsvExportHelper.ExportCallback() {
-                                @Override
-                                public void onSuccess(String filePath) {
-                                    Toast.makeText(OrganizerWaitlistActivity.this, "CSV exported: " + filePath, Toast.LENGTH_LONG).show();
-                                }
-                                @Override
-                                public void onFailure(Exception error) {
-                                    Toast.makeText(OrganizerWaitlistActivity.this, "Export failed", Toast.LENGTH_LONG).show();
-                                }
-                            }
-                    );
-                })
-                .addOnFailureListener(e -> {
-                    binding.progressBar.setVisibility(View.GONE);
-                    Log.e(TAG, "Error fetching accepted", e);
+                        @Override public void onFailure(Exception e) {
+                            Toast.makeText(OrganizerWaitlistActivity.this, "Failed.", Toast.LENGTH_SHORT).show();
+                            binding.progressBar.setVisibility(View.GONE);
+                        }
+                    });
                 });
     }
 
     private void promptForNotification(List<UserProfile> targets, String titleSuffix) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Notify " + titleSuffix);
-
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setHint("Enter notification message...");
         builder.setView(input);
-
-        builder.setPositiveButton("Send", (dialog, which) -> {
-            String message = input.getText().toString().trim();
-            if (!message.isEmpty()) {
-                sendBatchNotification(targets, message);
-            }
+        builder.setPositiveButton("Send", (d, w) -> {
+            String msg = input.getText().toString().trim();
+            if (!msg.isEmpty()) sendBatchNotification(targets, msg);
         });
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+        builder.setNegativeButton("Cancel", null);
         builder.show();
     }
 
     private void sendBatchNotification(List<UserProfile> targets, String message) {
         WriteBatch batch = db.batch();
         int count = 0;
-
         for (UserProfile user : targets) {
-            String uid = user.getUid();
-            if (uid == null) continue;
-
-            DocumentReference notifRef = db.collection("users").document(uid)
+            if (user.getUid() == null) continue;
+            DocumentReference ref = db.collection("users").document(user.getUid())
                     .collection("notifications").document();
-
-            Map<String, Object> notifData = new HashMap<>();
-            notifData.put("title", "Update: " + currentEvent.getTitle());
-            notifData.put("message", message);
-            notifData.put("eventId", eventId);
-            notifData.put("timestamp", new Date());
-            notifData.put("isRead", false);
-            notifData.put("type", "organizer_message");
-
-            batch.set(notifRef, notifData);
+            Map<String, Object> data = new HashMap<>();
+            data.put("title", "Update: " + currentEvent.getTitle());
+            data.put("message", message);
+            data.put("timestamp", new Date());
+            data.put("isRead", false);
+            batch.set(ref, data);
             count++;
         }
-
-        if (count == 0) return;
-
-        batch.commit()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Notifications Sent!", Toast.LENGTH_SHORT).show();
-                    waitlistAdapter.clearSelection();
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to send.", Toast.LENGTH_SHORT).show());
+        if (count > 0) {
+            batch.commit().addOnSuccessListener(a -> {
+                Toast.makeText(this, "Sent!", Toast.LENGTH_SHORT).show();
+                listAdapter.clearSelection();
+            });
+        }
     }
 
     private void startRealtimeUpdates() {
         binding.progressBar.setVisibility(View.VISIBLE);
-
         eventListener = db.collection("events").document(eventId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
-                        Log.w(TAG, "Listen failed.", e);
+                        Log.w(TAG, "Listen failed", e);
                         binding.progressBar.setVisibility(View.GONE);
                         return;
                     }
@@ -408,76 +360,50 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                         currentEvent = snapshot.toObject(Event.class);
                         if (currentEvent != null) {
                             currentEvent.setId(snapshot.getId());
-                            fetchProfilesForCurrentTab();
+                            fetchProfilesForCurrentMode();
                         }
-                    } else {
-                        binding.progressBar.setVisibility(View.GONE);
                     }
+                    binding.progressBar.setVisibility(View.GONE);
                 });
     }
 
-    /**
-     * Determines which list of User IDs to fetch based on the selected tab
-     * and filters the 'invitationStatus' map.
-     */
-    private void fetchProfilesForCurrentTab() {
+    private void fetchProfilesForCurrentMode() {
         if (currentEvent == null) return;
-
         List<String> targetIds = new ArrayList<>();
-        Map<String, String> statusMap = currentEvent.getInvitationStatus();
-        if (statusMap == null) statusMap = new HashMap<>();
+        Map<String, String> statusMap = currentEvent.getInvitationStatus() != null ? currentEvent.getInvitationStatus() : new HashMap<>();
 
-        switch (currentTabPosition) {
-            case 0: // Waitlist
-                if (currentEvent.getWaitlistUserIds() != null) {
-                    targetIds.addAll(currentEvent.getWaitlistUserIds());
+        switch (currentMode) {
+            case WAITLIST:
+                if (currentEvent.getWaitlistUserIds() != null) targetIds.addAll(currentEvent.getWaitlistUserIds());
+                break;
+            case SELECTED:
+                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
+                    if ("pending".equals(entry.getValue()) || "invited".equals(entry.getValue())) targetIds.add(entry.getKey());
                 }
                 break;
-            case 1: // Invited (Pending)
-                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
-                    if ("pending".equals(entry.getValue()) || "invited".equals(entry.getValue())) {
-                        targetIds.add(entry.getKey());
-                    }
-                }
+            case CANCELLED:
+                if (currentEvent.getCancelledUserIds() != null) targetIds.addAll(currentEvent.getCancelledUserIds());
                 break;
-            case 2: // Accepted
+            case ENROLLED:
                 for (Map.Entry<String, String> entry : statusMap.entrySet()) {
-                    if ("accepted".equals(entry.getValue())) {
-                        targetIds.add(entry.getKey());
-                    }
-                }
-                break;
-            case 3: // Declined
-                for (Map.Entry<String, String> entry : statusMap.entrySet()) {
-                    if ("declined".equals(entry.getValue())) {
-                        targetIds.add(entry.getKey());
-                    }
+                    if ("accepted".equals(entry.getValue())) targetIds.add(entry.getKey());
                 }
                 break;
         }
-
         fetchProfilesByIds(targetIds);
     }
 
-    /**
-     * Helper to fetch full profile objects for a list of IDs.
-     */
     private void fetchProfilesByIds(List<String> ids) {
         if (ids == null || ids.isEmpty()) {
             displayedProfiles.clear();
-            waitlistAdapter.notifyDataSetChanged();
+            listAdapter.notifyDataSetChanged();
             binding.tvEmpty.setVisibility(View.VISIBLE);
             binding.progressBar.setVisibility(View.GONE);
             updateUIBasedOnSelection(0);
             return;
         }
-
-        // Limit to 10 for 'whereIn' query to prevent crash.
-        // In a real app, you would chunk this list into batches of 10.
-        List<String> safeList = ids.subList(0, Math.min(ids.size(), 10));
-
         db.collection("users")
-                .whereIn(FieldPath.documentId(), safeList)
+                .whereIn(FieldPath.documentId(), ids.subList(0, Math.min(ids.size(), 10)))
                 .get()
                 .addOnSuccessListener(snap -> {
                     displayedProfiles.clear();
@@ -488,72 +414,101 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
                             displayedProfiles.add(p);
                         }
                     }
-                    waitlistAdapter.notifyDataSetChanged();
+                    listAdapter.notifyDataSetChanged();
                     binding.tvEmpty.setVisibility(displayedProfiles.isEmpty() ? View.VISIBLE : View.GONE);
                     binding.progressBar.setVisibility(View.GONE);
-
-                    // Reset selection count
                     updateUIBasedOnSelection(0);
                 });
     }
 
+    /**
+     * Prepares and displays the Lottery Draw dialog.
+     * Calculates available spots and allows the user to specify how many to sample.
+     */
     private void handleDrawClick() {
         if (currentEvent == null) return;
         int max = currentEvent.getMaxAttendees();
-        int currentSelected = currentEvent.getSelectedUserIds() != null ? currentEvent.getSelectedUserIds().size() : 0;
-        int spotsAvailable = max - currentSelected;
+        int selected = (currentEvent.getSelectedUserIds() != null) ? currentEvent.getSelectedUserIds().size() : 0;
 
-        if (spotsAvailable <= 0) {
-            Toast.makeText(this, "Event is full!", Toast.LENGTH_LONG).show();
+        // Calculate maximum possible spots to fill
+        int maxSpots = max - selected;
+
+        // Safety check if event is full
+        if (maxSpots <= 0) {
+            Toast.makeText(this, "Event is already at full capacity", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (currentEvent.getWaitlistUserIds() == null || currentEvent.getWaitlistUserIds().isEmpty()) {
-            Toast.makeText(this, "Waitlist is empty.", Toast.LENGTH_SHORT).show();
+
+        // Cap the draw amount at the number of people actually on the waitlist
+        int waitlistSize = (currentEvent.getWaitlistUserIds() != null) ? currentEvent.getWaitlistUserIds().size() : 0;
+        int defaultDrawAmount = Math.min(maxSpots, waitlistSize);
+
+        if (waitlistSize == 0) {
+            Toast.makeText(this, "No one on the waitlist to draw", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // Create Input Field for the Dialog
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setText(String.valueOf(defaultDrawAmount));
+
+        // Show Dialog allowing user to SPECIFY the number (US 02.05.02)
         new AlertDialog.Builder(this)
                 .setTitle("Draw Lottery")
-                .setMessage("Draw " + Math.min(spotsAvailable, currentEvent.getWaitlistUserIds().size()) + " entrants?")
-                .setPositiveButton("Draw", (d, w) -> performLotteryDraw(spotsAvailable))
+                .setMessage("How many entrants to sample? (Max: " + defaultDrawAmount + ")")
+                .setView(input)
+                .setPositiveButton("Draw", (dialog, which) -> {
+                    String text = input.getText().toString();
+                    if (!text.isEmpty()) {
+                        int amount = Integer.parseInt(text);
+                        if (amount > 0 && amount <= defaultDrawAmount) {
+                            performLotteryDraw(amount);
+                        } else {
+                            Toast.makeText(this, "Invalid number entered", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void performLotteryDraw(int spotsToFill) {
+    /**
+     * Executes the lottery logic: shuffles waitlist, picks winners, moves them to selected list,
+     * and sends notifications.
+     * @param spots The number of entrants to sample.
+     */
+    private void performLotteryDraw(int spots) {
+        if (currentEvent.getWaitlistUserIds() == null) return;
+
         List<String> pool = new ArrayList<>(currentEvent.getWaitlistUserIds());
-        List<String> winners = new ArrayList<>();
         Collections.shuffle(pool);
 
-        int count = 0;
-        while (count < spotsToFill && !pool.isEmpty()) {
-            winners.add(pool.remove(0));
-            count++;
-        }
+        // Double check bounds to prevent crash
+        int actualDraw = Math.min(pool.size(), spots);
+        List<String> winners = pool.subList(0, actualDraw);
+        List<String> losers = new ArrayList<>(pool.subList(actualDraw, pool.size()));
 
-        // Update local object states before sending to Firestore
+        // Update Event Data locally
         currentEvent.getWaitlistUserIds().removeAll(winners);
         if (currentEvent.getSelectedUserIds() == null) currentEvent.setSelectedUserIds(new ArrayList<>());
         currentEvent.getSelectedUserIds().addAll(winners);
 
-        if (currentEvent.getInvitationStatus() == null) {
-            currentEvent.setInvitationStatus(new HashMap<>());
-        }
-        for (String winnerId : winners) {
-            currentEvent.getInvitationStatus().put(winnerId, "pending");
-        }
+        if (currentEvent.getInvitationStatus() == null) currentEvent.setInvitationStatus(new HashMap<>());
+        for (String w : winners) currentEvent.getInvitationStatus().put(w, "pending");
 
+        // Batch Write to Firestore
         WriteBatch batch = db.batch();
-
         batch.update(db.collection("events").document(eventId),
                 "waitlistUserIds", currentEvent.getWaitlistUserIds(),
                 "selectedUserIds", currentEvent.getSelectedUserIds(),
                 "invitationStatus", currentEvent.getInvitationStatus());
 
+        // Notify Winners
         for (String winnerId : winners) {
             String notifId = db.collection("users").document(winnerId).collection("notifications").document().getId();
             Notification notif = new Notification(
-                    "You Won the Lottery! 🎉",
+                    "You Won the Lottery! \uD83C\uDF89",
                     "You have been selected for " + currentEvent.getTitle() + ". Please accept or decline your invitation.",
                     eventId,
                     "invitation"
@@ -561,32 +516,32 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             batch.set(db.collection("users").document(winnerId).collection("notifications").document(notifId), notif);
         }
 
-        batch.commit()
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Draw complete.", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Draw failed.", Toast.LENGTH_SHORT).show());
+        // Notify Losers
+        for (String loserId : losers) {
+            String notifId = db.collection("users").document(loserId).collection("notifications").document().getId();
+            Notification notif = new Notification(
+                    "Lottery Update",
+                    "You were not selected in the recent draw for " + currentEvent.getTitle() + ". You remain on the waitlist for future chances.",
+                    eventId,
+                    "info"
+            );
+            batch.set(db.collection("users").document(loserId).collection("notifications").document(notifId), notif);
+        }
+
+        batch.commit().addOnSuccessListener(a -> Toast.makeText(this, "Draw Complete", Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Generates a QR code for the event and saves it to the device gallery.
+     */
     private void generateAndSaveQRCode() {
         try {
             MultiFormatWriter writer = new MultiFormatWriter();
             BitMatrix matrix = writer.encode(eventId, BarcodeFormat.QR_CODE, 500, 500);
             BarcodeEncoder encoder = new BarcodeEncoder();
             Bitmap bitmap = encoder.createBitmap(matrix);
-
-            String savedImageURL = MediaStore.Images.Media.insertImage(
-                    getContentResolver(),
-                    bitmap,
-                    "EventQR_" + currentEvent.getTitle(),
-                    "Check-in QR Code for " + currentEvent.getTitle()
-            );
-
-            if (savedImageURL != null) {
-                Toast.makeText(this, "QR Code saved to Gallery!", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Failed to save QR Code", Toast.LENGTH_SHORT).show();
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "QR Gen Error", e);
-        }
+            String saved = MediaStore.Images.Media.insertImage(getContentResolver(), bitmap, "QR_" + eventId, "Event QR");
+            Toast.makeText(this, saved != null ? "Saved to Gallery" : "Error", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) { Log.e(TAG, "QR Error", e); }
     }
 }

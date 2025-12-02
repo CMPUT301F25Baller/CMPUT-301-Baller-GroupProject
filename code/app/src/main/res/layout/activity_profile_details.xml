@@ -2,311 +2,154 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/root"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF">
 
-    <!-- Top bar (Back & More handled in Activity code) -->
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title=""
-            />
+            app:title="User Profile"
+            app:titleCentered="true"
+            app:navigationIcon="@drawable/ic_arrow_back"/>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <ScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        android:fillViewport="true">
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
-            android:id="@+id/content"
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="24dp">
+            android:orientation="vertical"
+            android:padding="24dp">
 
-            <!-- Avatar -->
-            <com.google.android.material.imageview.ShapeableImageView
+            <de.hdodenhof.circleimageview.CircleImageView
                 android:id="@+id/ivAvatar"
-                android:layout_width="96dp"
-                android:layout_height="96dp"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
                 android:layout_gravity="center_horizontal"
-                android:src="@android:color/darker_gray"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                app:strokeWidth="0dp"
-                android:scaleType="centerCrop"/>
+                android:src="@drawable/placeholder_avatar1"
+                app:civ_border_width="0dp"/>
 
-            <!-- Name -->
             <TextView
                 android:id="@+id/tvName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:layout_gravity="center_horizontal"
-                android:text="David Silbia"
+                tools:text="David Silbia"
                 android:textSize="24sp"
-                android:textColor="#120D26"
-                android:textStyle="normal"/>
+                android:textStyle="bold"
+                android:textColor="#120D26"/>
 
-            <!-- Stat row: Following | Followers -->
-            <LinearLayout
-                android:id="@+id/statRow"
+            <TextView
+                android:id="@+id/tvEmail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                tools:text="david.silbia@example.com"
+                android:textSize="14sp"
+                android:textColor="#747688"/>
 
-                <!-- Following -->
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_horizontal">
-
-                    <TextView
-                        android:id="@+id/tvFollowingCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="350"
-                        android:textSize="16sp"
-                        android:textColor="#120D26"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Following"
-                        android:textSize="14sp"
-                        android:textColor="#747688"/>
-                </LinearLayout>
-
-                <!-- Divider -->
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="0dp"/>
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="24dp"
-                    android:background="#DDDDDD"/>
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="0dp"/>
-
-                <!-- Followers -->
-                <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_horizontal">
-
-                    <TextView
-                        android:id="@+id/tvFollowersCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="346"
-                        android:textSize="16sp"
-                        android:textColor="#120D26"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Followers"
-                        android:textSize="14sp"
-                        android:textColor="#747688"/>
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Action buttons -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnDeleteUser"
-                    style="@style/Widget.MaterialComponents.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="50dp"
-                    android:layout_weight="1"
-                    android:text="Delete User"
-                    android:textAllCaps="false"
-                    android:textColor="#FFFFFF"
-                    app:cornerRadius="10dp"
-                    app:backgroundTint="#5669FF"/>
-
-                <View
-                    android:layout_width="16dp"
-                    android:layout_height="0dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnMessage"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="50dp"
-                    android:layout_weight="1"
-                    android:text="Message"
-                    android:textAllCaps="false"
-                    app:cornerRadius="10dp"
-                    app:strokeColor="#5669FF"
-                    app:strokeWidth="1.5dp"
-                    app:iconTint="#5669FF"
-                    android:textColor="#5669FF"/>
-            </LinearLayout>
-
-            <!-- Tabs: About | Event | Notifications -->
-            <LinearLayout
-                android:id="@+id/tabs"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/tabAbout"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="About"
-                    android:textAllCaps="true"
-                    android:textSize="16sp"
-                    android:textColor="#5669FF"/>
-
-                <TextView
-                    android:id="@+id/tabEvent"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Event"
-                    android:textAllCaps="true"
-                    android:textSize="16sp"
-                    android:textColor="#747688"/>
-
-                <TextView
-                    android:id="@+id/tabNotifications"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
-                    android:text="Notifications"
-                    android:textAllCaps="true"
-                    android:textSize="16sp"
-                    android:textColor="#747688"/>
-            </LinearLayout>
-
-            <!-- Active tab underline (under About) -->
             <View
-                android:id="@+id/underline"
-                android:layout_width="58dp"
-                android:layout_height="3dp"
-                android:layout_gravity="start"
-                android:layout_marginTop="6dp"
-                android:background="#5669FF"/>
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E5E5E5"
+                android:layout_marginVertical="24dp"/>
 
-            <!-- About / Bio -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="About Me"
+                android:textAllCaps="true"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#5669FF"
+                android:layout_marginBottom="8dp"/>
+
             <TextView
                 android:id="@+id/tvBio"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="I am a retired philosopher just trying to make the most of my time on this Planet! I’m very approachable and always willing to give a helping hand!"
+                tools:text="I am a retired philosopher just trying to make the most of my time on this Planet!"
                 android:textSize="16sp"
-                android:lineSpacingExtra="6dp"
-                android:textColor="#3C3E56"/>
+                android:textColor="#3C3E56"
+                android:lineSpacingExtra="4dp"/>
 
-            <!-- Featured event card (simplified from the Figma block) -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardFeaturedEvent"
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Interests"
+                android:textAllCaps="true"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#5669FF"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="8dp"/>
+
+            <TextView
+                android:id="@+id/tvInterests"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                tools:text="Music, Art, Swimming"
+                android:textSize="16sp"
+                android:textColor="#3C3E56"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Event History"
+                android:textAllCaps="true"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#5669FF"
                 android:layout_marginTop="24dp"
-                app:cardCornerRadius="14dp"
-                app:cardUseCompatPadding="true">
+                android:layout_marginBottom="8dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="12dp">
+            <ProgressBar
+                android:id="@+id/progressHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"/>
 
-                    <ImageView
-                        android:id="@+id/ivEventPoster"
-                        android:layout_width="92dp"
-                        android:layout_height="92dp"
-                        android:scaleType="centerCrop"
-                        android:src="@android:color/darker_gray"
-                        android:background="#FFCD6C"
-                        android:contentDescription="event poster"
-                        android:layout_marginEnd="12dp"
-                        android:clipToOutline="true"/>
+            <TextView
+                android:id="@+id/tvNoHistory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No event history found."
+                android:visibility="gone"
+                android:gravity="center"
+                android:padding="16dp"/>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvEventHistory"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
 
-                        <TextView
-                            android:id="@+id/tvEventDate"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="10 June • 9:00 PM"
-                            android:textSize="12sp"
-                            android:textColor="#5669FF"
-                            android:textAllCaps="false"
-                            android:layout_marginBottom="4dp"/>
-
-                        <TextView
-                            android:id="@+id/tvEventTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="International Gala Music Festival"
-                            android:textSize="18sp"
-                            android:textColor="#120D26"/>
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginTop="6dp"
-                            android:gravity="center_vertical">
-
-                            <View
-                                android:layout_width="16dp"
-                                android:layout_height="16dp"
-                                android:background="#ADAFBB"/>
-
-                            <TextView
-                                android:id="@+id/tvEventLocation"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:text="36 Guild Street London, UK"
-                                android:textSize="13sp"
-                                android:textColor="#989AA6"/>
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeleteUser"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="40dp"
+                android:text="Delete User"
+                android:backgroundTint="#FF4444"
+                android:textColor="#FFFFFF"
+                app:cornerRadius="12dp"/>
 
         </LinearLayout>
-    </ScrollView>
+    </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

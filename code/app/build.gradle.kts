@@ -72,6 +72,14 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1")
+
+    // Google Maps SDK
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // Google Location Services (FusedLocationProviderClient)
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    // Firebase (Ensure these match your versions)
+    implementation("com.google.firebase:firebase-firestore:24.10.0")
+    implementation("com.google.firebase:firebase-auth:22.3.0")
 }
 
 tasks.withType<DokkaTask>().configureEach {

@@ -8,7 +8,6 @@
     android:background="@android:color/white"
     tools:context=".OrganizerActivity">
 
-    <!-- Header container with back button and title (THEIRS) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header_container"
         android:layout_width="match_parent"
@@ -54,7 +53,6 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Profile header (BOTH) -->
     <LinearLayout
         android:id="@+id/profileInfoContainer"
         android:layout_width="match_parent"
@@ -151,7 +149,6 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Row 1: New Event + Message (YOURS + THEIRS) -->
     <LinearLayout
         android:id="@+id/actionRow"
         android:layout_width="match_parent"
@@ -194,59 +191,6 @@
             android:insetBottom="6dp" />
     </LinearLayout>
 
-    <!-- Row 2: Final Entrants + Winners + Run Lottery (YOURS) -->
-    <LinearLayout
-        android:id="@+id/lotteryRow"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="8dp"
-        app:layout_constraintTop_toBottomOf="@id/actionRow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnViewFinalEntrants"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="View Final Entrants"
-            app:strokeColor="#5A00FF"
-            android:textColor="#5A00FF"
-            android:insetTop="10dp"
-            android:insetBottom="10dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnViewLotteryWinners"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="View Winners"
-            app:strokeColor="#5A00FF"
-            android:textColor="#5A00FF"
-            android:insetTop="10dp"
-            android:insetBottom="10dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnRunLottery"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="Run Lottery"
-            android:backgroundTint="#5A00FF"
-            android:textColor="@android:color/white"
-            android:insetTop="10dp"
-            android:insetBottom="10dp" />
-    </LinearLayout>
-
-    <!-- Tabs (now below lotteryRow) -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
@@ -255,7 +199,7 @@
         app:tabIndicatorColor="#5669FF"
         app:tabSelectedTextColor="#5669FF"
         app:tabTextColor="#747688"
-        app:layout_constraintTop_toBottomOf="@id/lotteryRow"
+        app:layout_constraintTop_toBottomOf="@id/actionRow"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
@@ -266,7 +210,6 @@
         android:background="#E5E5E5"
         app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
-    <!-- ViewPager2 -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="0dp"

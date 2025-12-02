@@ -2,65 +2,40 @@ package com.example.ballerevents;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ActivityProfileDetailsBinding;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-/**
- * Activity that displays detailed information for a single user profile.
- * <p>
- * Primary usage:
- * <ul>
- *     <li>Load profile data from Firestore using {@link #EXTRA_PROFILE_ID}</li>
- *     <li>Fallback to legacy extras when no profile ID is provided</li>
- *     <li>Allow the caller to "delete" (remove) a user from a list via result intent</li>
- *     <li>Prototype messaging entry point</li>
- * </ul>
- * <p>
- * Layout is accessed via {@link ActivityProfileDetailsBinding}.
- * </p>
- */
 public class ProfileDetailsActivity extends AppCompatActivity {
 
-    /** Intent extra key for passing a Firestore user document ID. */
     public static final String EXTRA_PROFILE_ID = "extra_profile_id";
-
-    /** Legacy extra for passing a profile display name directly. */
-    public static final String EXTRA_PROFILE_NAME = "extra_profile_name";
-
-    /** Legacy extra for passing an avatar drawable resource ID. */
-    public static final String EXTRA_PROFILE_AVATAR_RES = "extra_profile_avatar_res";
-
-    /** Legacy extra for passing a profile bio string. */
-    public static final String EXTRA_PROFILE_BIO = "extra_profile_bio";
-
-    /** Legacy extra for passing a follower count value. */
-    public static final String EXTRA_PROFILE_FOLLOWERS = "extra_profile_followers";
-
-    /** Legacy extra for passing a following count value. */
-    public static final String EXTRA_PROFILE_FOLLOWING = "extra_profile_following";
-
-    /** ViewBinding for the profile details layout. */
     private ActivityProfileDetailsBinding binding;
-
-    /** Firestore instance used to load profile data when an ID is provided. */
     private FirebaseFirestore db;
-
-    /** Firestore document ID of the profile being displayed (if available). */
     private String profileId;
+    private HistoryAdapter historyAdapter;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityProfileDetailsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -68,149 +43,170 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         setSupportActionBar(binding.topAppBar);
-        binding.topAppBar.setNavigationIcon(androidx.appcompat.R.drawable.abc_ic_ab_back_material);
-        binding.topAppBar.setNavigationOnClickListener(
-                v -> getOnBackPressedDispatcher().onBackPressed()
-        );
+        binding.topAppBar.setNavigationOnClickListener(v -> finish());
 
-        // Handle system back press with a simple finish()
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                finish();
-            }
-        });
+        profileId = getIntent().getStringExtra(EXTRA_PROFILE_ID);
 
-        Intent i = getIntent();
-        profileId = i.getStringExtra(EXTRA_PROFILE_ID);
+        setupHistoryRecycler();
 
-        // Prefer Firestore ID, fallback to legacy extras if not provided
-        if (profileId != null && !profileId.isEmpty()) {
+        if (profileId != null) {
             loadFromFirestore(profileId);
         } else {
-            bindFromIntentFallback(i);
+            Toast.makeText(this, "No User ID provided", Toast.LENGTH_SHORT).show();
+            finish();
         }
 
-        // "Delete user" returns the profile ID to the caller
-        binding.btnDeleteUser.setOnClickListener(v ->
-                new MaterialAlertDialogBuilder(this)
-                        .setTitle("Delete user?")
-                        .setMessage("This removes the user from your current list view. You can re-add them later from your data source.")
-                        .setPositiveButton("Delete", (d, which) -> {
-                            Intent result = new Intent();
-                            result.putExtra(EXTRA_PROFILE_ID, profileId);
-                            setResult(RESULT_OK, result);
-                            finish();
-                        })
-                        .setNegativeButton("Cancel", null)
-                        .show()
-        );
-
-        // Prototype messaging entry point
-        binding.btnMessage.setOnClickListener(v ->
-                new MaterialAlertDialogBuilder(this)
-                        .setMessage("Messaging coming soon.")
-                        .setPositiveButton("OK", null)
-                        .show()
-        );
+        binding.btnDeleteUser.setOnClickListener(v -> confirmDelete());
     }
 
-    /**
-     * Loads the profile data for a given Firestore user document ID and binds it to the UI.
-     * <p>
-     * If the document does not exist or is invalid, the activity displays a Toast
-     * and finishes.
-     * </p>
-     *
-     * @param userId Firestore document ID of the user to load.
-     */
+    private void setupHistoryRecycler() {
+        binding.rvEventHistory.setLayoutManager(new LinearLayoutManager(this));
+        historyAdapter = new HistoryAdapter();
+        binding.rvEventHistory.setAdapter(historyAdapter);
+    }
+
     private void loadFromFirestore(String userId) {
-        DocumentReference ref = db.collection("users").document(userId);
-        ref.get()
+        db.collection("users").document(userId).get()
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) {
-                        Toast.makeText(this, "User not found", Toast.LENGTH_SHORT).show();
                         finish();
                         return;
                     }
                     UserProfile up = doc.toObject(UserProfile.class);
-                    if (up == null) {
-                        Toast.makeText(this, "Invalid user data", Toast.LENGTH_SHORT).show();
-                        finish();
-                        return;
+                    if (up != null) {
+                        bindUserData(up);
+                        loadEventHistory(up);
                     }
-
-                    // Name
-                    binding.tvName.setText(nullTo(up.getName(), "User"));
-
-                    // Bio
-                    binding.tvBio.setText(nullTo(
-                            up.getAboutMe(),
-                            "This user hasn’t written a bio yet."
-                    ));
-
-                    // Followers/Following – default to 0 until schema supports lists/counts
-                    Integer followers = 0;
-                    Integer following = 0;
-                    // Example once schema is extended:
-                    // List<String> followersIds = up.getFollowersIds();
-                    // List<String> followingIds = up.getFollowingIds();
-                    // followers = followersIds != null ? followersIds.size() : 0;
-                    // following = followingIds != null ? followingIds.size() : 0;
-
-                    binding.tvFollowersCount.setText(String.valueOf(followers));
-                    binding.tvFollowingCount.setText(String.valueOf(following));
-
-                    // Avatar (URL from profile)
-                    Glide.with(this)
-                            .load(up.getProfilePictureUrl())
-                            .placeholder(R.drawable.placeholder_avatar1)
-                            .error(R.drawable.placeholder_avatar1)
-                            .into(binding.ivAvatar);
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show();
-                    finish();
-                });
+                .addOnFailureListener(e -> Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show());
     }
 
-    /**
-     * Binds profile details using legacy intent extras when no Firestore ID is provided.
-     * <p>
-     * This supports older callers that directly pass display data instead of a
-     * document ID. All values have safe fallbacks to prevent empty UI.
-     * </p>
-     *
-     * @param i The launching {@link Intent} containing legacy extras.
-     */
-    private void bindFromIntentFallback(Intent i) {
-        String name = i.getStringExtra(EXTRA_PROFILE_NAME);
-        int avatarRes = i.getIntExtra(EXTRA_PROFILE_AVATAR_RES, 0);
-        String bio = i.getStringExtra(EXTRA_PROFILE_BIO);
-        int followers = i.getIntExtra(EXTRA_PROFILE_FOLLOWERS, 0);
-        int following = i.getIntExtra(EXTRA_PROFILE_FOLLOWING, 0);
+    private void bindUserData(UserProfile user) {
+        binding.tvName.setText(user.getName() != null ? user.getName() : "User");
+        binding.tvEmail.setText(user.getEmail());
 
-        binding.tvName.setText(name != null ? name : "User");
-        binding.tvBio.setText(bio != null ? bio : "This user hasn’t written a bio yet.");
-        binding.tvFollowersCount.setText(String.valueOf(followers));
-        binding.tvFollowingCount.setText(String.valueOf(following));
+        String bio = (user.getAboutMe() != null && !user.getAboutMe().isEmpty())
+                ? user.getAboutMe()
+                : "No bio provided.";
+        binding.tvBio.setText(bio);
 
-        if (avatarRes != 0) {
-            binding.ivAvatar.setImageResource(avatarRes);
+        if (user.getInterests() != null && !user.getInterests().isEmpty()) {
+            // Join list with commas
+            StringBuilder sb = new StringBuilder();
+            for (String interest : user.getInterests()) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(interest);
+            }
+            binding.tvInterests.setText(sb.toString());
         } else {
-            binding.ivAvatar.setImageResource(R.drawable.placeholder_avatar1);
+            binding.tvInterests.setText("No interests selected.");
         }
+
+        Glide.with(this)
+                .load(user.getProfilePictureUrl())
+                .placeholder(R.drawable.placeholder_avatar1)
+                .into(binding.ivAvatar);
     }
 
-    /**
-     * Returns {@code fallback} if the input string is {@code null} or empty,
-     * otherwise returns the original string.
-     *
-     * @param s        Input string (may be null or empty).
-     * @param fallback Fallback value to use if {@code s} is null/empty.
-     * @return {@code s} when non-null and non-empty, otherwise {@code fallback}.
-     */
-    private static String nullTo(String s, String fallback) {
-        return (s == null || s.trim().isEmpty()) ? fallback : s;
+    private void loadEventHistory(UserProfile user) {
+        Set<String> allEventIds = new HashSet<>();
+        if (user.getAppliedEventIds() != null) allEventIds.addAll(user.getAppliedEventIds());
+        if (user.getInvitedEventIds() != null) allEventIds.addAll(user.getInvitedEventIds());
+        if (user.getJoinedEventIds() != null) allEventIds.addAll(user.getJoinedEventIds());
+
+        if (allEventIds.isEmpty()) {
+            binding.tvNoHistory.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        binding.progressHistory.setVisibility(View.VISIBLE);
+        List<String> idList = new ArrayList<>(allEventIds);
+
+        // Limit query to 10 for simplicity in this implementation
+        List<String> queryIds = idList.subList(0, Math.min(idList.size(), 10));
+
+        db.collection("events")
+                .whereIn(FieldPath.documentId(), queryIds)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    binding.progressHistory.setVisibility(View.GONE);
+                    List<HistoryItem> items = new ArrayList<>();
+
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        Event e = doc.toObject(Event.class);
+                        if (e != null) {
+                            String status = determineStatus(user, doc.getId());
+                            items.add(new HistoryItem(e.getTitle(), status, e.getDate()));
+                        }
+                    }
+                    historyAdapter.submitList(items);
+                    if (items.isEmpty()) binding.tvNoHistory.setVisibility(View.VISIBLE);
+                })
+                .addOnFailureListener(e -> binding.progressHistory.setVisibility(View.GONE));
+    }
+
+    private String determineStatus(UserProfile user, String eventId) {
+        if (user.getJoinedEventIds() != null && user.getJoinedEventIds().contains(eventId)) return "Going ✅";
+        if (user.getInvitedEventIds() != null && user.getInvitedEventIds().contains(eventId)) return "Invited 📩";
+        if (user.getAppliedEventIds() != null && user.getAppliedEventIds().contains(eventId)) return "Waitlisted ⏳";
+        return "History";
+    }
+
+    private void confirmDelete() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Delete User?")
+                .setMessage("Permanently delete this user?")
+                .setPositiveButton("Delete", (d, w) -> {
+                    db.collection("users").document(profileId).delete()
+                            .addOnSuccessListener(a -> {
+                                Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
+                                finish();
+                            });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // --- Simple Internal Adapter for History ---
+    private static class HistoryItem {
+        String title, status, date;
+        HistoryItem(String t, String s, String d) { title = t; status = s; date = d; }
+    }
+
+    private static class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.VH> {
+        private List<HistoryItem> list = new ArrayList<>();
+
+        void submitList(List<HistoryItem> newList) {
+            list = newList;
+            notifyDataSetChanged();
+        }
+
+        @NonNull @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            // Using standard simple layout for robustness
+            View v = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            HistoryItem item = list.get(position);
+            holder.text1.setText(item.title);
+            holder.text2.setText(item.status + " • " + item.date);
+        }
+
+        @Override
+        public int getItemCount() { return list.size(); }
+
+        static class VH extends RecyclerView.ViewHolder {
+            TextView text1, text2;
+            VH(View v) {
+                super(v);
+                text1 = v.findViewById(android.R.id.text1);
+                text2 = v.findViewById(android.R.id.text2);
+                text1.setTextColor(0xFF000000); // Black
+                text2.setTextColor(0xFF5A00FF); // Purple
+            }
+        }
     }
 }
