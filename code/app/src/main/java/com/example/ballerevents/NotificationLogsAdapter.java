@@ -71,6 +71,7 @@ public class NotificationLogsAdapter
             h.tvTime.setText("–");
         }
 
+        // Check type for Invitation Logic
         boolean invite = "invitation".equalsIgnoreCase(n.getType());
         h.actionsRow.setVisibility(invite ? View.VISIBLE : View.GONE);
 
@@ -79,9 +80,12 @@ public class NotificationLogsAdapter
             h.btnDecline.setOnClickListener(v -> actions.onDeclineInvite(n));
         }
 
+        // Standard Read/Unread logic
         h.unreadDot.setVisibility(n.isRead() ? View.INVISIBLE : View.VISIBLE);
+        h.btnMarkRead.setVisibility(invite ? View.GONE : View.VISIBLE); // Hide mark read if it's an invite (use accept/decline)
 
         h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
+
         h.itemView.setOnClickListener(v -> actions.onOpen(n));
         h.itemView.setOnLongClickListener(v -> {
             actions.onDelete(n);
@@ -106,9 +110,14 @@ public class NotificationLogsAdapter
             unreadDot = v.findViewById(R.id.unreadDot);
             actionsRow = v.findViewById(R.id.actionsRow);
 
+            // FIX: Correct ID binding
             btnMarkRead = v.findViewById(R.id.btnMarkRead);
-            btnAccept = v.findViewById(R.id.btnMarkRead);
-            btnDecline = v.findViewById(R.id.btnOpen);
+            btnAccept = v.findViewById(R.id.btnAccept);   // Was btnMarkRead
+            btnDecline = v.findViewById(R.id.btnDecline); // Was btnOpen
+
+            // Fallback for btnOpen if layout uses generic names,
+            // but for invites we usually need specific IDs in item_notification_log.xml
+            // If your XML uses different IDs, update them here.
         }
     }
 }

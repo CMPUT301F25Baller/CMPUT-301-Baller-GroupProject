@@ -183,29 +183,39 @@ public class ProfileDetailsActivity extends AppCompatActivity {
 
         @NonNull @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Using standard simple layout for robustness
-            View v = LayoutInflater.from(parent.getContext()).inflate(android.R.layout.simple_list_item_2, parent, false);
+            // FIX: Inflate your custom layout here!
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_event_history, parent, false);
             return new VH(v);
         }
 
         @Override
-        public void onBindViewHolder(@NonNull VH holder, int position) {
+        public void onBindViewHolder(@NonNull VH h, int position) {
             HistoryItem item = list.get(position);
-            holder.text1.setText(item.title);
-            holder.text2.setText(item.status + " • " + item.date);
+            h.title.setText(item.title);
+            h.date.setText(item.date);
+            h.status.setText(item.status);
+
+            // Optional: Change badge color based on status
+            if (item.status.contains("Going")) {
+                h.status.setTextColor(0xFF4CAF50); // Green
+            } else if (item.status.contains("Invited")) {
+                h.status.setTextColor(0xFF5A00FF); // Purple
+            } else {
+                h.status.setTextColor(0xFF757575); // Grey
+            }
         }
 
         @Override
         public int getItemCount() { return list.size(); }
 
         static class VH extends RecyclerView.ViewHolder {
-            TextView text1, text2;
+            TextView title, date, status;
             VH(View v) {
                 super(v);
-                text1 = v.findViewById(android.R.id.text1);
-                text2 = v.findViewById(android.R.id.text2);
-                text1.setTextColor(0xFF000000); // Black
-                text2.setTextColor(0xFF5A00FF); // Purple
+                title = v.findViewById(R.id.tvEventTitle);
+                date = v.findViewById(R.id.tvEventDate);
+                status = v.findViewById(R.id.tvStatusBadge);
             }
         }
     }

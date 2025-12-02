@@ -24,110 +24,83 @@ public class NotificationLogsActivity extends AppCompatActivity {
 
     private ActivityNotificationLogsBinding binding;
     private NotificationLogsAdapter adapter;
-
     private FirebaseFirestore db;
     private FirebaseAuth auth;
     private ListenerRegistration notifListener;
-
     private List<Notification> allNotifications = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
+        if (binding.btnBack != null) binding.btnBack.setOnClickListener(v -> finish());
+        binding.tvTitle.setText("Notifications");
+
         setupRecyclerView();
-        setupBackButton();
 
         if (auth.getCurrentUser() != null) {
             setupRealtimeListener();
         } else {
-            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please log in.", Toast.LENGTH_SHORT).show();
+            finish();
         }
 
         binding.btnMarkAll.setOnClickListener(v -> markAllAsRead());
     }
 
-    private void setupBackButton() {
-        if (binding.btnBack != null) {
-            binding.btnBack.setOnClickListener(v -> finish());
-        }
-    }
-
     private void setupRecyclerView() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-
         adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
+            @Override
+            public void onMarkRead(Notification notif) { markAsRead(notif); }
 
             @Override
-            public void onMarkRead(Notification notif) {
-                markAsRead(notif);
-            }
+            public void onOpen(Notification notif) { markAsRead(notif); }
 
             @Override
-            public void onOpen(Notification notif) {
-                // For now, open just marks as read
-                markAsRead(notif);
-            }
+            public void onAcceptInvite(Notification notif) { respondToInvite(notif, "accepted"); }
 
             @Override
-            public void onAcceptInvite(Notification notif) {
-                respondToInvite(notif, "accepted");
-            }
+            public void onDeclineInvite(Notification notif) { respondToInvite(notif, "declined"); }
 
             @Override
-            public void onDeclineInvite(Notification notif) {
-                respondToInvite(notif, "declined");
-            }
-
-            @Override
-            public void onDelete(Notification notif) {
-                deleteNotification(notif);
-            }
+            public void onDelete(Notification notif) { deleteNotification(notif); }
         });
-
         binding.rvLogs.setAdapter(adapter);
     }
 
-
     private void setupRealtimeListener() {
         String userId = auth.getCurrentUser().getUid();
+        binding.progressBar.setVisibility(View.VISIBLE);
 
         notifListener = db.collection("users")
                 .document(userId)
                 .collection("notifications")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
-
+                    binding.progressBar.setVisibility(View.GONE);
                     if (e != null) {
                         Log.w("NotifActivity", "Listen failed", e);
                         return;
                     }
-
                     if (snapshots != null) {
                         allNotifications = snapshots.toObjects(Notification.class);
-
                         for (int i = 0; i < snapshots.size(); i++) {
-                            allNotifications.get(i)
-                                    .setId(snapshots.getDocuments().get(i).getId());
+                            allNotifications.get(i).setId(snapshots.getDocuments().get(i).getId());
                         }
-
                         adapter.submitList(new ArrayList<>(allNotifications));
-                        binding.tvEmpty.setVisibility(allNotifications.isEmpty()
-                                ? View.VISIBLE : View.GONE);
+                        binding.tvEmpty.setVisibility(allNotifications.isEmpty() ? View.VISIBLE : View.GONE);
                     }
                 });
     }
 
-
     private void respondToInvite(Notification notif, String status) {
         if (notif.getEventId() == null) return;
-
         String userId = auth.getCurrentUser().getUid();
 
         Map<String, Object> updates = new HashMap<>();
@@ -136,48 +109,34 @@ public class NotificationLogsActivity extends AppCompatActivity {
         if ("declined".equals(status)) {
             updates.put("selectedUserIds", FieldValue.arrayRemove(userId));
             updates.put("cancelledUserIds", FieldValue.arrayUnion(userId));
+        } else if ("accepted".equals(status)) {
+            updates.put("selectedUserIds", FieldValue.arrayRemove(userId)); // Move out of selected
+            // You might have an 'acceptedUserIds' field or similar logic in your event model
+            // updates.put("acceptedUserIds", FieldValue.arrayUnion(userId));
         }
 
-        db.collection("events")
-                .document(notif.getEventId())
-                .update(updates)
+        db.collection("events").document(notif.getEventId()).update(updates)
                 .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Invitation " + status, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Response: " + status, Toast.LENGTH_SHORT).show();
                     markAsRead(notif);
-                });
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to send response", Toast.LENGTH_SHORT).show());
     }
 
-
     private void deleteNotification(Notification notif) {
-        db.collection("users")
-                .document(auth.getCurrentUser().getUid())
-                .collection("notifications")
-                .document(notif.getId())
-                .delete();
+        db.collection("users").document(auth.getCurrentUser().getUid())
+                .collection("notifications").document(notif.getId()).delete();
     }
 
     private void markAsRead(Notification notif) {
-        db.collection("users")
-                .document(auth.getCurrentUser().getUid())
-                .collection("notifications")
-                .document(notif.getId())
-                .update("read", true);
+        db.collection("users").document(auth.getCurrentUser().getUid())
+                .collection("notifications").document(notif.getId()).update("read", true);
     }
 
     private void markAllAsRead() {
         String userId = auth.getCurrentUser().getUid();
-
-        db.collection("users")
-                .document(userId)
-                .collection("notifications")
-                .get()
-                .addOnSuccessListener(q ->
-                        db.runBatch(batch ->
-                                q.forEach(doc ->
-                                        batch.update(doc.getReference(), "read", true)
-                                )
-                        )
-                );
+        db.collection("users").document(userId).collection("notifications").get()
+                .addOnSuccessListener(q -> db.runBatch(batch -> q.forEach(doc -> batch.update(doc.getReference(), "read", true))));
     }
 
     @Override

@@ -52,6 +52,13 @@
             android:name=".NotificationLogsActivity"
             android:label="Notifications"
             android:exported="false" />
+
+        <activity
+            android:name=".AdminLogsActivity"
+            android:label="System Logs"
+            android:exported="false"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
         <activity
             android:name=".AdminImagesActivity"
             android:exported="false"

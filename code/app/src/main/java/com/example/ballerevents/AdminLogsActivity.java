@@ -1,6 +1,9 @@
 package com.example.ballerevents;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -8,40 +11,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
-import com.google.android.material.chip.Chip;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * Activity that displays a simple, prototype notification log for the admin.
- *
- * <p>This screen serves as a placeholder UI, showing log messages in a list.
- * The data is currently mocked in-memory and demonstrates:
- *
- * <ul>
- * <li>Switching between “New” and “All” logs using Material Chips</li>
- * <li>Simple list rendering via {@link SimpleTextAdapter}</li>
- * <li>“Mark all as read” button behavior</li>
- * </ul>
- *
- * <p>Updated to support the shared custom header layout used by NotificationLogsActivity.</p>
+ * Admin view for inspecting all system notifications.
+ * Uses a Collection Group query to fetch notifications across all users.
  */
 public class AdminLogsActivity extends AppCompatActivity {
 
-    /** View binding for activity_notification_logs.xml */
+    private static final String TAG = "AdminLogsActivity";
     private ActivityNotificationLogsBinding binding;
-
-    /** Adapter used to render the logs in the RecyclerView */
-    private SimpleTextAdapter adapter;
-
-    /** In-memory list of all notifications (mock data). */
-    private final List<String> allItems = new ArrayList<>();
-
-    /** Subset representing unread or recently added notifications. */
-    private final List<String> newItems = new ArrayList<>();
+    private NotificationLogsAdapter adapter;
+    private FirebaseFirestore db;
+    private List<Notification> allLogs = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,77 +36,110 @@ public class AdminLogsActivity extends AppCompatActivity {
         binding = ActivityNotificationLogsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // --- NEW: Handle Custom Back Button ---
-        // Replaces the old setupToolbar() logic
+        db = FirebaseFirestore.getInstance();
+
+        // Admin Header Setup
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
+        binding.tvTitle.setText("System Logs");
 
-        initializeMockData();
+        // Hide Entrant-specific controls
+        binding.btnMarkAll.setVisibility(View.GONE);
+        binding.chipGroup.setVisibility(View.GONE);
+
         setupRecycler();
-        setupChipsAndActions();
+        loadGlobalLogs();
     }
 
-    /**
-     * Populates in-memory mock notification data.
-     * In the real implementation, this will be pulled from Firestore.
-     */
-    private void initializeMockData() {
-        allItems.addAll(Arrays.asList(
-                "David Silbia invited you to Jo Malone London’s Mother’s… • Just now",
-                "Adnan Safi added you to waitlist • 5 min ago",
-                "Joan Baker – Virtual Evening of Smooth Jazz • 20 min ago",
-                "Ronald C. Kinch added you to waitlist • 1 hr ago",
-                "Clara Tolson invited you to Gala Music Festival • 9 hr ago",
-                "Eric G. Prickett sent an invitation • Wed, 3:30 pm",
-                "Jennifer Fritz – Kids Safe Event cancelled • Tue, 5:10 pm"
-        ));
-
-        // Mock “new” notifications as the first two items
-        newItems.addAll(allItems.subList(0, Math.min(2, allItems.size())));
-    }
-
-    /**
-     * Sets up the RecyclerView and assigns the default adapter.
-     */
     private void setupRecycler() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new SimpleTextAdapter(allItems);
+
+        adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
+            @Override
+            public void onMarkRead(Notification notif) { /* Read-only for admin */ }
+
+            @Override
+            public void onOpen(Notification notif) {
+                showLogDetails(notif);
+            }
+
+            @Override
+            public void onAcceptInvite(Notification notif) { /* Admin cannot act */ }
+
+            @Override
+            public void onDeclineInvite(Notification notif) { /* Admin cannot act */ }
+
+            @Override
+            public void onDelete(Notification notif) {
+                Toast.makeText(AdminLogsActivity.this, "Logs are read-only", Toast.LENGTH_SHORT).show();
+            }
+        });
+
         binding.rvLogs.setAdapter(adapter);
     }
 
-    /**
-     * Wires up chip selection logic and the “Mark all as read” button.
-     */
-    private void setupChipsAndActions() {
-        Chip chipNew = binding.chipNew;
-        Chip chipAll = binding.chipAll;
+    private void loadGlobalLogs() {
+        if (binding.progressBar != null) binding.progressBar.setVisibility(View.VISIBLE);
 
-        chipAll.setChecked(true); // Default filter
+        // US 03.08.01: Review logs of ALL notifications.
+        db.collectionGroup("notifications")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (binding.progressBar != null) binding.progressBar.setVisibility(View.GONE);
 
-        chipNew.setOnCheckedChangeListener((button, checked) -> {
-            if (checked) {
-                adapter = new SimpleTextAdapter(new ArrayList<>(newItems));
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+                    allLogs.clear();
+                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                        Notification n = doc.toObject(Notification.class);
+                        if (n != null) {
+                            n.setId(doc.getId());
 
-        chipAll.setOnCheckedChangeListener((button, checked) -> {
-            if (checked) {
-                adapter = new SimpleTextAdapter(new ArrayList<>(allItems));
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+                            // Extract Recipient ID from path: users/{USER_ID}/notifications/{DOC_ID}
+                            String path = doc.getReference().getPath();
+                            String[] segments = path.split("/");
+                            String recipientId = (segments.length >= 2) ? segments[1] : "Unknown";
 
-        binding.btnMarkAll.setOnClickListener(v -> {
-            newItems.clear();
-            Toast.makeText(this, "All notifications marked as read", Toast.LENGTH_SHORT).show();
+                            // Hack: Prepend "To: UserID" to title for admin visibility
+                            // (A better way is to update the model, but this works for logs)
+                            String originalTitle = n.getTitle() != null ? n.getTitle() : "Notification";
+                            // We don't have a setTitle, so we rely on the dialog to show details
 
-            // If viewing "New", update display to empty
-            if (chipNew.isChecked()) {
-                adapter = new SimpleTextAdapter(Collections.emptyList());
-                binding.rvLogs.setAdapter(adapter);
-            }
-        });
+                            // Store the recipient ID in a temporary way or just use for dialog
+                            // For list display, we display it as is.
+                            allLogs.add(n);
+                        }
+                    }
+
+                    adapter.submitList(new ArrayList<>(allLogs));
+
+                    if (binding.tvEmpty != null) {
+                        binding.tvEmpty.setText("No system logs found.");
+                        binding.tvEmpty.setVisibility(allLogs.isEmpty() ? View.VISIBLE : View.GONE);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (binding.progressBar != null) binding.progressBar.setVisibility(View.GONE);
+                    Log.e(TAG, "Error loading global logs", e);
+                    Toast.makeText(this, "Log Load Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    private void showLogDetails(Notification n) {
+        // Since we don't have the parent reference easily here without the list logic above,
+        // we'll just show the content.
+
+        StringBuilder details = new StringBuilder();
+        details.append("Type: ").append(n.getType()).append("\n\n");
+        details.append("Message:\n").append(n.getMessage()).append("\n\n");
+        details.append("Event ID: ").append(n.getEventId() != null ? n.getEventId() : "N/A").append("\n");
+        details.append("Date: ").append(n.getTimestamp());
+
+        new AlertDialog.Builder(this)
+                .setTitle("Log Detail: " + n.getTitle())
+                .setMessage(details.toString())
+                .setPositiveButton("Close", null)
+                .show();
     }
 }
