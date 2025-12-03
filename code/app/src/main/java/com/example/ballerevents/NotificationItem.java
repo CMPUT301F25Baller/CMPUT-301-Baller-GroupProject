@@ -43,13 +43,15 @@ public class NotificationItem {
     /**
      * Constructs a new {@link NotificationItem}.
      *
-     * @param id         Unique notification identifier
-     * @param avatarRes  Drawable resource ID for avatar
-     * @param sender     Sender name or label
-     * @param message    Notification body text
-     * @param timeLabel  Display-formatted time label
-     * @param hasActions Whether to display action buttons
-     * @param isRead     Whether the notification is already marked as read
+     * @param id           Unique notification identifier.
+     * @param avatarRes    Drawable resource ID for avatar.
+     * @param sender       Sender name or label.
+     * @param message      Notification body text.
+     * @param timeLabel    Display-formatted time label.
+     * @param hasActions   Whether to display action buttons.
+     * @param isRead       Whether the notification is already marked as read.
+     * @param isInvitation Whether this is an invitation requiring user action.
+     * @param eventId      The associated event ID, if any.
      */
     public NotificationItem(String id,
                             int avatarRes,

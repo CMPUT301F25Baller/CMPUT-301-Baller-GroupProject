@@ -14,6 +14,13 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity that displays the list of entrants who have won the lottery for a specific event.
+ * <p>
+ * Fetches the list of user IDs from the event's `chosenUserIds` field and retrieves
+ * their profile information to display in a RecyclerView.
+ * </p>
+ */
 public class OrganizerLotteryWinnersActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "eventId";
@@ -48,6 +55,11 @@ public class OrganizerLotteryWinnersActivity extends AppCompatActivity {
         loadWinners(eventId);
     }
 
+    /**
+     * Fetches the event details to identify winners and then loads their user profiles.
+     *
+     * @param eventId The ID of the event to check.
+     */
     private void loadWinners(String eventId) {
         db.collection("events").document(eventId)
                 .get()

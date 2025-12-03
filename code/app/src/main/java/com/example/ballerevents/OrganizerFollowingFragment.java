@@ -24,8 +24,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fragment displaying Following/Followers lists.
- * Uses ProfilesListAdapter (read-only) to prevent deletion.
+ * Fragment that displays the lists of users the organizer is following and their followers.
+ * <p>
+ * This fragment uses {@link ProfilesListAdapter} in a read-only capacity to display
+ * user profiles. Clicking on a user navigates to their profile details.
+ * </p>
  */
 public class OrganizerFollowingFragment extends Fragment {
 
@@ -36,7 +39,6 @@ public class OrganizerFollowingFragment extends Fragment {
     private FirebaseAuth mAuth;
     private String currentUserId;
 
-    // Changed Adapter Type to the Safe Read-Only Adapter
     private ProfilesListAdapter followingAdapter;
     private ProfilesListAdapter followersAdapter;
     private ListenerRegistration userListener;
@@ -86,8 +88,11 @@ public class OrganizerFollowingFragment extends Fragment {
         }
     }
 
+    /**
+     * Initializes the RecyclerViews for "Following" and "Followers" lists.
+     * Sets up click listeners to navigate to {@link ProfileDetailsActivity}.
+     */
     private void setupRecyclerViews() {
-        // Safe Adapter: Clicking opens profile details
         followingAdapter = new ProfilesListAdapter(profile -> {
             Intent intent = new Intent(getContext(), ProfileDetailsActivity.class);
             intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, profile.getId());
@@ -107,6 +112,9 @@ public class OrganizerFollowingFragment extends Fragment {
         binding.rvFollowers.setAdapter(followersAdapter);
     }
 
+    /**
+     * Listens for real-time updates to the organizer's profile to refresh the lists.
+     */
     private void loadOrganizerProfile() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -138,6 +146,14 @@ public class OrganizerFollowingFragment extends Fragment {
         });
     }
 
+    /**
+     * Fetches user profiles based on a list of IDs and updates the adapter.
+     *
+     * @param ids          List of user IDs to fetch.
+     * @param adapter      The adapter to update with fetched profiles.
+     * @param emptyView    The view to show if the list is empty.
+     * @param emptyMessage The message to display if the list is empty.
+     */
     private void loadProfileLists(List<String> ids, ProfilesListAdapter adapter, View emptyView, String emptyMessage) {
         if (ids == null || ids.isEmpty()) {
             adapter.submitList(new ArrayList<>());
@@ -148,8 +164,6 @@ public class OrganizerFollowingFragment extends Fragment {
             return;
         }
 
-        // Firestore 'whereIn' query limited to 10 for safety in this snippet,
-        // ideally paginate or chunk if lists are large.
         List<String> chunk = ids.subList(0, Math.min(ids.size(), 10));
 
         db.collection("users")

@@ -13,21 +13,10 @@ import com.example.ballerevents.databinding.ItemEventTrendingBinding;
 
 /**
  * RecyclerView adapter for displaying {@link Event} objects inside a
- * horizontal carousel-like list using the wide card layout
- * {@code item_event_trending.xml}.
- *
+ * horizontal carousel-like list using the wide card layout.
  * <p>
- * The adapter extends {@link ListAdapter} to efficiently handle data updates
- * using {@link DiffUtil}. Each card displays:
- * <ul>
- *     <li>Event title</li>
- *     <li>Location</li>
- *     <li>Date</li>
- *     <li>Price</li>
- *     <li>Poster background</li>
- * </ul>
- *
- * Clicking a card invokes the supplied {@link OnEventClickListener}.
+ * This adapter is primarily used for the "Popular" or "Trending" sections
+ * of the dashboard.
  * </p>
  */
 public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapter.EventViewHolder> {
@@ -39,18 +28,17 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
         /**
          * Called when an event item is clicked.
          *
-         * @param event the event that was clicked
+         * @param event The event that was clicked.
          */
         void onEventClick(Event event);
     }
 
-    /** Callback for card clicks. */
     private final OnEventClickListener onClickListener;
 
     /**
      * Creates a new adapter instance.
      *
-     * @param onClickListener listener that receives click events for each item
+     * @param onClickListener Listener that receives click events for each item.
      */
     public TrendingEventAdapter(OnEventClickListener onClickListener) {
         super(EventDiffCallback);
@@ -77,11 +65,6 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
 
         private final ItemEventTrendingBinding binding;
 
-        /**
-         * Constructs the ViewHolder using ViewBinding.
-         *
-         * @param binding binding for {@code item_event_trending.xml}
-         */
         public EventViewHolder(ItemEventTrendingBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
@@ -90,8 +73,8 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
         /**
          * Binds an {@link Event} object to the card UI.
          *
-         * @param event            the event data being displayed
-         * @param onClickListener  listener for click events on the card
+         * @param event            The event data being displayed.
+         * @param onClickListener  Listener for click events on the card.
          */
         public void bind(Event event, OnEventClickListener onClickListener) {
             binding.tvEventTitle.setText(event.getTitle());
@@ -99,7 +82,6 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
             binding.tvEventDate.setText(event.getDate());
             binding.tvPrice.setText(event.getPrice());
 
-            // Load poster image
             Glide.with(binding.getRoot().getContext())
                     .load(event.getEventPosterUrl())
                     .placeholder(R.drawable.placeholder_image)
@@ -115,7 +97,6 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
      */
     private static final DiffUtil.ItemCallback<Event> EventDiffCallback =
             new DiffUtil.ItemCallback<Event>() {
-
                 @Override
                 public boolean areItemsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
                     return oldItem.getId().equals(newItem.getId());
@@ -123,7 +104,6 @@ public class TrendingEventAdapter extends ListAdapter<Event, TrendingEventAdapte
 
                 @Override
                 public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-                    // Assuming event content is immutable for display purposes.
                     return oldItem.getId().equals(newItem.getId());
                 }
             };

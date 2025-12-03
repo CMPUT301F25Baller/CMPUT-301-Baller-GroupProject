@@ -15,16 +15,32 @@ import java.util.Locale;
 
 /**
  * A safe, read-only adapter for displaying lists of user profiles.
- * Used for "Following" and "Followers" lists where no admin actions (delete) are allowed.
+ * <p>
+ * This adapter is designed for public-facing lists such as "Following" and "Followers".
+ * It deliberately hides administrative actions (like the delete menu) to ensure security.
+ * </p>
  */
 public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAdapter.VH> {
 
+    /**
+     * Interface for handling click events on profile items.
+     */
     public interface OnProfileClick {
+        /**
+         * Called when a profile item is clicked.
+         *
+         * @param p The selected user profile.
+         */
         void onClick(UserProfile p);
     }
 
     private final OnProfileClick onClick;
 
+    /**
+     * Constructs a new ProfilesListAdapter.
+     *
+     * @param onClick Listener to handle profile selection.
+     */
     public ProfilesListAdapter(OnProfileClick onClick) {
         super(DIFF);
         this.onClick = onClick;
@@ -80,7 +96,6 @@ public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAd
             b.tvName.setText(p.getName() == null ? "User" : p.getName());
             b.tvEmail.setText(p.getEmail());
 
-            // Show Role
             String role = p.getRole();
             if (role != null && !role.isEmpty()) {
                 String displayRole = role.substring(0, 1).toUpperCase(Locale.ROOT) + role.substring(1);

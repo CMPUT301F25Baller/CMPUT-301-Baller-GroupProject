@@ -14,10 +14,14 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 
-import java.util.Map; // Explicitly import java.util.Map
+import java.util.Map;
 
 /**
- * Activity that displays a map of where entrants joined the waitlist from.
+ * Activity that displays a map visualizing where entrants joined the waitlist from.
+ * <p>
+ * This activity fetches the geolocation data associated with an event's waitlist
+ * and places markers on a Google Map.
+ * </p>
  */
 public class OrganizerMapActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -47,6 +51,9 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
         loadEventLocations();
     }
 
+    /**
+     * Fetches the event document and retrieves the map of entrant locations.
+     */
     private void loadEventLocations() {
         if (eventId == null) return;
 
@@ -64,6 +71,11 @@ public class OrganizerMapActivity extends AppCompatActivity implements OnMapRead
                 });
     }
 
+    /**
+     * Adds markers to the map for each entrant location and centers the camera.
+     *
+     * @param locations Map of user IDs to GeoPoints.
+     */
     private void displayMarkers(Map<String, GeoPoint> locations) {
         if (mMap == null) return;
 

@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shows a list of user profiles for entrants that were chosen in the lottery
- * for a given event (uses Event.chosenUserIds).
+ * Activity that displays the list of entrants who have been chosen in the lottery.
+ * This corresponds to users whose IDs are in the event's {@code chosenUserIds} list.
  */
 public class OrganizerFinalEntrantsActivity extends AppCompatActivity {
 
@@ -61,7 +61,10 @@ public class OrganizerFinalEntrantsActivity extends AppCompatActivity {
         binding.recyclerFinalEntrants.setAdapter(adapter);
     }
 
-    /** Loads chosen entrants (chosenUserIds) for this event. */
+    /**
+     * Loads the event document to retrieve the {@code chosenUserIds} list.
+     * Subsequently fetches the {@link UserProfile} documents for those IDs.
+     */
     private void fetchFinalEntrants() {
         binding.tvMessage.setText("");
         binding.tvMessage.setVisibility(android.view.View.GONE);
@@ -85,7 +88,6 @@ public class OrganizerFinalEntrantsActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Fetch the UserProfile docs for those IDs
                     db.collection("users")
                             .whereIn(FieldPath.documentId(), chosenIds)
                             .get()

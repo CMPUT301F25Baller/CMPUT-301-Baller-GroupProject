@@ -12,14 +12,15 @@ import com.google.firebase.firestore.PropertyName;
  * <p>
  * Each entry includes an identifier, a title or message label, timestamp,
  * avatar resource, and read/unread state. This model is UI-focused and does
- * not integrate directly with Firestore.
+ * not integrate directly with Firestore real-time updates in the same way the
+ * core {@link Notification} model does.
  * </p>
  */
 @Keep
 public class NotificationLog {
 
     // ---------------------------------------------------------
-    // Firestore-backed fields (Organizer → Entrant notifications)
+    // Firestore-backed fields
     // ---------------------------------------------------------
     @DocumentId
     private String id;
@@ -33,26 +34,26 @@ public class NotificationLog {
     private String eventId;
     private String eventTitle;
 
-    private String title;      // shared with UI version
+    private String title;
     private String message;
-    private String type;       // e.g., "INVITE", "UPDATE", etc.
+    private String type;
     private boolean read;
 
     private Timestamp timestamp;
 
-    private Boolean adminReviewed;  // NEW audit flag
+    private Boolean adminReviewed;
 
     // ---------------------------------------------------------
-    // UI-only fields (from main + dashboard branches)
+    // UI-only fields
     // ---------------------------------------------------------
 
-    /** Human-friendly timestamp label such as "1h ago" */
+    /** Human-friendly timestamp label such as "1h ago". */
     private String timestampLabel;
 
-    /** Avatar icon for list display */
+    /** Avatar icon resource ID for list display. */
     private int avatarRes = 0;
 
-    /** Whether this notification represents an event invitation */
+    /** Whether this notification represents an event invitation. */
     private boolean isInvitation = false;
 
 
@@ -60,11 +61,20 @@ public class NotificationLog {
     // Constructors
     // ---------------------------------------------------------
 
+    /**
+     * Required empty constructor for Firestore deserialization.
+     */
     public NotificationLog() {
-        // Required empty constructor for Firestore
     }
 
-    /** Simple Firestore constructor */
+    /**
+     * Simple constructor for basic Firestore data.
+     *
+     * @param id        The unique document ID.
+     * @param title     The notification title.
+     * @param message   The notification body text.
+     * @param timestamp The time the notification was created.
+     */
     public NotificationLog(String id, String title, String message, Timestamp timestamp) {
         this.id = id;
         this.title = title;
@@ -72,7 +82,15 @@ public class NotificationLog {
         this.timestamp = timestamp;
     }
 
-    /** UI Constructor (main branch version) */
+    /**
+     * Constructor for UI display without specific invitation logic.
+     *
+     * @param id             The unique document ID.
+     * @param title          The notification title.
+     * @param timestampLabel Formatted time string (e.g., "2h ago").
+     * @param avatarRes      Resource ID for the avatar icon.
+     * @param isRead         Whether the notification has been read.
+     */
     public NotificationLog(String id,
                            String title,
                            String timestampLabel,
@@ -85,7 +103,17 @@ public class NotificationLog {
         this.read = isRead;
     }
 
-    /** Full UI + invitation constructor */
+    /**
+     * Full constructor for UI display, including invitation details.
+     *
+     * @param id             The unique document ID.
+     * @param title          The notification title.
+     * @param timestampLabel Formatted time string.
+     * @param avatarRes      Resource ID for the avatar icon.
+     * @param isRead         Whether the notification has been read.
+     * @param isInvitation   True if this is an event invitation.
+     * @param eventId        The ID of the associated event.
+     */
     public NotificationLog(String id,
                            String title,
                            String timestampLabel,
@@ -100,7 +128,7 @@ public class NotificationLog {
 
 
     // ---------------------------------------------------------
-    // Getters (FULL)
+    // Getters
     // ---------------------------------------------------------
 
     public String getId() { return id; }
@@ -132,15 +160,27 @@ public class NotificationLog {
 
 
     // ---------------------------------------------------------
-    // Helper fallback methods (for older documents)
+    // Helper fallback methods
     // ---------------------------------------------------------
 
+    /**
+     * Returns a safe title string to display.
+     * Falls back to the notification type or a default string if the title is missing.
+     *
+     * @return A displayable title string.
+     */
     public String safeTitle() {
         if (title != null && !title.isEmpty()) return title;
         if (type != null && !type.isEmpty()) return type;
         return "Notification";
     }
 
+    /**
+     * Returns a safe message string to display.
+     * Falls back to the event title if the message body is missing.
+     *
+     * @return A displayable message string.
+     */
     public String safeMessage() {
         if (message != null && !message.isEmpty()) return message;
         if (eventTitle != null && !eventTitle.isEmpty()) return "Related to " + eventTitle;

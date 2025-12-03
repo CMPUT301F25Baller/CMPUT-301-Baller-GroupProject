@@ -29,9 +29,9 @@ import java.util.stream.Collectors;
  * <p>Features include:</p>
  * <ul>
  * <li>Updating Name, "About Me" bio, and Interests.</li>
- * <li><b>Opting out of Notifications</b> (US 01.04.03).</li>
+ * <li>Opting out of Notifications (US 01.04.03).</li>
  * <li>Uploading or changing the profile picture.</li>
- * <li>Deleting the account.</li>
+ * <li>Deleting the account permanently.</li>
  * </ul>
  */
 public class EditProfileActivity extends AppCompatActivity {
@@ -41,8 +41,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private String currentUserId;
     private String newProfileImageUriString;
-    private String existingProfileImageUrl; // Track existing URL for potential deletion
-
+    private String existingProfileImageUrl;
 
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
@@ -67,7 +66,6 @@ public class EditProfileActivity extends AppCompatActivity {
         }
         currentUserId = auth.getCurrentUser().getUid();
 
-        // Handle Custom Back Button
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
@@ -81,7 +79,7 @@ public class EditProfileActivity extends AppCompatActivity {
 
     /**
      * Fetches the current user's data from Firestore and populates the UI fields.
-     * Includes checking the 'notificationsEnabled' preference.
+     * Also retrieves the current notification preference.
      */
     private void loadUserData() {
         db.collection("users").document(currentUserId).get()
@@ -92,13 +90,11 @@ public class EditProfileActivity extends AppCompatActivity {
                             binding.etName.setText(user.getName());
                             binding.etAboutMe.setText(user.getAboutMe());
 
-                            // Load Interests
                             if (user.getInterests() != null && !user.getInterests().isEmpty()) {
                                 String interestsJoined = TextUtils.join(", ", user.getInterests());
                                 binding.etInterests.setText(interestsJoined);
                             }
 
-                            // Load Profile Image
                             if (user.getProfilePictureUrl() != null && !user.getProfilePictureUrl().isEmpty()) {
                                 existingProfileImageUrl = user.getProfilePictureUrl();
                                 Glide.with(this).load(user.getProfilePictureUrl())
@@ -108,8 +104,6 @@ public class EditProfileActivity extends AppCompatActivity {
                                 newProfileImageUriString = user.getProfilePictureUrl();
                             }
 
-                            // Load Notification Preference (US 01.04.03)
-                            // Assuming default is TRUE if field is missing
                             Boolean notifEnabled = documentSnapshot.getBoolean("notificationsEnabled");
                             if (notifEnabled != null) {
                                 binding.switchNotifications.setChecked(notifEnabled);
@@ -124,7 +118,6 @@ public class EditProfileActivity extends AppCompatActivity {
     /**
      * Validates input fields and updates the user's profile in Firestore.
      * Uploads new profile image to Firebase Storage if selected.
-     * Saves the 'notificationsEnabled' boolean.
      */
     private void saveProfile() {
         String newName = binding.etName.getText().toString().trim();
@@ -137,13 +130,11 @@ public class EditProfileActivity extends AppCompatActivity {
             return;
         }
 
-        // Show progress while saving
         binding.btnSave.setEnabled(false);
         binding.btnSave.setText("Saving...");
 
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
-        // Parse interests string to List
         List<String> newInterests;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
             newInterests = Arrays.stream(newInterestsString.split(","))
@@ -164,36 +155,28 @@ public class EditProfileActivity extends AppCompatActivity {
         updates.put("interests", newInterests);
         updates.put("notificationsEnabled", notificationsEnabled);
 
-        // Check if there's a new profile image to upload
         if (newProfileImageUriString != null && !newProfileImageUriString.startsWith("http")) {
-            // This is a local URI - upload to Firebase Storage
             Uri imageUri = Uri.parse(newProfileImageUriString);
 
             ImageUploadHelper.uploadProfileImage(imageUri, new ImageUploadHelper.UploadCallback() {
                 @Override
                 public void onSuccess(String downloadUrl) {
-                    // Add the download URL to updates
                     updates.put("profilePictureUrl", downloadUrl);
 
-                    // Delete old image if it exists and is different
                     if (existingProfileImageUrl != null &&
                             !existingProfileImageUrl.isEmpty() &&
                             !existingProfileImageUrl.equals(downloadUrl)) {
                         ImageUploadHelper.deleteImage(existingProfileImageUrl, new ImageUploadHelper.DeleteCallback() {
                             @Override
-                            public void onSuccess() {
-                                // Old image deleted successfully
-                            }
+                            public void onSuccess() { }
 
                             @Override
                             public void onFailure(Exception e) {
-                                // Log but don't block save
                                 android.util.Log.w("EditProfile", "Failed to delete old image", e);
                             }
                         });
                     }
 
-                    // Save to Firestore
                     saveToFirestore(userRef, updates);
                 }
 
@@ -207,7 +190,6 @@ public class EditProfileActivity extends AppCompatActivity {
                 }
             });
         } else {
-            // No new image or already a download URL - save directly
             if (newProfileImageUriString != null) {
                 updates.put("profilePictureUrl", newProfileImageUriString);
             }
@@ -216,7 +198,10 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     /**
-     * Helper method to save profile updates to Firestore.
+     * Helper method to commit the update map to Firestore.
+     *
+     * @param userRef Reference to the user document.
+     * @param updates Map of fields to update.
      */
     private void saveToFirestore(DocumentReference userRef, Map<String, Object> updates) {
         userRef.update(updates)
@@ -232,6 +217,9 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Displays a confirmation dialog before deleting the user account.
+     */
     private void confirmDeleteAccount() {
         new AlertDialog.Builder(this)
                 .setTitle("Delete Account")
@@ -240,23 +228,23 @@ public class EditProfileActivity extends AppCompatActivity {
                 .setNegativeButton("Cancel", null)
                 .show();
     }
+
+    /**
+     * Deletes the user profile image, Firestore document, and Firebase Authentication account.
+     */
     private void performAccountDeletion() {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) return;
 
         String uid = user.getUid();
 
-        // Delete profile image from Storage if it exists
         if (existingProfileImageUrl != null && !existingProfileImageUrl.isEmpty()) {
             ImageUploadHelper.deleteImage(existingProfileImageUrl, new ImageUploadHelper.DeleteCallback() {
                 @Override
-                public void onSuccess() {
-                    // Image deleted successfully
-                }
+                public void onSuccess() { }
 
                 @Override
                 public void onFailure(Exception e) {
-                    // Log but continue with account deletion
                     android.util.Log.w("EditProfile", "Failed to delete profile image during account deletion", e);
                 }
             });
@@ -279,6 +267,9 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Redirects the user to the login screen after account deletion.
+     */
     private void navigateToLogin() {
         Intent intent = new Intent(this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

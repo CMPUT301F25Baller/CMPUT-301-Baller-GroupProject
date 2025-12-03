@@ -19,7 +19,7 @@ import java.util.List;
  * RecyclerView adapter for displaying notification rows.
  * <p>
  * Supports standard notifications (Mark Read/Open) and interactive Invitations (Accept/Reject).
- * This adapter uses the standalone {@link NotificationItem} class.
+ * This adapter uses the standalone {@link NotificationItem} class for its data model.
  * </p>
  */
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.VH> {
@@ -31,13 +31,19 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
      * Interface to handle button clicks from the Activity/Fragment.
      */
     public interface OnNotificationActionListener {
+        /** Called when the user accepts an invitation. */
         void onAccept(NotificationItem item);
+
+        /** Called when the user rejects an invitation. */
         void onReject(NotificationItem item);
+
+        /** Called when the user marks a notification as read. */
         void onMarkRead(NotificationItem item);
     }
 
     /**
      * Constructs a new NotificationAdapter.
+     *
      * @param actionListener Listener for handling button actions.
      */
     public NotificationAdapter(OnNotificationActionListener actionListener) {
@@ -46,6 +52,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
     /**
      * Updates the list of items and refreshes the RecyclerView.
+     *
      * @param newItems The new list of notifications to display.
      */
     public void submitList(List<NotificationItem> newItems) {
@@ -79,11 +86,8 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                 holder.btnAction1.setText("Accept");
                 holder.btnAction2.setText("Reject");
 
-                // Bind invitation actions
                 holder.btnAction1.setOnClickListener(v -> actionListener.onAccept(item));
                 holder.btnAction2.setOnClickListener(v -> actionListener.onReject(item));
-
-                // Ensure buttons are enabled for invites
                 holder.btnAction1.setEnabled(true);
 
             } else {
@@ -100,7 +104,6 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                 }
 
                 holder.btnAction1.setOnClickListener(v -> actionListener.onMarkRead(item));
-                // Define 'Open' logic if needed, or hide button
             }
         } else {
             holder.actionsRow.setVisibility(View.GONE);
@@ -134,7 +137,6 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             tvTime      = itemView.findViewById(R.id.tvTime);
             actionsRow  = itemView.findViewById(R.id.actionsRow);
 
-            // Map buttons to layout IDs
             btnAction1 = itemView.findViewById(R.id.btnMarkRead);
             btnAction2 = itemView.findViewById(R.id.btnOpen);
         }

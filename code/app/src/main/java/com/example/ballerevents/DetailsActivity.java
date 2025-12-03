@@ -27,6 +27,17 @@ import com.google.firebase.firestore.ListenerRegistration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Activity for displaying detailed information about a specific event.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ * <li>Viewing event details (Title, Description, Date, Location).</li>
+ * <li>Joining the waitlist (with optional Geolocation).</li>
+ * <li>Accepting or declining invitations to join the event.</li>
+ * <li>Viewing the organizer's profile.</li>
+ * </ul>
+ */
 public class DetailsActivity extends AppCompatActivity {
 
     public static final String EXTRA_EVENT_ID = "com.example.ballerevents.EVENT_ID";
@@ -101,6 +112,10 @@ public class DetailsActivity extends AppCompatActivity {
         if (eventListener != null) eventListener.remove();
     }
 
+    /**
+     * Updates the UI with the latest event data.
+     * Fetches and displays organizer details and current waitlist count.
+     */
     private void updateUI() {
         binding.tvTitle.setText(mEvent.getTitle());
         binding.tvDescription.setText(mEvent.getDescription());
@@ -125,7 +140,6 @@ public class DetailsActivity extends AppCompatActivity {
                             .placeholder(R.drawable.placeholder_avatar1)
                             .into(binding.ivOrganizerAvatar);
 
-                    // --- NEW: CLICK LISTENER TO VIEW PROFILE ---
                     View.OnClickListener viewProfile = v -> {
                         Intent intent = new Intent(DetailsActivity.this, ProfileDetailsActivity.class);
                         intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, organizerProfile.getId());
@@ -133,7 +147,6 @@ public class DetailsActivity extends AppCompatActivity {
                     };
                     binding.tvOrganizerName.setOnClickListener(viewProfile);
                     binding.ivOrganizerAvatar.setOnClickListener(viewProfile);
-                    // -------------------------------------------
 
                 } else {
                     binding.tvOrganizerName.setText(mEvent.getOrganizer() != null ? mEvent.getOrganizer() : "Unknown");
@@ -149,6 +162,10 @@ public class DetailsActivity extends AppCompatActivity {
         updateStatusUI();
     }
 
+    /**
+     * Updates the status message and action buttons based on the user's relationship to the event.
+     * Handles states: Waitlisted, Selected (Won), Accepted, Declined, Cancelled, and Full.
+     */
     private void updateStatusUI() {
         if (currentUserId == null) return;
 
@@ -213,6 +230,9 @@ public class DetailsActivity extends AppCompatActivity {
         binding.btnDecline.setOnClickListener(v -> respondToInvite("declined"));
     }
 
+    /**
+     * Requests the device's last known location and joins the waitlist with coordinates.
+     */
     private void fetchLocationAndJoin() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
@@ -226,6 +246,12 @@ public class DetailsActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Adds the current user to the waitlist in Firestore.
+     * Optionally records geolocation if provided.
+     *
+     * @param location The GeoPoint of the user (can be null).
+     */
     private void joinWaitlist(GeoPoint location) {
         if (mEvent == null) return;
         db.collection("events").document(eventId)
@@ -241,6 +267,11 @@ public class DetailsActivity extends AppCompatActivity {
                 .addOnSuccessListener(a -> Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Updates the user's invitation status (accepted/declined) in Firestore.
+     *
+     * @param response The response string ("accepted" or "declined").
+     */
     private void respondToInvite(String response) {
         if (mEvent == null) return;
         Map<String, Object> updates = new HashMap<>();

@@ -18,6 +18,11 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity that allows the Administrator to review global system logs.
+ * Displays a list of all notifications sent within the system for auditing purposes.
+ * Note: The logs in this view are read-only.
+ */
 public class AdminLogsActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminLogsActivity";
@@ -43,10 +48,13 @@ public class AdminLogsActivity extends AppCompatActivity {
         loadGlobalLogs();
     }
 
+    /**
+     * Sets up the RecyclerView with the NotificationLogsAdapter.
+     * The adapter is initialized in read-only mode (isAdminView = true).
+     */
     private void setupRecycler() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- PASS 'true' FOR ADMIN VIEW (READ ONLY) ---
         adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
             @Override public void onMarkRead(Notification notif) {}
             @Override public void onOpen(Notification notif) { showLogDetails(notif); }
@@ -55,11 +63,14 @@ public class AdminLogsActivity extends AppCompatActivity {
             @Override public void onDelete(Notification notif) {
                 Toast.makeText(AdminLogsActivity.this, "Logs are read-only", Toast.LENGTH_SHORT).show();
             }
-        }, true); // <--- 'true' means Admin View
+        }, true);
 
         binding.rvLogs.setAdapter(adapter);
     }
 
+    /**
+     * Fetches the last 100 notifications from the entire system (collectionGroup query).
+     */
     private void loadGlobalLogs() {
         if (binding.progressBar != null) binding.progressBar.setVisibility(View.VISIBLE);
 
@@ -89,6 +100,11 @@ public class AdminLogsActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Displays the technical details of a notification log in a dialog.
+     *
+     * @param n The notification object to display.
+     */
     private void showLogDetails(Notification n) {
         StringBuilder details = new StringBuilder();
         details.append("From ID: ").append(n.getSenderId() != null ? n.getSenderId() : "System").append("\n");

@@ -20,6 +20,7 @@ import java.util.List;
  * <p>
  * Displays the event details and dynamically calculates the user's status
  * (Waitlist, Selected, Enrolled, Cancelled) based on the event's lists.
+ * </p>
  */
 public class EventHistoryAdapter extends RecyclerView.Adapter<EventHistoryAdapter.ViewHolder> {
 
@@ -31,11 +32,22 @@ public class EventHistoryAdapter extends RecyclerView.Adapter<EventHistoryAdapte
     private final OnEventClickListener listener;
     private final String currentUserId;
 
+    /**
+     * Constructs the adapter.
+     *
+     * @param currentUserId The ID of the currently logged-in user.
+     * @param listener      Listener for item click events.
+     */
     public EventHistoryAdapter(String currentUserId, OnEventClickListener listener) {
         this.currentUserId = currentUserId;
         this.listener = listener;
     }
 
+    /**
+     * Updates the data set and refreshes the RecyclerView.
+     *
+     * @param newEvents The new list of events to display.
+     */
     public void submitList(List<Event> newEvents) {
         events.clear();
         if (newEvents != null) {
@@ -65,7 +77,7 @@ public class EventHistoryAdapter extends RecyclerView.Adapter<EventHistoryAdapte
                 .placeholder(R.drawable.placeholder_coldplay_banner)
                 .into(holder.ivImage);
 
-        // --- STATUS LOGIC ---
+        // Determine User Status logic
         String statusText = "Unknown";
         int colorRes = android.R.color.darker_gray;
 

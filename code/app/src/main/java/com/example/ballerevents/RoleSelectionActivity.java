@@ -14,22 +14,19 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * Activity displayed immediately after a successful login where the user selects
  * their primary role in the app.
  * <p>
- * The selected role is written to the user's Firestore document (field
- * {@code "role"} in the {@code users} collection) and the user is then
- * navigated to the appropriate main activity.
+ * The selected role is written to the user's Firestore document, and the user
+ * is then routed to the appropriate dashboard.
+ * </p>
  * <p>
- * Update: Both Entrants and Organizers are now routed to {@link EntrantMainActivity}
- * to provide a unified dashboard experience.
+ * Note: Both Entrants and Organizers are now routed to {@link EntrantMainActivity}
+ * to provide a unified dashboard experience, while Admins go to {@link AdminMainActivity}.
+ * </p>
  */
 public class RoleSelectionActivity extends AppCompatActivity {
 
-    /** Logging tag for role selection flow. */
     private static final String TAG = "RoleSelectionActivity";
 
-    /** Firestore instance used to update the user's role. */
     private FirebaseFirestore db;
-
-    /** FirebaseAuth instance for retrieving the current user ID. */
     private FirebaseAuth mAuth;
 
     @Override
@@ -69,7 +66,7 @@ public class RoleSelectionActivity extends AppCompatActivity {
      * Persists the chosen role in the current user's Firestore document and
      * then starts the given activity.
      *
-     * @param role          Role string to be stored (e.g., {@code "entrant"}, {@code "organizer"}, {@code "admin"}).
+     * @param role          Role string to be stored (e.g., "entrant", "organizer", "admin").
      * @param activityClass Target activity class to navigate to after the role is set.
      */
     private void selectRole(String role, Class<?> activityClass) {
@@ -80,7 +77,6 @@ public class RoleSelectionActivity extends AppCompatActivity {
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "User role set to: " + role);
                     startActivity(new Intent(RoleSelectionActivity.this, activityClass));
-                    // Prevent navigating back to role selection
                     finish();
                 })
                 .addOnFailureListener(e -> {

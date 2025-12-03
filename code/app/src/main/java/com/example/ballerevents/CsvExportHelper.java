@@ -27,10 +27,10 @@ import java.util.Locale;
  *
  * <p>Features:</p>
  * <ul>
- *     <li>Exports accepted entrants with name and email</li>
- *     <li>Generates timestamped filenames</li>
- *     <li>Saves to Downloads folder for easy access</li>
- *     <li>Handles Android version differences automatically</li>
+ * <li>Exports accepted entrants with name and email</li>
+ * <li>Generates timestamped filenames</li>
+ * <li>Saves to Downloads folder for easy access</li>
+ * <li>Handles Android version differences automatically</li>
  * </ul>
  */
 public class CsvExportHelper {
@@ -44,14 +44,14 @@ public class CsvExportHelper {
         /**
          * Called when export succeeds.
          *
-         * @param filePath The path or URI where the file was saved
+         * @param filePath The path or URI where the file was saved.
          */
         void onSuccess(String filePath);
 
         /**
          * Called when export fails.
          *
-         * @param error The exception that caused the failure
+         * @param error The exception that caused the failure.
          */
         void onFailure(Exception error);
     }
@@ -62,10 +62,10 @@ public class CsvExportHelper {
      * <p>The CSV will contain two columns: Name and Email.
      * The file is saved to the Downloads folder with a timestamped filename.</p>
      *
-     * @param context       Application context for file operations
-     * @param eventTitle    Title of the event (used in filename)
-     * @param entrants      List of UserProfile objects who accepted
-     * @param callback      Callback to receive success/failure results
+     * @param context       Application context for file operations.
+     * @param eventTitle    Title of the event (used in filename).
+     * @param entrants      List of UserProfile objects who accepted.
+     * @param callback      Callback to receive success/failure results.
      */
     public static void exportAcceptedEntrants(
             Context context,
@@ -79,31 +79,23 @@ public class CsvExportHelper {
         }
 
         try {
-            // Generate CSV content
             StringBuilder csvContent = new StringBuilder();
-
-            // Add header row
             csvContent.append("Name,Email\n");
 
-            // Add data rows
             for (UserProfile entrant : entrants) {
                 String name = escapeCSV(entrant.getName());
                 String email = escapeCSV(entrant.getEmail());
                 csvContent.append(name).append(",").append(email).append("\n");
             }
 
-            // Generate filename with timestamp
             String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
                     .format(new Date());
             String sanitizedTitle = sanitizeFilename(eventTitle);
             String filename = "Accepted_Entrants_" + sanitizedTitle + "_" + timestamp + ".csv";
 
-            // Save file based on Android version
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10+ (Scoped Storage)
                 saveToDownloadsQ(context, filename, csvContent.toString(), callback);
             } else {
-                // Android 9 and below (Legacy External Storage)
                 saveToDownloadsLegacy(context, filename, csvContent.toString(), callback);
             }
 
@@ -115,6 +107,11 @@ public class CsvExportHelper {
 
     /**
      * Saves CSV to Downloads folder on Android 10+ using MediaStore API.
+     *
+     * @param context  Application context.
+     * @param filename Name of the file to save.
+     * @param content  String content of the CSV.
+     * @param callback Callback for success or failure.
      */
     private static void saveToDownloadsQ(
             Context context,
@@ -157,6 +154,11 @@ public class CsvExportHelper {
 
     /**
      * Saves CSV to Downloads folder on Android 9 and below using File API.
+     *
+     * @param context  Application context.
+     * @param filename Name of the file to save.
+     * @param content  String content of the CSV.
+     * @param callback Callback for success or failure.
      */
     private static void saveToDownloadsLegacy(
             Context context,
@@ -195,17 +197,15 @@ public class CsvExportHelper {
      * <p>If a field contains commas, quotes, or newlines, it will be
      * wrapped in double quotes and internal quotes will be escaped.</p>
      *
-     * @param value The string value to escape
-     * @return Escaped string safe for CSV format
+     * @param value The string value to escape.
+     * @return Escaped string safe for CSV format.
      */
     private static String escapeCSV(String value) {
         if (value == null) {
             return "";
         }
 
-        // If field contains comma, quote, or newline, wrap in quotes
         if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            // Escape existing quotes by doubling them
             value = value.replace("\"", "\"\"");
             return "\"" + value + "\"";
         }
@@ -216,20 +216,16 @@ public class CsvExportHelper {
     /**
      * Sanitizes a string to be safe for use as a filename.
      *
-     * <p>Removes or replaces characters that are invalid in filenames
-     * across different operating systems.</p>
-     *
-     * @param filename The string to sanitize
-     * @return Sanitized filename safe for all platforms
+     * @param filename The string to sanitize.
+     * @return Sanitized filename safe for all platforms.
      */
     private static String sanitizeFilename(String filename) {
         if (filename == null || filename.isEmpty()) {
             return "Event";
         }
 
-        // Replace invalid filename characters with underscores
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_")
-                .replaceAll("_{2,}", "_")  // Replace multiple underscores with single
-                .substring(0, Math.min(filename.length(), 50));  // Limit length
+                .replaceAll("_{2,}", "_")
+                .substring(0, Math.min(filename.length(), 50));
     }
 }

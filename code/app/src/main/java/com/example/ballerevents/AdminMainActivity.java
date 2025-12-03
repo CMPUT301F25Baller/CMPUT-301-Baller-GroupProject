@@ -7,13 +7,9 @@ import androidx.appcompat.app.AppCompatActivity;
 /**
  * Entry activity for the Admin role.
  *
- * <p>This activity exists solely as a redirector. When an admin logs in or
- * selects the admin role, the app launches this activity first. Its only
- * responsibility is to immediately start the
- * {@link AdminDashboardActivity}, which is the real admin home screen.
- *
- * <p>Once the dashboard is launched, this activity finishes itself so that
- * the user cannot accidentally navigate back to it using the back button.
+ * <p>This activity acts as a router. When an admin logs in, this activity is launched first,
+ * which then immediately redirects to the {@link AdminDashboardActivity}.
+ * It finishes itself immediately to prevent navigation back to this intermediate state.</p>
  */
 public class AdminMainActivity extends AppCompatActivity {
 

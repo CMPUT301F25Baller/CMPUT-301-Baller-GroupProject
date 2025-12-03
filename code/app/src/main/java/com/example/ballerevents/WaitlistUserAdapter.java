@@ -18,14 +18,17 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Adapter for displaying a list of {@link UserProfile} entries.
- * Features:
- * - Multi-selection via Checkboxes.
- * - Row click listener for detailed actions (Dialog).
+ * Adapter for displaying a list of {@link UserProfile} entries in the Organizer Waitlist.
+ * <p>
+ * Key features:
+ * <ul>
+ * <li><b>Multi-selection:</b> Uses checkboxes to select multiple users for batch actions.</li>
+ * <li><b>Individual Actions:</b> Clicking a row opens a detailed options dialog.</li>
+ * </ul>
+ * </p>
  */
 public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapter.ViewHolder> {
 
-    // --- INTERFACES ---
     public interface OnItemClickListener {
         void onItemClick(UserProfile user);
     }
@@ -34,22 +37,27 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         void onSelectionChanged(int count);
     }
 
-    // --- FIELDS ---
     private final List<UserProfile> users;
     private final OnSelectionChangeListener selectionListener;
-
-    // Member variable for row click listener
     private OnItemClickListener itemClickListener;
-
     private final Set<String> selectedUserIds = new HashSet<>();
 
-    // --- CONSTRUCTOR ---
+    /**
+     * Constructs a new WaitlistUserAdapter.
+     *
+     * @param users             The list of users to display.
+     * @param selectionListener Listener for updates to the selection count.
+     */
     public WaitlistUserAdapter(List<UserProfile> users, OnSelectionChangeListener selectionListener) {
         this.users = users;
         this.selectionListener = selectionListener;
     }
 
-    // --- SETTER FOR ROW CLICK LISTENER (Fixes the compilation error) ---
+    /**
+     * Sets the listener for row click events (viewing user details).
+     *
+     * @param listener The click listener.
+     */
     public void setOnItemClickListener(OnItemClickListener listener) {
         this.itemClickListener = listener;
     }
@@ -70,7 +78,6 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         holder.tvName.setText(user.getName());
         holder.tvEmail.setText(user.getEmail());
 
-        // Use Glide to load image
         Glide.with(holder.itemView.getContext())
                 .load(user.getProfilePictureUrl())
                 .placeholder(R.drawable.placeholder_avatar1)
@@ -78,11 +85,11 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
                 .circleCrop()
                 .into(holder.ivAvatar);
 
-        // Set Checkbox state without triggering listener
+        // Reset listener to prevent recycling issues
         holder.cbSelect.setOnCheckedChangeListener(null);
         holder.cbSelect.setChecked(selectedUserIds.contains(uid));
 
-        // Logic 1: Clicking the Checkbox ONLY toggles selection
+        // Checkbox click: Toggles selection state
         holder.cbSelect.setOnClickListener(v -> {
             toggleSelection(uid);
             if (selectionListener != null) {
@@ -90,7 +97,7 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
             }
         });
 
-        // Logic 2: Clicking the ROW opens the Options Dialog (Cancel/Message)
+        // Row click: Triggers detailed action (e.g., options dialog)
         holder.itemView.setOnClickListener(v -> {
             if (itemClickListener != null) {
                 itemClickListener.onItemClick(user);
@@ -103,6 +110,9 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         return users.size();
     }
 
+    /**
+     * Toggles the selection status of a specific user ID.
+     */
     private void toggleSelection(String uid) {
         if (selectedUserIds.contains(uid)) {
             selectedUserIds.remove(uid);
@@ -111,6 +121,11 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         }
     }
 
+    /**
+     * Returns a list of all currently selected UserProfiles.
+     *
+     * @return List of selected users.
+     */
     public List<UserProfile> getSelectedUsers() {
         List<UserProfile> selectedProfiles = new ArrayList<>();
         for (UserProfile user : users) {
@@ -121,6 +136,9 @@ public class WaitlistUserAdapter extends RecyclerView.Adapter<WaitlistUserAdapte
         return selectedProfiles;
     }
 
+    /**
+     * Clears all selections and updates the UI.
+     */
     public void clearSelection() {
         selectedUserIds.clear();
         notifyDataSetChanged();

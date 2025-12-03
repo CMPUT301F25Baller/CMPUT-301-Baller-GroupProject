@@ -21,9 +21,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * <p>This activity displays the organizer's profile header (Name, Bio, Stats)
  * and hosts a {@link ViewPager2} with three tabs:</p>
  * <ul>
- * <li><b>About</b>: Detailed profile information.</li>
- * <li><b>Event</b>: List of events managed by the organizer.</li>
- * <li><b>Following</b>: Lists of followers and following users.</li>
+ * <li><b>About:</b> Detailed profile information.</li>
+ * <li><b>Event:</b> List of events managed by the organizer.</li>
+ * <li><b>Following:</b> Lists of followers and following users.</li>
  * </ul>
  *
  * <p><b>Navigation Note:</b> Event-specific actions (like running a lottery) are NOT performed here.
@@ -59,27 +59,22 @@ public class OrganizerActivity extends AppCompatActivity {
         }
         currentUserId = mAuth.getCurrentUser().getUid();
 
-        // Handle Custom Back Button
         if (binding.btnBack != null) {
             binding.btnBack.setOnClickListener(v -> finish());
         }
 
-        // Setup ViewPager
         binding.viewPager.setAdapter(new OrganizerPagerAdapter(this));
         binding.viewPager.setOffscreenPageLimit(2);
-        binding.viewPager.setCurrentItem(1, false); // Default to Event tab
+        binding.viewPager.setCurrentItem(1, false);
 
-        // Connect TabLayout to ViewPager
         new TabLayoutMediator(binding.tabLayout, binding.viewPager,
                 (tab, position) -> tab.setText(TAB_TITLES[position])
         ).attach();
 
-        // "New Event" Button Listener
         binding.btnNewEvent.setOnClickListener(v ->
                 startActivity(new Intent(this, OrganizerEventCreationActivity.class))
         );
 
-        // "Message" Button Listener (Prototype)
         binding.btnMessage.setOnClickListener(v ->
                 Toast.makeText(this, "Messaging prototype coming soon.", Toast.LENGTH_SHORT).show()
         );
@@ -97,12 +92,16 @@ public class OrganizerActivity extends AppCompatActivity {
 
     /**
      * Helper method called by fragments to set the currently selected event context.
+     *
+     * @param eventId The ID of the selected event.
      */
     public void setSelectedEventId(String eventId) {
         this.selectedEventId = eventId;
-        // Logic can be added here if the parent activity needs to react to event selection
     }
 
+    /**
+     * Fetches and displays the organizer's profile header information from Firestore.
+     */
     private void loadOrganizerHeaderInfo() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -111,22 +110,18 @@ public class OrganizerActivity extends AppCompatActivity {
                 UserProfile userProfile = documentSnapshot.toObject(UserProfile.class);
 
                 if (userProfile != null) {
-                    // Update Name
                     binding.tvOrganizerName.setText(userProfile.getName());
 
-                    // Update About Me (Bio)
                     if (binding.tvOrganizerAboutMe != null) {
                         binding.tvOrganizerAboutMe.setText(userProfile.getAboutMe());
                     }
 
-                    // Update Profile Image
                     Glide.with(this)
                             .load(userProfile.getProfilePictureUrl())
                             .placeholder(R.drawable.placeholder_avatar1)
                             .error(R.drawable.placeholder_avatar1)
                             .into(binding.ivOrganizerProfile);
 
-                    // Update Stats
                     int following = userProfile.getFollowingIds() != null ? userProfile.getFollowingIds().size() : 0;
                     int followers = userProfile.getFollowerIds() != null ? userProfile.getFollowerIds().size() : 0;
 

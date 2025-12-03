@@ -42,7 +42,16 @@ import java.util.Map;
 
 /**
  * Activity for Organizers to manage the waitlist for a specific event.
- * Allows viewing entrants, drawing lottery winners, and sending notifications.
+ * <p>
+ * Key features:
+ * <ul>
+ * <li>View lists of entrants filtered by status (Waitlist, Selected, Cancelled, Enrolled).</li>
+ * <li>Draw lottery winners from the waitlist.</li>
+ * <li>Send notifications to individual or multiple users.</li>
+ * <li>Generate and save the event QR code.</li>
+ * <li>Export accepted entrants to CSV.</li>
+ * <li>View entrant locations on a map.</li>
+ * </ul>
  */
 public class OrganizerWaitlistActivity extends AppCompatActivity {
 
@@ -117,10 +126,7 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         binding.rvWaitlist.setLayoutManager(new LinearLayoutManager(this));
 
-        // Initialize Adapter (2 arguments: List + Listener)
         listAdapter = new WaitlistUserAdapter(displayedProfiles, count -> updateUIBasedOnSelection(count));
-
-        // Set Item Click Listener
         listAdapter.setOnItemClickListener(this::showUserOptions);
 
         binding.rvWaitlist.setAdapter(listAdapter);
@@ -430,16 +436,13 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         int max = currentEvent.getMaxAttendees();
         int selected = (currentEvent.getSelectedUserIds() != null) ? currentEvent.getSelectedUserIds().size() : 0;
 
-        // Calculate maximum possible spots to fill
         int maxSpots = max - selected;
 
-        // Safety check if event is full
         if (maxSpots <= 0) {
             Toast.makeText(this, "Event is already at full capacity", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Cap the draw amount at the number of people actually on the waitlist
         int waitlistSize = (currentEvent.getWaitlistUserIds() != null) ? currentEvent.getWaitlistUserIds().size() : 0;
         int defaultDrawAmount = Math.min(maxSpots, waitlistSize);
 
@@ -448,12 +451,10 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             return;
         }
 
-        // Create Input Field for the Dialog
         final EditText input = new EditText(this);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setText(String.valueOf(defaultDrawAmount));
 
-        // Show Dialog allowing user to SPECIFY the number (US 02.05.02)
         new AlertDialog.Builder(this)
                 .setTitle("Draw Lottery")
                 .setMessage("How many entrants to sample? (Max: " + defaultDrawAmount + ")")
@@ -484,12 +485,10 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         List<String> pool = new ArrayList<>(currentEvent.getWaitlistUserIds());
         Collections.shuffle(pool);
 
-        // Double check bounds to prevent crash
         int actualDraw = Math.min(pool.size(), spots);
         List<String> winners = pool.subList(0, actualDraw);
         List<String> losers = new ArrayList<>(pool.subList(actualDraw, pool.size()));
 
-        // Update Event Data locally
         currentEvent.getWaitlistUserIds().removeAll(winners);
         if (currentEvent.getSelectedUserIds() == null) currentEvent.setSelectedUserIds(new ArrayList<>());
         currentEvent.getSelectedUserIds().addAll(winners);
@@ -497,14 +496,12 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
         if (currentEvent.getInvitationStatus() == null) currentEvent.setInvitationStatus(new HashMap<>());
         for (String w : winners) currentEvent.getInvitationStatus().put(w, "pending");
 
-        // Batch Write to Firestore
         WriteBatch batch = db.batch();
         batch.update(db.collection("events").document(eventId),
                 "waitlistUserIds", currentEvent.getWaitlistUserIds(),
                 "selectedUserIds", currentEvent.getSelectedUserIds(),
                 "invitationStatus", currentEvent.getInvitationStatus());
 
-        // Notify Winners
         for (String winnerId : winners) {
             String notifId = db.collection("users").document(winnerId).collection("notifications").document().getId();
             Notification notif = new Notification(
@@ -516,7 +513,6 @@ public class OrganizerWaitlistActivity extends AppCompatActivity {
             batch.set(db.collection("users").document(winnerId).collection("notifications").document(notifId), notif);
         }
 
-        // Notify Losers
         for (String loserId : losers) {
             String notifId = db.collection("users").document(loserId).collection("notifications").document().getId();
             Notification notif = new Notification(

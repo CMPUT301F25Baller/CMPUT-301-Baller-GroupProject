@@ -27,12 +27,14 @@ import java.util.Map;
 
 /**
  * Activity allowing Organizers to create or edit events.
- * Features:
- * - Date/Time pickers
- * - Image pickers for Banner + Poster
- * - Full Firebase Storage upload
- * - Keeps old images when editing
- * - Supports registration open/close timestamps
+ * <p>
+ * Key features:
+ * <ul>
+ * <li>Configuring event details (title, description, location, capacity).</li>
+ * <li>Setting event date/time and registration open/close windows.</li>
+ * <li>Uploading and updating event posters and banners via Firebase Storage.</li>
+ * <li>Saving new events or updating existing ones in Firestore.</li>
+ * </ul>
  */
 public class OrganizerEventCreationActivity extends AppCompatActivity {
 
@@ -103,19 +105,17 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         binding.btnBack.setOnClickListener(v -> finish());
     }
 
-
-    // ---------------------------------------------
-    // IMAGE UPLOAD CLICKS
-    // ---------------------------------------------
+    /**
+     * Sets up click listeners for image selection views.
+     */
     private void setupImageUploads() {
         binding.ivPageHeader.setOnClickListener(v -> bannerPicker.launch("image/*"));
         binding.ivEventPoster.setOnClickListener(v -> posterPicker.launch("image/*"));
     }
 
-
-    // ---------------------------------------------
-    // DATE/TIME PICKERS
-    // ---------------------------------------------
+    /**
+     * Initializes date and time pickers for event schedule and registration windows.
+     */
     private void setupPickers() {
 
         binding.etDate.setOnClickListener(v -> showDatePicker(binding.etDate, eventCal));
@@ -145,10 +145,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         }, cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE), false).show();
     }
 
-
-    // ---------------------------------------------
-    // LOAD EXISTING EVENT (EDIT MODE)
-    // ---------------------------------------------
+    /**
+     * Loads event details from Firestore when editing an existing event.
+     * Populates input fields and image views with existing data.
+     */
     private void loadExistingEvent() {
         binding.tvPageTitle.setText("Edit Event");
         binding.btnSaveEvent.setText("Update Event");
@@ -201,10 +201,10 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                 });
     }
 
-
-    // ---------------------------------------------
-    // SAVE EVENT
-    // ---------------------------------------------
+    /**
+     * Validates input fields and initiates the save process.
+     * Prepares the data map and triggers image uploading if necessary.
+     */
     private void saveEvent() {
 
         String title = binding.etTitle.getText().toString().trim();
@@ -256,10 +256,12 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         uploadImagesAndSave(data);
     }
 
-
-    // ---------------------------------------------
-    // UPLOAD IMAGES (poster + banner)
-    // ---------------------------------------------
+    /**
+     * Handles the asynchronous upload of poster and banner images.
+     * Once uploads are complete, it proceeds to save event data to Firestore.
+     *
+     * @param data The map of event data to be saved.
+     */
     private void uploadImagesAndSave(Map<String, Object> data) {
 
         int uploadCount = 0;
@@ -328,7 +330,11 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
         }
     }
 
-
+    /**
+     * Commits the event data to Firestore.
+     *
+     * @param data The final map of event fields.
+     */
     private void saveEventToFirestore(Map<String, Object> data) {
 
         if (eventIdToEdit != null) {
@@ -354,7 +360,6 @@ public class OrganizerEventCreationActivity extends AppCompatActivity {
                     });
         }
     }
-
 
     private void resetSaveButton() {
         binding.btnSaveEvent.setEnabled(true);

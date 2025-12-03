@@ -12,10 +12,22 @@ import com.example.ballerevents.databinding.ItemProfileSimpleBinding;
 
 import java.util.List;
 
+/**
+ * Adapter for displaying a simple list of lottery winners.
+ * <p>
+ * Uses {@code item_profile_simple} layout to show basic user information
+ * (name and email) for selected entrants.
+ * </p>
+ */
 public class OrganizerLotteryWinnersAdapter extends RecyclerView.Adapter<OrganizerLotteryWinnersAdapter.ViewHolder> {
 
     private final List<UserProfile> profiles;
 
+    /**
+     * Constructs the adapter with a list of user profiles.
+     *
+     * @param profiles The list of users who won the lottery.
+     */
     public OrganizerLotteryWinnersAdapter(List<UserProfile> profiles) {
         this.profiles = profiles;
     }

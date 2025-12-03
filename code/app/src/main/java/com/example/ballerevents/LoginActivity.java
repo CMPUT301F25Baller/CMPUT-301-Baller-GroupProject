@@ -21,23 +21,17 @@ import java.util.Map;
  * Launch activity responsible for handling user authentication.
  * <p>
  * Supports both sign-in and registration using Firebase Authentication.
- * After login or registration, a corresponding user profile document may be
- * created in Firestore, and the user is forwarded to
+ * After login or registration, a corresponding user profile document is
+ * created or updated in Firestore, and the user is forwarded to
  * {@link RoleSelectionActivity}.
  * </p>
  */
 public class LoginActivity extends AppCompatActivity {
 
-    /** Logging tag for debugging authentication flow. */
     private static final String TAG = "LoginActivity";
 
-    /** Firebase Authentication instance used for login/registration. */
     private FirebaseAuth mAuth;
-
-    /** Firestore instance for storing user profile documents. */
     private FirebaseFirestore db;
-
-    /** ViewBinding instance for accessing UI elements from activity_login.xml. */
     private ActivityLoginBinding binding;
 
     @Override
@@ -49,7 +43,6 @@ public class LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // If a user is already logged in, skip login screen
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             Log.d(TAG, "User already logged in: " + currentUser.getUid());
@@ -62,11 +55,6 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * Attempts to sign in an existing user using Firebase Authentication.
-     * <p>
-     * Email and password are read from the corresponding ViewBinding input fields.
-     * Displays a Toast message on failure and navigates to {@link RoleSelectionActivity}
-     * on success.
-     * </p>
      */
     private void loginUser() {
         String email = binding.etEmail.getText().toString().trim();
@@ -92,11 +80,6 @@ public class LoginActivity extends AppCompatActivity {
 
     /**
      * Creates a new Firebase Authentication user using an email and password.
-     * <p>
-     * On success, a new Firestore user document is created by calling
-     * {@link #createNewUserDocument(FirebaseUser)}.
-     * On failure, displays the full Firebase error message to the user.
-     * </p>
      */
     private void registerUser() {
         String email = binding.etEmail.getText().toString().trim();
@@ -116,7 +99,6 @@ public class LoginActivity extends AppCompatActivity {
                             createNewUserDocument(user);
                         }
                     } else {
-                        // Show detailed Firebase error
                         String errorMessage = "Registration failed.";
                         if (task.getException() != null) {
                             errorMessage = task.getException().getMessage();
@@ -130,13 +112,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Creates a corresponding user profile document in the Firestore
-     * {@code users} collection after user registration.
-     * <p>
-     * Default values are assigned for new fields such as name, aboutMe,
-     * interests, applied events, and profile picture URL. The {@code role} field
-     * is assigned later by {@link RoleSelectionActivity}.
-     * </p>
+     * Creates a corresponding user profile document in the Firestore users collection.
      *
      * @param firebaseUser The authenticated user whose Firestore profile is created.
      */
@@ -166,11 +142,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     /**
-     * Navigates to {@link RoleSelectionActivity} after authentication or profile creation.
-     * <p>
-     * This activity is finished to prevent returning to the login screen with the
-     * back button.
-     * </p>
+     * Navigates to the RoleSelectionActivity.
      */
     private void goToRoleSelection() {
         Intent intent = new Intent(LoginActivity.this, RoleSelectionActivity.class);

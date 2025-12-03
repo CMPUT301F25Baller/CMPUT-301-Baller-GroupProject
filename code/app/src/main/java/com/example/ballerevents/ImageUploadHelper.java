@@ -19,27 +19,13 @@ import java.util.UUID;
  * <p>This class provides a centralized interface for uploading profile pictures,
  * event posters, and event banners to Firebase Storage. Each uploaded image
  * receives a unique filename and is stored in an organized folder structure.</p>
- *
- * <p>Usage example:</p>
- * <pre>
- * ImageUploadHelper.uploadProfileImage(imageUri, new ImageUploadHelper.UploadCallback() {
- *     public void onSuccess(String downloadUrl) {
- *         // Save downloadUrl to Firestore
- *     }
- *     public void onFailure(Exception e) {
- *         // Handle error
- *     }
- * });
- * </pre>
  */
 public class ImageUploadHelper {
 
     private static final String TAG = "ImageUploadHelper";
 
-    /** Root reference to Firebase Storage. */
     private static final FirebaseStorage storage = FirebaseStorage.getInstance();
 
-    /** Storage folder paths for different image types. */
     private static final String PROFILE_IMAGES_PATH = "profile_images/";
     private static final String EVENT_POSTERS_PATH = "event_posters/";
     private static final String EVENT_BANNERS_PATH = "event_banners/";
@@ -111,21 +97,18 @@ public class ImageUploadHelper {
      * <p>Generates a unique filename using UUID and uploads the image to the
      * specified storage path. Once complete, retrieves the public download URL.</p>
      *
-     * @param imageUri The local URI of the image.
-     * @param storagePath The folder path in Firebase Storage (e.g., "profile_images/").
-     * @param callback Callback to receive results.
+     * @param imageUri    The local URI of the image.
+     * @param storagePath The folder path in Firebase Storage.
+     * @param callback    Callback to receive results.
      */
     private static void uploadImage(Uri imageUri, String storagePath, UploadCallback callback) {
-        // Generate unique filename
         String filename = UUID.randomUUID().toString() + ".jpg";
         StorageReference imageRef = storage.getReference().child(storagePath + filename);
 
-        // Upload the file
         imageRef.putFile(imageUri)
                 .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                     @Override
                     public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                        // Get the download URL
                         imageRef.getDownloadUrl()
                                 .addOnSuccessListener(new OnSuccessListener<Uri>() {
                                     @Override
@@ -154,8 +137,6 @@ public class ImageUploadHelper {
 
     /**
      * Deletes an image from Firebase Storage given its download URL.
-     *
-     * <p>This is useful when a user removes their profile picture or deletes an event.</p>
      *
      * @param imageUrl The full download URL of the image to delete.
      * @param callback Callback to handle success or failure.

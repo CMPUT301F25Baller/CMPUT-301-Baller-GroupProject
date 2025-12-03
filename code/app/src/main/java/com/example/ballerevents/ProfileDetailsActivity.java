@@ -30,6 +30,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Activity for displaying the detailed profile of another user.
+ * <p>
+ * Allows users to view:
+ * <ul>
+ * <li>User bio, interests, and stats.</li>
+ * <li>Public event history.</li>
+ * <li>Follow/Unfollow functionality.</li>
+ * <li>Admin-specific actions (e.g., delete user).</li>
+ * </ul>
+ * </p>
+ */
 public class ProfileDetailsActivity extends AppCompatActivity {
 
     public static final String EXTRA_PROFILE_ID = "extra_profile_id";
@@ -75,6 +87,11 @@ public class ProfileDetailsActivity extends AppCompatActivity {
         binding.btnDeleteUser.setOnClickListener(v -> confirmDelete());
     }
 
+    /**
+     * Fetches user data from Firestore and populates the UI.
+     *
+     * @param userId The ID of the user to load.
+     */
     private void loadFromFirestore(String userId) {
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(doc -> {
@@ -91,6 +108,12 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Toast.makeText(this, "Error loading profile", Toast.LENGTH_SHORT).show());
     }
 
+    /**
+     * Binds the fetched user data to the UI components.
+     * Also handles visibility of admin-specific or self-profile buttons.
+     *
+     * @param user The user profile object.
+     */
     private void bindUserData(UserProfile user) {
         binding.tvName.setText(user.getName() != null ? user.getName() : "User");
         binding.tvEmail.setText(user.getEmail());
@@ -100,7 +123,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                 : "No bio provided.";
         binding.tvBio.setText(bio);
 
-        // Stats
         binding.tvFollowingCount.setText(String.valueOf(user.getFollowingCount()));
         binding.tvFollowersCount.setText(String.valueOf(user.getFollowerCount()));
 
@@ -120,7 +142,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                 .placeholder(R.drawable.placeholder_avatar1)
                 .into(binding.ivAvatar);
 
-        // --- Role Based View ---
         if (currentUserId != null) {
             db.collection("users").document(currentUserId).get().addOnSuccessListener(doc -> {
                 String myRole = doc.getString("role");
@@ -128,7 +149,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                     binding.btnDeleteUser.setVisibility(View.VISIBLE);
                     binding.btnFollow.setVisibility(View.GONE);
                 } else if (!currentUserId.equals(profileId)) {
-                    // Not admin, and not looking at myself
                     binding.btnFollow.setVisibility(View.VISIBLE);
                 }
             });
@@ -170,11 +190,9 @@ public class ProfileDetailsActivity extends AppCompatActivity {
     }
 
     private void followUser() {
-        // Add to my following
         db.collection("users").document(currentUserId)
                 .update("followingIds", FieldValue.arrayUnion(profileId));
 
-        // Add to target's followers
         db.collection("users").document(profileId)
                 .update("followerIds", FieldValue.arrayUnion(currentUserId))
                 .addOnSuccessListener(a -> {
@@ -207,7 +225,7 @@ public class ProfileDetailsActivity extends AppCompatActivity {
             notif.put("title", "New Follower");
             notif.put("message", myName + " started following you!");
             notif.put("type", "new_follower");
-            notif.put("senderId", currentUserId); // For follow back
+            notif.put("senderId", currentUserId);
             notif.put("timestamp", new Date());
             notif.put("read", false);
 
@@ -280,7 +298,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
                 .show();
     }
 
-    // Custom Adapter for History
     private static class HistoryItem {
         String title, status, date;
         HistoryItem(String t, String s, String d) { title = t; status = s; date = d; }
@@ -296,7 +313,6 @@ public class ProfileDetailsActivity extends AppCompatActivity {
 
         @NonNull @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Using the custom layout you provided
             View v = LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_event_history, parent, false);
             return new VH(v);

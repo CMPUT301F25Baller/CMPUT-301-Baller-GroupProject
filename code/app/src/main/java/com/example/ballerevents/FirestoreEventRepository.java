@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Repository class handling all Firestore operations related to Events.
+ * This includes fetching events, creating events, and managing the lottery/sampling system.
+ */
 public class FirestoreEventRepository {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -35,6 +39,9 @@ public class FirestoreEventRepository {
         void onError(Exception e);
     }
 
+    /**
+     * Maps a Firestore QuerySnapshot to a list of Event objects.
+     */
     private static List<Event> mapToEvents(QuerySnapshot snap) {
         List<Event> out = new ArrayList<>();
         if (snap == null) return out;
@@ -49,34 +56,43 @@ public class FirestoreEventRepository {
     }
 
     /**
-     * NEW: Fetches top 3 events by Waitlist Size.
-     * Since Firestore cannot sort by array size, we fetch events and sort client-side.
+     * Fetches the top 3 events by Waitlist Size.
+     * Note: Sorting is performed client-side as Firestore does not natively support
+     * sorting by array length.
+     *
+     * @param cb Callback to receive the top 3 popular events.
      */
     public void fetchPopularEvents(ListCallback<Event> cb) {
         db.collection("events")
-                .limit(100) // Safety limit
+                .limit(100)
                 .get()
                 .addOnSuccessListener(snap -> {
                     List<Event> events = mapToEvents(snap);
 
-                    // Sort descending by waitlist size
                     Collections.sort(events, (e1, e2) ->
                             Integer.compare(e2.getWaitlistCount(), e1.getWaitlistCount())
                     );
 
-                    // Take top 3
                     List<Event> top3 = events.subList(0, Math.min(events.size(), 3));
                     cb.onSuccess(top3);
                 })
                 .addOnFailureListener(cb::onError);
     }
 
-    /** "Trending" events (legacy prototype). */
+    /**
+     * Fetches trending events. Currently redirects to {@link #fetchPopularEvents}.
+     *
+     * @param cb Callback to receive the list of events.
+     */
     public void fetchTrending(ListCallback<Event> cb) {
-        fetchPopularEvents(cb); // Redirect to new logic
+        fetchPopularEvents(cb);
     }
 
-    /** "Near you" prototype. */
+    /**
+     * Fetches events "Near You".
+     *
+     * @param cb Callback to receive the list of nearby events.
+     */
     public void fetchNearYou(ListCallback<Event> cb) {
         db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING)
@@ -86,7 +102,12 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Real-time listener for all events. */
+    /**
+     * Registers a real-time listener for all events.
+     *
+     * @param cb Callback to receive real-time updates.
+     * @return The ListenerRegistration object (call remove() to stop listening).
+     */
     public ListenerRegistration listenAll(ListCallback<Event> cb) {
         return db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING)
@@ -99,6 +120,12 @@ public class FirestoreEventRepository {
                 });
     }
 
+    /**
+     * Fetches all events created by a specific organizer.
+     *
+     * @param organizerId The UID of the organizer.
+     * @param cb Callback to receive the list of events.
+     */
     public void fetchByOrganizer(String organizerId, ListCallback<Event> cb) {
         db.collection("events")
                 .whereEqualTo("organizerId", organizerId)
@@ -108,6 +135,12 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
+    /**
+     * Fetches a single event by its ID.
+     *
+     * @param id The event ID.
+     * @param cb Callback to receive the Event object.
+     */
     public void fetchById(String id, ItemCallback<Event> cb) {
         db.collection("events").document(id)
                 .get()
@@ -119,13 +152,26 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
+    /**
+     * Creates a new event in Firestore.
+     *
+     * @param e  The Event object to create.
+     * @param cb Callback to receive the new Event ID.
+     */
     public void create(Event e, ItemCallback<String> cb) {
         db.collection("events").add(e)
                 .addOnSuccessListener(ref -> cb.onSuccess(ref.getId()))
                 .addOnFailureListener(cb::onError);
     }
 
-    // US29 & US30 Logic (Notifications/Sampling)
+    /**
+     * Performs the lottery sampling logic.
+     * Selects a random sample of users from the waiting list and updates their status to "chosen".
+     *
+     * @param eventId    The ID of the event.
+     * @param sampleSize The number of attendees to select.
+     * @param cb         Callback for completion.
+     */
     public void sampleAttendeesAndNotify(String eventId, int sampleSize, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)
@@ -165,6 +211,12 @@ public class FirestoreEventRepository {
                 });
     }
 
+    /**
+     * Sends notifications to users who have been selected in the lottery.
+     *
+     * @param eventId The ID of the event.
+     * @param cb      Callback for completion.
+     */
     public void sendWinnerNotifications(String eventId, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)

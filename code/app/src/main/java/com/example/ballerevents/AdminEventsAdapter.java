@@ -16,18 +16,42 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.android.material.card.MaterialCardView;
 
+/**
+ * Adapter for displaying the list of events in the Admin interface.
+ * Allows the administrator to browse events and perform actions such as deleting an event or viewing the waitlist[cite: 103, 106].
+ */
 public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.EventViewHolder> {
 
+    /**
+     * Interface to handle interactions with event items.
+     */
     public interface OnEventActionListener {
+        /**
+         * Triggered when the event card is clicked.
+         * @param event The clicked event.
+         */
         void onEventClick(Event event);
 
-        // Default methods for optional actions
+        /**
+         * Triggered when the delete action is selected.
+         * @param event The event to be deleted.
+         */
         default void onDelete(Event event) {}
+
+        /**
+         * Triggered when the view waitlist action is selected.
+         * @param event The event to view.
+         */
         default void onViewWaitlist(Event event) {}
     }
 
     private final OnEventActionListener listener;
 
+    /**
+     * Constructs the adapter with a specific listener.
+     *
+     * @param listener The listener for event actions.
+     */
     public AdminEventsAdapter(OnEventActionListener listener) {
         super(EventDiffCallback);
         this.listener = listener;
@@ -66,6 +90,13 @@ public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.Ev
         });
     }
 
+    /**
+     * Handles menu item selections for a specific event.
+     *
+     * @param item The selected menu item.
+     * @param e    The event associated with the row.
+     * @return True if the event was handled, false otherwise.
+     */
     private boolean handleMenu(MenuItem item, Event e) {
         int id = item.getItemId();
         if (id == R.id.action_delete) {
@@ -78,6 +109,9 @@ public class AdminEventsAdapter extends ListAdapter<Event, AdminEventsAdapter.Ev
         return false;
     }
 
+    /**
+     * ViewHolder for Event items.
+     */
     static class EventViewHolder extends RecyclerView.ViewHolder {
         MaterialCardView cardRoot;
         ImageView ivPoster, ivMenu;

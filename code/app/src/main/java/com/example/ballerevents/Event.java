@@ -13,7 +13,8 @@ import java.util.Map;
 
 /**
  * Model class for Events.
- * Includes support for Geolocation, Registration Windows, and Banners.
+ * Represents all data related to an event, including its waitlist, selected users,
+ * location requirements, and registration windows.
  */
 public class Event implements Parcelable {
 
@@ -55,11 +56,13 @@ public class Event implements Parcelable {
 
     public Event() {}
 
-    // --- NEW HELPER FOR POPULARITY ---
+    /**
+     * Helper to get the current size of the waitlist.
+     * @return The number of users currently on the waitlist.
+     */
     public int getWaitlistCount() {
         return waitlistUserIds != null ? waitlistUserIds.size() : 0;
     }
-    // ---------------------------------
 
     // --- GETTERS & SETTERS ---
 

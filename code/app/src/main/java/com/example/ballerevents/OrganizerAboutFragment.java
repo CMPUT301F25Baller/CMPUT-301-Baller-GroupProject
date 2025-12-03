@@ -20,6 +20,17 @@ import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.List;
 
+/**
+ * Fragment that displays the detailed "About" section for an Organizer.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ * <li>Displaying the organizer's bio ("About Me").</li>
+ * <li>Displaying interests as chips.</li>
+ * <li>Navigating to the edit profile screen.</li>
+ * <li>Handling user logout.</li>
+ * </ul>
+ */
 public class OrganizerAboutFragment extends Fragment {
 
     private static final String TAG = "OrganizerAboutFragment";
@@ -55,13 +66,15 @@ public class OrganizerAboutFragment extends Fragment {
             Intent intent = new Intent(getActivity(), LoginActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
             startActivity(intent);
-            // If the hosting activity needs to close, we can call finish() on it
             if (getActivity() != null) {
                 getActivity().finish();
             }
         });
     }
 
+    /**
+     * Sets up a real-time listener to fetch and display profile updates.
+     */
     private void setupRealtimeProfileListener() {
         String userId = auth.getCurrentUser().getUid();
         DocumentReference userRef = db.collection("users").document(userId);

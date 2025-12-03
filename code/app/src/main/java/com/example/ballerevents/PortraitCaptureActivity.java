@@ -5,8 +5,8 @@ import com.journeyapps.barcodescanner.CaptureActivity;
 /**
  * A custom CaptureActivity used to force the QR scanner into Portrait orientation.
  * <p>
- * This class must be declared in AndroidManifest.xml with:
- * <code>android:screenOrientation="portrait"</code>
+ * This class extends {@link CaptureActivity} and relies on the manifest declaration:
+ * <code>android:screenOrientation="portrait"</code> to enforce the orientation.
  * </p>
  */
 public class PortraitCaptureActivity extends CaptureActivity {

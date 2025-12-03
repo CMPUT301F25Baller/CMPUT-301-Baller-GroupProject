@@ -15,9 +15,22 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
+/**
+ * Adapter for displaying a list of Notification logs.
+ * <p>
+ * This adapter supports two modes:
+ * <ul>
+ * <li><b>Interactive Mode:</b> Allows users to Accept/Decline invites and Follow Back.</li>
+ * <li><b>Admin Mode:</b> Read-only view where interactive buttons are hidden.</li>
+ * </ul>
+ * </p>
+ */
 public class NotificationLogsAdapter
         extends ListAdapter<Notification, NotificationLogsAdapter.VH> {
 
+    /**
+     * Interface for handling actions triggered from notification items.
+     */
     public interface OnItemAction {
         void onMarkRead(Notification notif);
         void onOpen(Notification notif);
@@ -28,14 +41,15 @@ public class NotificationLogsAdapter
     }
 
     private final OnItemAction actions;
-    private final boolean isAdminView; // NEW FLAG
+    private final boolean isAdminView;
 
     private static final SimpleDateFormat sdf =
             new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
 
     /**
-     * Constructor.
-     * @param actions Action listener
+     * Constructs the adapter.
+     *
+     * @param actions     The listener for item actions.
      * @param isAdminView If true, hides all interactive buttons (Accept/Decline/Follow).
      */
     public NotificationLogsAdapter(OnItemAction actions, boolean isAdminView) {
@@ -80,17 +94,15 @@ public class NotificationLogsAdapter
             h.tvTime.setText("–");
         }
 
-        // --- NEW LOGIC: If Admin, Hide EVERYTHING interactive ---
+        // Admin View Logic: Hide all interactive elements
         if (isAdminView) {
             h.actionsRow.setVisibility(View.GONE);
             h.btnMarkRead.setVisibility(View.GONE);
-            h.unreadDot.setVisibility(View.GONE); // Admins don't need to see read/unread state visually
+            h.unreadDot.setVisibility(View.GONE);
 
-            // Still allow clicking the row to see details (handled by onOpen)
             h.itemView.setOnClickListener(v -> actions.onOpen(n));
-            return; // Stop here for Admin
+            return;
         }
-        // --------------------------------------------------------
 
         String type = n.getType() != null ? n.getType() : "";
         boolean invite = "invitation".equalsIgnoreCase(type);

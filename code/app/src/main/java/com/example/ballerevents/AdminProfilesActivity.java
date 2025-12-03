@@ -17,6 +17,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity for the Administrator to browse and manage user profiles.
+ * Allows the admin to view profile details and permanently delete users from the system.
+ */
 public class AdminProfilesActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminProfilesActivity";
@@ -40,13 +44,15 @@ public class AdminProfilesActivity extends AppCompatActivity {
         loadAllProfiles();
     }
 
+    /**
+     * Initializes the RecyclerView and Adapter with click and delete listeners.
+     */
     private void setupRecycler() {
         binding.recycler.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new AdminProfilesAdapter(new AdminProfilesAdapter.OnProfileActionListener() {
             @Override
             public void onProfileClick(UserProfile profile) {
-                // --- KEY FIX: Use the Correct Extra Key ---
                 Intent intent = new Intent(AdminProfilesActivity.this, ProfileDetailsActivity.class);
                 intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, profile.getId());
                 startActivity(intent);
@@ -66,6 +72,9 @@ public class AdminProfilesActivity extends AppCompatActivity {
         binding.recycler.setAdapter(adapter);
     }
 
+    /**
+     * Fetches all user profiles from Firestore and populates the list.
+     */
     private void loadAllProfiles() {
         binding.progress.setVisibility(View.VISIBLE);
         db.collection("users").get()
@@ -87,6 +96,11 @@ public class AdminProfilesActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Deletes a user document from Firestore.
+     *
+     * @param userId The unique identifier of the user to delete.
+     */
     private void deleteUser(String userId) {
         if (userId == null) return;
         db.collection("users").document(userId).delete()

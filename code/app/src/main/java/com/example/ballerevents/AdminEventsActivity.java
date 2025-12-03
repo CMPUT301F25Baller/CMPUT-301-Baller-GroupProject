@@ -20,6 +20,10 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity for the Administrator to browse and manage the list of all events.
+ * Provides functionality to filter events by title and delete events from the system[cite: 103, 106].
+ */
 public class AdminEventsActivity extends AppCompatActivity
         implements AdminEventsAdapter.OnEventActionListener {
 
@@ -55,6 +59,9 @@ public class AdminEventsActivity extends AppCompatActivity
         });
     }
 
+    /**
+     * Fetches all events from Firestore, ordered by date descending.
+     */
     private void loadAllEvents() {
         if (binding.progress != null) binding.progress.setVisibility(View.VISIBLE);
 
@@ -75,6 +82,11 @@ public class AdminEventsActivity extends AppCompatActivity
                 });
     }
 
+    /**
+     * Filters the displayed list of events based on the search query.
+     *
+     * @param query The text to filter by event title.
+     */
     private void filter(String query) {
         if (query == null) query = "";
         String q = query.toLowerCase();
@@ -87,7 +99,6 @@ public class AdminEventsActivity extends AppCompatActivity
         adapter.submitList(filtered);
     }
 
-    // --- KEY FIX: Use the Correct Extra Key ---
     @Override
     public void onEventClick(Event event) {
         Intent intent = new Intent(this, DetailsActivity.class);

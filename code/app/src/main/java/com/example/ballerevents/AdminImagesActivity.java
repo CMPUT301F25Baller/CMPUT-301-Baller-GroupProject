@@ -21,6 +21,10 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Activity for the Administrator to view and manage uploaded event posters.
+ * Allows browsing of all images and deletion of specific posters if deemed necessary[cite: 105, 108].
+ */
 public class AdminImagesActivity extends AppCompatActivity implements AdminImagesAdapter.ImageActions {
 
     private static final String TAG = "AdminImagesActivity";
@@ -54,6 +58,9 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
         loadImages();
     }
 
+    /**
+     * Loads all events from Firestore to extract and display their posters.
+     */
     private void loadImages() {
         progress.setVisibility(View.VISIBLE);
         db.collection("events")
@@ -88,6 +95,11 @@ public class AdminImagesActivity extends AppCompatActivity implements AdminImage
                 .show();
     }
 
+    /**
+     * Removes the poster URL from the specified event document in Firestore.
+     *
+     * @param event The event whose poster is being deleted.
+     */
     private void deletePosterFromEvent(Event event) {
         db.collection("events").document(event.getId())
                 .update("eventPosterUrl", "")

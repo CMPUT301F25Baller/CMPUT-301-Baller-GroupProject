@@ -28,6 +28,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Main dashboard for Entrants.
+ * Features include:
+ * <ul>
+ * <li>Browsing popular and nearby events.</li>
+ * <li>Searching and filtering events by date or tags.</li>
+ * <li>Scanning QR codes to join events.</li>
+ * <li>Navigating to profile and notification screens.</li>
+ * </ul>
+ */
 public class EntrantMainActivity extends AppCompatActivity {
 
     private static final String TAG = "EntrantMainActivity";
@@ -35,7 +45,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth auth;
 
-    private TrendingEventAdapter trendingAdapter; // Used for "Popular"
+    private TrendingEventAdapter trendingAdapter;
     private NearEventAdapter nearAdapter;
     private TrendingEventAdapter searchAdapter;
 
@@ -89,6 +99,9 @@ public class EntrantMainActivity extends AppCompatActivity {
         if (allEventsListener != null) allEventsListener.remove();
     }
 
+    /**
+     * Initializes the RecyclerView adapters for Trending, Near You, and Search results.
+     */
     private void setupRecyclerViews() {
         trendingAdapter = new TrendingEventAdapter(this::launchDetailsActivity);
         binding.rvTrending.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
@@ -103,6 +116,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         binding.rvSearchResults.setAdapter(searchAdapter);
     }
 
+    /**
+     * Listens for real-time updates to the events collection.
+     * Sorts events by waitlist count to determine "Popular" events.
+     */
     private void loadAllEvents() {
         if (allEventsListener != null) allEventsListener.remove();
 
@@ -120,21 +137,14 @@ public class EntrantMainActivity extends AppCompatActivity {
                         }
                     }
 
-                    // --- IMPLEMENT POPULAR LOGIC ---
-                    // 1. Create copy
                     List<Event> popularList = new ArrayList<>(allEvents);
-
-                    // 2. Sort by waitlist size (descending)
                     Collections.sort(popularList, (e1, e2) ->
                             Integer.compare(e2.getWaitlistCount(), e1.getWaitlistCount())
                     );
 
-                    // 3. Take Top 3
                     List<Event> top3 = popularList.subList(0, Math.min(popularList.size(), 3));
                     trendingAdapter.submitList(top3);
-                    // -------------------------------
 
-                    // "Near You" (For now, just showing all, or logic can be added later)
                     nearAdapter.submitList(new ArrayList<>(allEvents));
 
                     performSearchAndFilter();
@@ -159,6 +169,9 @@ public class EntrantMainActivity extends AppCompatActivity {
         binding.btnFilterDate.setOnClickListener(v -> showDatePicker());
     }
 
+    /**
+     * Displays a date range picker dialog for filtering events.
+     */
     private void showDatePicker() {
         MaterialDatePicker<Pair<Long, Long>> picker = MaterialDatePicker.Builder.dateRangePicker()
                 .setTitleText("Select Event Dates")
@@ -180,6 +193,9 @@ public class EntrantMainActivity extends AppCompatActivity {
         picker.show(getSupportFragmentManager(), "DATE_PICKER");
     }
 
+    /**
+     * Handles navigation based on the user's role (Organizer, Admin, or Entrant).
+     */
     private void handleMenuNavigation() {
         if (auth.getCurrentUser() == null) return;
         db.collection("users").document(auth.getCurrentUser().getUid()).get()
@@ -203,6 +219,10 @@ public class EntrantMainActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Filters the event list based on search query, selected tags, and date range.
+     * Updates the UI to show either search results or the default dashboard.
+     */
     private void performSearchAndFilter() {
         String query = binding.etSearch.getText().toString();
         boolean hasFilters = !query.isEmpty() || !selectedTags.isEmpty() || startDateFilter != null;

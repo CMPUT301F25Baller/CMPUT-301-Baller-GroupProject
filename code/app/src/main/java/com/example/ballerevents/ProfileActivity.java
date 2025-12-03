@@ -22,8 +22,13 @@ import java.util.List;
 /**
  * Activity displaying the entrant's profile and event history.
  * <p>
- * Updated to use {@link EventHistoryAdapter} which displays the user's status
- * (e.g. "Waitlisted", "Selected") for each event they have joined.
+ * This activity allows users to:
+ * <ul>
+ * <li>View their profile details (Name, Bio, Stats, Interests).</li>
+ * <li>See a list of events they have applied for.</li>
+ * <li>View the status of each application (e.g., "Waitlisted", "Selected").</li>
+ * <li>Navigate to edit their profile or log out.</li>
+ * </ul>
  */
 public class ProfileActivity extends AppCompatActivity {
 
@@ -33,7 +38,6 @@ public class ProfileActivity extends AppCompatActivity {
     private FirebaseAuth auth;
     private ListenerRegistration userListener;
 
-    // CHANGED: Use History Adapter instead of NearEventAdapter
     private EventHistoryAdapter historyAdapter;
     private String currentUserId;
 
@@ -57,6 +61,9 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Sets up click listeners for the back, edit profile, and logout buttons.
+     */
     private void setupButtons() {
         if (binding.btnBackProfile != null) {
             binding.btnBackProfile.setOnClickListener(v -> finish());
@@ -77,9 +84,11 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Initializes the RecyclerView with the {@link EventHistoryAdapter}.
+     * Passes the current user ID so the adapter can determine the correct status for each event.
+     */
     private void setupRecyclerView() {
-        // Initialize History Adapter
-        // We pass currentUserId so the adapter can check if we are Selected/Waitlisted/etc.
         historyAdapter = new EventHistoryAdapter(currentUserId, event -> {
             Intent intent = new Intent(this, DetailsActivity.class);
             intent.putExtra(DetailsActivity.EXTRA_EVENT_ID, event.getId());
@@ -90,6 +99,10 @@ public class ProfileActivity extends AppCompatActivity {
         binding.rvJoinedEvents.setAdapter(historyAdapter);
     }
 
+    /**
+     * Sets up a real-time listener for the user's profile document.
+     * Updates the UI and loads joined events whenever the profile changes.
+     */
     private void setupRealtimeProfileListener() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -111,6 +124,11 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Updates the profile UI elements with the latest user data.
+     *
+     * @param user The user profile object.
+     */
     private void updateUI(UserProfile user) {
         binding.tvName.setText(user.getName());
         binding.tvAboutMe.setText(user.getAboutMe());
@@ -123,7 +141,6 @@ public class ProfileActivity extends AppCompatActivity {
                 .error(R.drawable.placeholder_avatar1)
                 .into(binding.ivProfileImage);
 
-        // Update chips
         binding.chipGroupInterests.removeAllViews();
         for (String interest : user.getInterests()) {
             Chip chip = new Chip(this);
@@ -133,14 +150,17 @@ public class ProfileActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Fetches the details for the events the user has joined.
+     *
+     * @param eventIds List of event IDs the user has applied to.
+     */
     private void loadJoinedEvents(List<String> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
             historyAdapter.submitList(new ArrayList<>());
             return;
         }
 
-        // Firestore 'in' query supports max 10 items.
-        // For production apps, batching logic would go here.
         List<String> subset = eventIds.subList(0, Math.min(eventIds.size(), 10));
 
         db.collection("events")

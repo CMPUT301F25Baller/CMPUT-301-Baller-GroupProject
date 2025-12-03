@@ -15,13 +15,7 @@ import com.example.ballerevents.databinding.ItemAdminPosterBinding;
  * to display event poster thumbnails.
  *
  * <p>This adapter binds each {@link Event}'s poster URL and title into a
- * compact visual layout. Glide is used for efficient image loading and
- * caching. The adapter exposes a click callback through
- * {@link OnPosterClickListener} so the parent screen can respond to poster
- * taps (e.g., open preview or navigate to details).
- *
- * <p>This class is a thin wrapper around {@link ListAdapter}, using a
- * diffing strategy based on event IDs to efficiently update the UI.
+ * compact visual layout. Glide is used for efficient image loading and caching.</p>
  */
 public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.VH> {
 
@@ -30,7 +24,10 @@ public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.
      * Implemented by the parent Activity or Fragment.
      */
     public interface OnPosterClickListener {
-        /** Called when the user taps a poster thumbnail. */
+        /**
+         * Called when the user taps a poster thumbnail.
+         * @param event The event associated with the clicked poster.
+         */
         void onPosterClick(Event event);
     }
 
@@ -39,7 +36,7 @@ public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.
     /**
      * Constructs the adapter with a required click listener.
      *
-     * @param listener callback invoked when a poster is clicked
+     * @param listener Callback invoked when a poster is clicked.
      */
     public AdminPostersAdapter(OnPosterClickListener listener) {
         super(EventDiffCallback);
@@ -60,8 +57,8 @@ public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.
         /**
          * Binds a single {@link Event} to the row layout.
          *
-         * @param event    the event whose poster is being shown
-         * @param listener callback to notify when poster is tapped
+         * @param event    The event whose poster is being shown.
+         * @param listener Callback to notify when poster is tapped.
          */
         void bind(Event event, OnPosterClickListener listener) {
             b.tvLabel.setText(event.getTitle());
@@ -108,7 +105,6 @@ public class AdminPostersAdapter extends ListAdapter<Event, AdminPostersAdapter.
 
                 @Override
                 public boolean areContentsTheSame(@NonNull Event oldItem, @NonNull Event newItem) {
-                    // Treat content the same if IDs match; admin view only needs basic diffing.
                     return oldItem.getId().equals(newItem.getId());
                 }
             };

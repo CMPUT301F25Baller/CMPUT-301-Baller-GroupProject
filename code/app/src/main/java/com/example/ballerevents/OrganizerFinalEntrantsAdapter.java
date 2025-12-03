@@ -11,7 +11,10 @@ import com.example.ballerevents.databinding.ItemAdminProfileBinding;
 
 import java.util.List;
 
-/** Shows a simple list of user profiles (avatar + name + email). */
+/**
+ * Adapter for displaying a simple list of chosen entrants (Final Entrants).
+ * Uses the {@code item_admin_profile} layout to show avatar, name, and email.
+ */
 public class OrganizerFinalEntrantsAdapter
         extends RecyclerView.Adapter<OrganizerFinalEntrantsAdapter.ViewHolder> {
 
@@ -56,7 +59,7 @@ public class OrganizerFinalEntrantsAdapter
                 .load(user.getProfilePictureUrl())
                 .placeholder(R.drawable.placeholder_avatar1)
                 .error(R.drawable.placeholder_avatar1)
-                .into(holder.binding.ivAvatar);   // make sure item_admin_profile.xml has ivAvatar
+                .into(holder.binding.ivAvatar);
     }
 
     @Override

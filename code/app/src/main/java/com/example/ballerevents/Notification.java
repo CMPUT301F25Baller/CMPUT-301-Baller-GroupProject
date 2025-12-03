@@ -6,7 +6,10 @@ import java.util.Date;
 
 /**
  * Firestore model for a user notification.
- * Stored in: users/{userId}/notifications/{notificationId}
+ * <p>
+ * This class maps directly to documents stored in:
+ * <code>users/{userId}/notifications/{notificationId}</code>
+ * </p>
  */
 public class Notification {
 
@@ -15,16 +18,26 @@ public class Notification {
     private String title;
     private String message;
     private String eventId;
-    private String type;    // e.g., "invitation", "general", "new_follower"
-    private String senderId; // NEW: ID of the user who triggered the notif (for Follow Back)
+    private String type;
+    private String senderId;
     private boolean isRead;
 
     @ServerTimestamp
     private Date timestamp;
 
+    /**
+     * Required empty constructor for Firestore deserialization.
+     */
     public Notification() {}
 
-    // Constructor for standard notifications
+    /**
+     * Constructs a standard notification object.
+     *
+     * @param title   The notification title.
+     * @param message The body text of the notification.
+     * @param eventId The ID of the related event (optional).
+     * @param type    The type of notification (e.g., "invitation", "general").
+     */
     public Notification(String title, String message, String eventId, String type) {
         this.title = title;
         this.message = message;
@@ -41,10 +54,8 @@ public class Notification {
     public String getEventId() { return eventId; }
     public String getType() { return type; }
 
-    // --- NEW GETTER/SETTER ---
     public String getSenderId() { return senderId; }
     public void setSenderId(String senderId) { this.senderId = senderId; }
-    // -------------------------
 
     public boolean isRead() { return isRead; }
     public Date getTimestamp() { return timestamp; }

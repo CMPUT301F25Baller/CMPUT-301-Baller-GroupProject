@@ -15,20 +15,45 @@ import com.example.ballerevents.databinding.ItemAdminProfileBinding;
 
 import java.util.Locale;
 
+/**
+ * Adapter for displaying a list of user profiles in the Admin interface.
+ * Handles the display of user details (avatar, name, email, role) and provides
+ * a context menu for administrative actions like deletion.
+ */
 public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfilesAdapter.VH> {
 
+    /**
+     * Interface for handling user interactions with profile items.
+     */
     public interface OnProfileActionListener {
+        /**
+         * Triggered when a profile item is clicked.
+         * @param profile The selected user profile.
+         */
         void onProfileClick(UserProfile profile);
+
+        /**
+         * Triggered when the delete action is selected from the menu.
+         * @param profile The user profile to be deleted.
+         */
         default void onDelete(UserProfile profile) {}
     }
 
     private final OnProfileActionListener listener;
 
+    /**
+     * Constructs the adapter with a specific listener.
+     *
+     * @param listener The listener for profile actions.
+     */
     public AdminProfilesAdapter(OnProfileActionListener listener) {
         super(ProfileDiffCallback);
         this.listener = listener;
     }
 
+    /**
+     * ViewHolder class for binding profile data to the view.
+     */
     static class VH extends RecyclerView.ViewHolder {
         final ItemAdminProfileBinding b;
 
@@ -37,6 +62,12 @@ public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfiles
             this.b = b;
         }
 
+        /**
+         * Binds the UserProfile data to the UI elements.
+         *
+         * @param p        The UserProfile object.
+         * @param listener The listener for click events.
+         */
         void bind(UserProfile p, OnProfileActionListener listener) {
             b.tvName.setText(p.getName());
             b.tvEmail.setText(p.getEmail());
@@ -59,7 +90,6 @@ public class AdminProfilesAdapter extends ListAdapter<UserProfile, AdminProfiles
 
             b.ivMenu.setOnClickListener(v -> {
                 PopupMenu popup = new PopupMenu(v.getContext(), v);
-                // --- FIX: Use correct menu resource for Profiles ---
                 popup.inflate(R.menu.menu_admin_profile_row);
 
                 popup.setOnMenuItemClickListener(item -> {

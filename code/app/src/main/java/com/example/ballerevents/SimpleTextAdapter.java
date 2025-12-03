@@ -10,24 +10,21 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 /**
- * A minimal RecyclerView.Adapter that displays each string entry
- * as a simple {@link TextView} row using the built-in layout
- * {@code android.R.layout.simple_list_item_1}.
- *
+ * A minimal RecyclerView.Adapter that displays a list of strings.
  * <p>
- * This adapter is intended for lightweight logs or simple text lists
- * where no custom view holder logic is required.
+ * This adapter uses the built-in {@code android.R.layout.simple_list_item_1}
+ * layout to render each entry as a simple TextView. It is intended for
+ * lightweight logs or debug lists where custom ViewHolders are not required.
  * </p>
  */
 public class SimpleTextAdapter extends RecyclerView.Adapter<SimpleTextAdapter.VH> {
 
-    /** Backing list of string entries to display. */
     private final List<String> data;
 
     /**
      * Creates a new simple text adapter.
      *
-     * @param data List of strings to display.
+     * @param data The list of strings to display.
      */
     public SimpleTextAdapter(List<String> data) {
         this.data = data;
@@ -51,7 +48,6 @@ public class SimpleTextAdapter extends RecyclerView.Adapter<SimpleTextAdapter.VH
         TextView tv = (TextView) LayoutInflater.from(parent.getContext())
                 .inflate(android.R.layout.simple_list_item_1, parent, false);
 
-        // Add horizontal padding for better visual spacing
         int padH = (int) (16 * parent.getResources().getDisplayMetrics().density);
         tv.setPadding(padH, tv.getPaddingTop(), padH, tv.getPaddingBottom());
 

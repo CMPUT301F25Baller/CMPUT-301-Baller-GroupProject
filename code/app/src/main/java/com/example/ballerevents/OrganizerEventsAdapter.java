@@ -12,22 +12,44 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adapter for the organizer's own events list.
+ * Adapter for displaying the list of events owned by a specific organizer.
+ * <p>
+ * This adapter binds event data (title, date, location) to the RecyclerView
+ * using the {@code item_event_organizer} layout.
+ * </p>
  */
 public class OrganizerEventsAdapter
         extends RecyclerView.Adapter<OrganizerEventsAdapter.ViewHolder> {
 
+    /**
+     * Listener interface for handling click events on organizer event items.
+     */
     public interface OnEventClickListener {
+        /**
+         * Called when an event item is clicked.
+         *
+         * @param event The clicked event.
+         */
         void onEventClick(Event event);
     }
 
     private final List<Event> events = new ArrayList<>();
     private final OnEventClickListener listener;
 
+    /**
+     * Constructs a new OrganizerEventsAdapter.
+     *
+     * @param listener The listener to handle event click actions.
+     */
     public OrganizerEventsAdapter(OnEventClickListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * Updates the data set and refreshes the RecyclerView.
+     *
+     * @param newEvents The new list of events to display.
+     */
     public void submitList(List<Event> newEvents) {
         events.clear();
         if (newEvents != null) {
@@ -36,6 +58,9 @@ public class OrganizerEventsAdapter
         notifyDataSetChanged();
     }
 
+    /**
+     * ViewHolder for organizer event items.
+     */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ItemEventOrganizerBinding binding;
 
@@ -67,12 +92,9 @@ public class OrganizerEventsAdapter
     ) {
         Event event = events.get(position);
 
-        // These IDs must exist in item_event_organizer.xml
         holder.binding.tvEventTitle.setText(event.getTitle());
         holder.binding.tvEventDate.setText(event.getDate());
         holder.binding.tvEventLocation.setText(event.getLocationName());
-
-        // No image loading here (ivPoster removed) to avoid compile error.
 
         holder.binding.getRoot().setOnClickListener(v -> {
             if (listener != null) {

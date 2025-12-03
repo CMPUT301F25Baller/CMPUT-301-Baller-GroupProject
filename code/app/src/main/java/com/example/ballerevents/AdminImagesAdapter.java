@@ -15,50 +15,42 @@ import com.bumptech.glide.Glide;
 
 /**
  * Adapter for displaying event posters in the Admin Images gallery.
- *
- * <p>This adapter renders a grid of event posters, each showing:
- * <ul>
- *   <li>a thumbnail loaded via Glide</li>
- *   <li>a text label (event title)</li>
- * </ul>
+ * This allows the administrator to browse images uploaded by organizers and remove them if necessary[cite: 105, 108].
  *
  * <p>User interactions:</p>
  * <ul>
- *     <li><b>Click</b> → preview the poster in a dialog</li>
- *     <li><b>Long-press</b> → prompt to delete (clear poster URL)</li>
+ * <li><b>Click:</b> Previews the poster in a dialog.</li>
+ * <li><b>Long-press:</b> Prompts to delete (clear) the poster URL.</li>
  * </ul>
- *
- * <p>The adapter uses {@link DiffUtil} for efficient list updates and supports stable IDs.</p>
  */
 public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH> {
 
     /**
-     * Callback interface implemented by {@link com.example.ballerevents.AdminImagesActivity}.
+     * Callback interface implemented by {@link AdminImagesActivity}.
      * Provides actions for previewing or deleting a poster image.
      */
     interface ImageActions {
         /**
          * Called when the user taps a poster thumbnail.
          *
-         * @param event the associated event whose poster should be previewed
+         * @param event The associated event whose poster should be previewed.
          */
         void onPreview(Event event);
 
         /**
          * Called when the user long-presses a poster thumbnail.
          *
-         * @param event the event whose poster URL should be cleared
+         * @param event The event whose poster URL should be cleared.
          */
         void onDelete(Event event);
     }
 
-    /** Listener for preview/delete actions. */
     private final ImageActions actions;
 
     /**
      * Creates a new adapter instance.
      *
-     * @param actions callback handler for user interactions
+     * @param actions Callback handler for user interactions.
      */
     public AdminImagesAdapter(ImageActions actions) {
         super(EventDiffCallback);
@@ -68,6 +60,9 @@ public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH
 
     /**
      * Provides stable item IDs based on the Firestore event ID hash.
+     *
+     * @param position The position of the item within the adapter's data set.
+     * @return A unique long identifier for the item.
      */
     @Override
     public long getItemId(int position) {
@@ -81,9 +76,6 @@ public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH
         ImageView ivPoster;
         TextView tvLabel;
 
-        /**
-         * @param itemView inflated row layout for item_admin_poster.xml
-         */
         VH(@NonNull View itemView) {
             super(itemView);
             ivPoster = itemView.findViewById(R.id.ivPoster);
@@ -93,6 +85,10 @@ public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH
 
     /**
      * Inflates the poster grid item layout.
+     *
+     * @param parent   The ViewGroup into which the new View will be added.
+     * @param viewType The view type of the new View.
+     * @return A new VH that holds the View for each poster.
      */
     @NonNull
     @Override
@@ -104,28 +100,27 @@ public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH
 
     /**
      * Binds the poster image and title, and wires up click/long-press interactions.
+     *
+     * @param h   The ViewHolder which should be updated to represent the contents of the item.
+     * @param pos The position of the item within the adapter's data set.
      */
     @Override
     public void onBindViewHolder(@NonNull VH h, int pos) {
         Event event = getItem(pos);
         if (event == null) return;
 
-        // Load poster thumbnail
         Glide.with(h.itemView.getContext())
                 .load(event.getEventPosterUrl())
                 .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.placeholder_image)
                 .into(h.ivPoster);
 
-        // Label under the image
         h.tvLabel.setText(event.getTitle());
 
-        // Click → preview
         h.itemView.setOnClickListener(v -> {
             if (actions != null) actions.onPreview(event);
         });
 
-        // Long press → delete
         h.itemView.setOnLongClickListener(v -> {
             if (actions != null) actions.onDelete(event);
             return true;
@@ -134,8 +129,6 @@ public class AdminImagesAdapter extends ListAdapter<Event, AdminImagesAdapter.VH
 
     /**
      * DiffUtil callback based on Firestore document ID.
-     * Only the ID is checked for changes since posters rarely change
-     * and contents are minimal.
      */
     private static final DiffUtil.ItemCallback<Event> EventDiffCallback =
             new DiffUtil.ItemCallback<Event>() {

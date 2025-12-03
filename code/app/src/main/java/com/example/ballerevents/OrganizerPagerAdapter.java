@@ -11,9 +11,9 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
  *
  * <p>The pager displays three fragments:</p>
  * <ul>
- *     <li><b>About</b> – {@link OrganizerAboutFragment}</li>
- *     <li><b>Event</b> – {@link OrganizerEventFragment}</li>
- *     <li><b>Following</b> – {@link OrganizerFollowingFragment}</li>
+ * <li><b>About</b> – {@link OrganizerAboutFragment}</li>
+ * <li><b>Event</b> – {@link OrganizerEventFragment}</li>
+ * <li><b>Following</b> – {@link OrganizerFollowingFragment}</li>
  * </ul>
  *
  * <p>

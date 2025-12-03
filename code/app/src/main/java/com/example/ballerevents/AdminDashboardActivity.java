@@ -18,6 +18,11 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Main dashboard for the Administrator.
+ * This activity allows the admin to navigate to events, profiles, images, and logs management[cite: 48].
+ * It displays previews of recent data to provide a quick overview of system activity.
+ */
 public class AdminDashboardActivity extends AppCompatActivity {
 
     private static final String TAG = "AdminDashboardActivity";
@@ -41,6 +46,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         setupLogout();
     }
 
+    /**
+     * Initializes navigation buttons to various admin sub-activities.
+     */
     private void setupNavigation() {
         binding.btnNavEvents.setOnClickListener(v -> startActivity(new Intent(this, AdminEventsActivity.class)));
         binding.btnSeeAllEvents.setOnClickListener(v -> startActivity(new Intent(this, AdminEventsActivity.class)));
@@ -54,6 +62,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         binding.btnNavLogs.setOnClickListener(v -> startActivity(new Intent(this, AdminLogsActivity.class)));
     }
 
+    /**
+     * Sets up the logout functionality.
+     */
     private void setupLogout() {
         binding.btnLogoutIcon.setOnClickListener(v -> {
             auth.signOut();
@@ -64,6 +75,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Loads the 5 most recent events to display in the dashboard preview.
+     */
     private void loadRecentEvents() {
         db.collection("events")
                 .orderBy("date", Query.Direction.DESCENDING)
@@ -79,7 +93,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                         }
                     }
 
-                    // Use Adapter with corrected Keys
                     AdminEventsAdapter adapter = new AdminEventsAdapter(new AdminEventsAdapter.OnEventActionListener() {
                         @Override
                         public void onEventClick(Event event) {
@@ -102,6 +115,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Log.e(TAG, "Error loading recent events", e));
     }
 
+    /**
+     * Loads the 5 most recent user profiles to display in the dashboard preview.
+     */
     private void loadRecentProfiles() {
         db.collection("users")
                 .limit(5)
@@ -138,6 +154,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Log.e(TAG, "Error loading recent profiles", e));
     }
 
+    /**
+     * Loads a sample of recent event posters to display in the dashboard preview.
+     */
     private void loadRecentPosters() {
         db.collection("events")
                 .orderBy("date", Query.Direction.DESCENDING)

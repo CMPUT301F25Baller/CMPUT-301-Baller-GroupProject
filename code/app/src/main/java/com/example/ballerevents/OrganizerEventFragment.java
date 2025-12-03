@@ -23,10 +23,15 @@ import com.google.firebase.firestore.Query;
 import java.util.List;
 
 /**
- * Displays all events created by the logged-in organizer.
- * Features:
- * - View / Edit / Manage Waitlist
- * - NEW: Delete Event functionality
+ * Fragment that displays all events created by the logged-in organizer.
+ * <p>
+ * Provides functionality to:
+ * <ul>
+ * <li>View event details.</li>
+ * <li>Edit event information.</li>
+ * <li>Manage the waiting list (lottery system).</li>
+ * <li>Delete events.</li>
+ * </ul>
  */
 public class OrganizerEventFragment extends Fragment {
 
@@ -73,6 +78,10 @@ public class OrganizerEventFragment extends Fragment {
         }
     }
 
+    /**
+     * Initializes the RecyclerView with the TrendingEventAdapter.
+     * Sets up the click listener to show the options dialog.
+     */
     private void setupRecyclerView() {
         adapter = new TrendingEventAdapter(event -> {
             if (getActivity() instanceof OrganizerActivity) {
@@ -84,6 +93,12 @@ public class OrganizerEventFragment extends Fragment {
         binding.rvOrganizerEvents.setAdapter(adapter);
     }
 
+    /**
+     * Displays a dialog with options for the selected event.
+     * Options include: View Details, Edit Event, Manage Waitlist, and Delete Event.
+     *
+     * @param event The event selected by the user.
+     */
     private void showEventOptionsDialog(Event event) {
         if (getContext() == null) return;
 
@@ -91,7 +106,7 @@ public class OrganizerEventFragment extends Fragment {
                 "View Details",
                 "Edit Event",
                 "Manage Waitlist",
-                "Delete Event" // NEW OPTION
+                "Delete Event"
         };
 
         new AlertDialog.Builder(getContext())
@@ -121,8 +136,11 @@ public class OrganizerEventFragment extends Fragment {
                 .show();
     }
 
-    // --- DELETE LOGIC ---
-
+    /**
+     * Shows a confirmation dialog before deleting an event.
+     *
+     * @param event The event to be deleted.
+     */
     private void confirmDeleteEvent(Event event) {
         new AlertDialog.Builder(getContext())
                 .setTitle("Delete Event")
@@ -132,6 +150,11 @@ public class OrganizerEventFragment extends Fragment {
                 .show();
     }
 
+    /**
+     * Deletes the specified event from Firestore.
+     *
+     * @param event The event to delete.
+     */
     private void deleteEvent(Event event) {
         if (event.getId() == null) return;
 
@@ -151,8 +174,9 @@ public class OrganizerEventFragment extends Fragment {
                 });
     }
 
-    // ---------------------
-
+    /**
+     * Fetches the list of events owned by the current organizer from Firestore.
+     */
     private void loadOrganizerEvents() {
         binding.progressBar.setVisibility(View.VISIBLE);
         binding.tvNoEvents.setVisibility(View.GONE);

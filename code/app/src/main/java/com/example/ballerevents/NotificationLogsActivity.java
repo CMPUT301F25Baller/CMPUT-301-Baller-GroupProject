@@ -22,6 +22,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Activity for displaying and managing user notifications.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ * <li>Real-time monitoring of user notifications.</li>
+ * <li>Responding to event invitations (Accept/Decline).</li>
+ * <li>Following users back directly from notifications.</li>
+ * <li>Marking notifications as read or deleting them.</li>
+ * </ul>
+ */
 public class NotificationLogsActivity extends AppCompatActivity {
 
     private ActivityNotificationLogsBinding binding;
@@ -54,10 +65,12 @@ public class NotificationLogsActivity extends AppCompatActivity {
         binding.btnMarkAll.setOnClickListener(v -> markAllAsRead());
     }
 
+    /**
+     * Initializes the RecyclerView adapter in interactive mode.
+     */
     private void setupRecyclerView() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- PASS 'false' FOR STANDARD USER VIEW ---
         adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
             @Override public void onMarkRead(Notification notif) { markAsRead(notif); }
             @Override public void onOpen(Notification notif) { markAsRead(notif); }
@@ -65,11 +78,14 @@ public class NotificationLogsActivity extends AppCompatActivity {
             @Override public void onDeclineInvite(Notification notif) { respondToInvite(notif, "declined"); }
             @Override public void onDelete(Notification notif) { deleteNotification(notif); }
             @Override public void onFollowBack(Notification notif) { performFollowBack(notif); }
-        }, false); // <--- 'false' means Interactive Mode
+        }, false);
 
         binding.rvLogs.setAdapter(adapter);
     }
 
+    /**
+     * Sets up a real-time listener for the current user's notifications collection.
+     */
     private void setupRealtimeListener() {
         String userId = auth.getCurrentUser().getUid();
         binding.progressBar.setVisibility(View.VISIBLE);
@@ -92,6 +108,9 @@ public class NotificationLogsActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Handles the "Follow Back" action from a new follower notification.
+     */
     private void performFollowBack(Notification notif) {
         String targetUserId = notif.getSenderId();
         if (targetUserId == null) {
@@ -111,6 +130,9 @@ public class NotificationLogsActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Handles accepting or declining an event invitation.
+     */
     private void respondToInvite(Notification notif, String status) {
         if (notif.getEventId() == null) return;
         String userId = auth.getCurrentUser().getUid();
