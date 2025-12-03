@@ -14,15 +14,17 @@ public class Notification {
     private String id;
     private String title;
     private String message;
-    private String eventId; // Required to link back to the event
-    private String type;    // e.g., "invitation", "general"
+    private String eventId;
+    private String type;    // e.g., "invitation", "general", "new_follower"
+    private String senderId; // NEW: ID of the user who triggered the notif (for Follow Back)
     private boolean isRead;
 
     @ServerTimestamp
     private Date timestamp;
 
-    public Notification() {} // Required for Firestore
+    public Notification() {}
 
+    // Constructor for standard notifications
     public Notification(String title, String message, String eventId, String type) {
         this.title = title;
         this.message = message;
@@ -38,6 +40,12 @@ public class Notification {
     public String getMessage() { return message; }
     public String getEventId() { return eventId; }
     public String getType() { return type; }
+
+    // --- NEW GETTER/SETTER ---
+    public String getSenderId() { return senderId; }
+    public void setSenderId(String senderId) { this.senderId = senderId; }
+    // -------------------------
+
     public boolean isRead() { return isRead; }
     public Date getTimestamp() { return timestamp; }
 

@@ -24,15 +24,24 @@ public class NotificationLogsAdapter
         void onAcceptInvite(Notification notif);
         void onDeclineInvite(Notification notif);
         void onDelete(Notification notif);
+        default void onFollowBack(Notification notif) {}
     }
 
     private final OnItemAction actions;
+    private final boolean isAdminView; // NEW FLAG
+
     private static final SimpleDateFormat sdf =
             new SimpleDateFormat("MMM d, h:mm a", Locale.getDefault());
 
-    public NotificationLogsAdapter(OnItemAction actions) {
+    /**
+     * Constructor.
+     * @param actions Action listener
+     * @param isAdminView If true, hides all interactive buttons (Accept/Decline/Follow).
+     */
+    public NotificationLogsAdapter(OnItemAction actions, boolean isAdminView) {
         super(DIFF);
         this.actions = actions;
+        this.isAdminView = isAdminView;
     }
 
     private static final DiffUtil.ItemCallback<Notification> DIFF =
@@ -71,20 +80,50 @@ public class NotificationLogsAdapter
             h.tvTime.setText("–");
         }
 
-        // Check type for Invitation Logic
-        boolean invite = "invitation".equalsIgnoreCase(n.getType());
-        h.actionsRow.setVisibility(invite ? View.VISIBLE : View.GONE);
+        // --- NEW LOGIC: If Admin, Hide EVERYTHING interactive ---
+        if (isAdminView) {
+            h.actionsRow.setVisibility(View.GONE);
+            h.btnMarkRead.setVisibility(View.GONE);
+            h.unreadDot.setVisibility(View.GONE); // Admins don't need to see read/unread state visually
+
+            // Still allow clicking the row to see details (handled by onOpen)
+            h.itemView.setOnClickListener(v -> actions.onOpen(n));
+            return; // Stop here for Admin
+        }
+        // --------------------------------------------------------
+
+        String type = n.getType() != null ? n.getType() : "";
+        boolean invite = "invitation".equalsIgnoreCase(type);
+        boolean follower = "new_follower".equalsIgnoreCase(type);
+
+        h.actionsRow.setVisibility(View.GONE);
+        h.btnMarkRead.setVisibility(View.GONE);
 
         if (invite) {
+            h.actionsRow.setVisibility(View.VISIBLE);
+            h.btnAccept.setText("Accept");
+            h.btnAccept.setVisibility(View.VISIBLE);
+
+            h.btnDecline.setVisibility(View.VISIBLE);
+            h.btnDecline.setText("Decline");
+
             h.btnAccept.setOnClickListener(v -> actions.onAcceptInvite(n));
             h.btnDecline.setOnClickListener(v -> actions.onDeclineInvite(n));
+
+        } else if (follower) {
+            h.actionsRow.setVisibility(View.VISIBLE);
+            h.btnAccept.setText("Follow Back");
+            h.btnAccept.setVisibility(View.VISIBLE);
+            h.btnDecline.setVisibility(View.GONE);
+
+            h.btnAccept.setOnClickListener(v -> actions.onFollowBack(n));
+
+        } else {
+            h.btnMarkRead.setVisibility(View.VISIBLE);
+            h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
         }
 
-        // Standard Read/Unread logic
         h.unreadDot.setVisibility(n.isRead() ? View.INVISIBLE : View.VISIBLE);
-        h.btnMarkRead.setVisibility(invite ? View.GONE : View.VISIBLE); // Hide mark read if it's an invite (use accept/decline)
-
-        h.btnMarkRead.setOnClickListener(v -> actions.onMarkRead(n));
 
         h.itemView.setOnClickListener(v -> actions.onOpen(n));
         h.itemView.setOnLongClickListener(v -> {
@@ -94,7 +133,6 @@ public class NotificationLogsAdapter
     }
 
     static class VH extends RecyclerView.ViewHolder {
-
         ImageView ivAvatar;
         TextView tvTitle, tvMessage, tvTime;
         View unreadDot, actionsRow;
@@ -102,22 +140,15 @@ public class NotificationLogsAdapter
 
         VH(@NonNull View v) {
             super(v);
-
             ivAvatar = v.findViewById(R.id.ivAvatar);
             tvTitle = v.findViewById(R.id.tvSender);
             tvMessage = v.findViewById(R.id.tvMessage);
             tvTime = v.findViewById(R.id.tvTime);
             unreadDot = v.findViewById(R.id.unreadDot);
             actionsRow = v.findViewById(R.id.actionsRow);
-
-            // FIX: Correct ID binding
             btnMarkRead = v.findViewById(R.id.btnMarkRead);
-            btnAccept = v.findViewById(R.id.btnAccept);   // Was btnMarkRead
-            btnDecline = v.findViewById(R.id.btnDecline); // Was btnOpen
-
-            // Fallback for btnOpen if layout uses generic names,
-            // but for invites we usually need specific IDs in item_notification_log.xml
-            // If your XML uses different IDs, update them here.
+            btnAccept = v.findViewById(R.id.btnAccept);
+            btnDecline = v.findViewById(R.id.btnDecline);
         }
     }
 }

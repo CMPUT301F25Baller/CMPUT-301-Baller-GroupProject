@@ -10,10 +10,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.ballerevents.databinding.ActivityNotificationLogsBinding;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,7 +48,6 @@ public class NotificationLogsActivity extends AppCompatActivity {
         if (auth.getCurrentUser() != null) {
             setupRealtimeListener();
         } else {
-            Toast.makeText(this, "Please log in.", Toast.LENGTH_SHORT).show();
             finish();
         }
 
@@ -55,22 +56,17 @@ public class NotificationLogsActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         binding.rvLogs.setLayoutManager(new LinearLayoutManager(this));
+
+        // --- PASS 'false' FOR STANDARD USER VIEW ---
         adapter = new NotificationLogsAdapter(new NotificationLogsAdapter.OnItemAction() {
-            @Override
-            public void onMarkRead(Notification notif) { markAsRead(notif); }
+            @Override public void onMarkRead(Notification notif) { markAsRead(notif); }
+            @Override public void onOpen(Notification notif) { markAsRead(notif); }
+            @Override public void onAcceptInvite(Notification notif) { respondToInvite(notif, "accepted"); }
+            @Override public void onDeclineInvite(Notification notif) { respondToInvite(notif, "declined"); }
+            @Override public void onDelete(Notification notif) { deleteNotification(notif); }
+            @Override public void onFollowBack(Notification notif) { performFollowBack(notif); }
+        }, false); // <--- 'false' means Interactive Mode
 
-            @Override
-            public void onOpen(Notification notif) { markAsRead(notif); }
-
-            @Override
-            public void onAcceptInvite(Notification notif) { respondToInvite(notif, "accepted"); }
-
-            @Override
-            public void onDeclineInvite(Notification notif) { respondToInvite(notif, "declined"); }
-
-            @Override
-            public void onDelete(Notification notif) { deleteNotification(notif); }
-        });
         binding.rvLogs.setAdapter(adapter);
     }
 
@@ -84,10 +80,7 @@ public class NotificationLogsActivity extends AppCompatActivity {
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((snapshots, e) -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    if (e != null) {
-                        Log.w("NotifActivity", "Listen failed", e);
-                        return;
-                    }
+                    if (e != null) return;
                     if (snapshots != null) {
                         allNotifications = snapshots.toObjects(Notification.class);
                         for (int i = 0; i < snapshots.size(); i++) {
@@ -99,10 +92,28 @@ public class NotificationLogsActivity extends AppCompatActivity {
                 });
     }
 
+    private void performFollowBack(Notification notif) {
+        String targetUserId = notif.getSenderId();
+        if (targetUserId == null) {
+            Toast.makeText(this, "Cannot follow unknown user", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String myId = auth.getCurrentUser().getUid();
+        WriteBatch batch = db.batch();
+        DocumentReference myRef = db.collection("users").document(myId);
+        batch.update(myRef, "followingIds", FieldValue.arrayUnion(targetUserId));
+        DocumentReference targetRef = db.collection("users").document(targetUserId);
+        batch.update(targetRef, "followerIds", FieldValue.arrayUnion(myId));
+
+        batch.commit().addOnSuccessListener(a -> {
+            Toast.makeText(this, "You followed them back!", Toast.LENGTH_SHORT).show();
+            markAsRead(notif);
+        });
+    }
+
     private void respondToInvite(Notification notif, String status) {
         if (notif.getEventId() == null) return;
         String userId = auth.getCurrentUser().getUid();
-
         Map<String, Object> updates = new HashMap<>();
         updates.put("invitationStatus." + userId, status);
 
@@ -110,17 +121,14 @@ public class NotificationLogsActivity extends AppCompatActivity {
             updates.put("selectedUserIds", FieldValue.arrayRemove(userId));
             updates.put("cancelledUserIds", FieldValue.arrayUnion(userId));
         } else if ("accepted".equals(status)) {
-            updates.put("selectedUserIds", FieldValue.arrayRemove(userId)); // Move out of selected
-            // You might have an 'acceptedUserIds' field or similar logic in your event model
-            // updates.put("acceptedUserIds", FieldValue.arrayUnion(userId));
+            updates.put("selectedUserIds", FieldValue.arrayRemove(userId));
         }
 
         db.collection("events").document(notif.getEventId()).update(updates)
-                .addOnSuccessListener(unused -> {
-                    Toast.makeText(this, "Response: " + status, Toast.LENGTH_SHORT).show();
+                .addOnSuccessListener(a -> {
+                    Toast.makeText(this, "Response sent: " + status, Toast.LENGTH_SHORT).show();
                     markAsRead(notif);
-                })
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to send response", Toast.LENGTH_SHORT).show());
+                });
     }
 
     private void deleteNotification(Notification notif) {

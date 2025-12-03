@@ -11,55 +11,26 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.ItemAdminProfileBinding;
 
+import java.util.Locale;
+
 /**
- * ListAdapter for displaying {@link UserProfile} items inside an admin-style
- * profile list layout (item_admin_profile.xml).
- *
- * <p>
- * Each item shows:
- * <ul>
- *     <li>Profile picture</li>
- *     <li>User name</li>
- * </ul>
- * and invokes a click callback when selected.
- * </p>
- *
- * <p>
- * Uses a stable ID derived from the profile document ID where possible to
- * help RecyclerView maintain item identity efficiently.
- * </p>
+ * A safe, read-only adapter for displaying lists of user profiles.
+ * Used for "Following" and "Followers" lists where no admin actions (delete) are allowed.
  */
 public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAdapter.VH> {
 
-    /**
-     * Listener invoked when a profile row is clicked.
-     */
     public interface OnProfileClick {
-        /**
-         * Called when a user profile is clicked.
-         *
-         * @param p the clicked profile
-         */
         void onClick(UserProfile p);
     }
 
-    /** Callback invoked when a profile item is selected. */
     private final OnProfileClick onClick;
 
-    /**
-     * Constructs the adapter.
-     *
-     * @param onClick click listener for profile rows
-     */
     public ProfilesListAdapter(OnProfileClick onClick) {
         super(DIFF);
         this.onClick = onClick;
         setHasStableIds(true);
     }
 
-    /**
-     * DiffUtil callback comparing user profiles by ID, name, and avatar URL.
-     */
     private static final DiffUtil.ItemCallback<UserProfile> DIFF =
             new DiffUtil.ItemCallback<UserProfile>() {
                 @Override
@@ -68,27 +39,13 @@ public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAd
                 }
 
                 @Override
-                public boolean areContentsTheSame(
-                        @NonNull UserProfile o,
-                        @NonNull UserProfile n
-                ) {
-                    return safe(o.getId()).equals(safe(n.getId()))
-                            && safe(o.getName()).equals(safe(n.getName()))
-                            && safe(o.getProfilePictureUrl()).equals(safe(n.getProfilePictureUrl()));
+                public boolean areContentsTheSame(@NonNull UserProfile o, @NonNull UserProfile n) {
+                    return safe(o.getId()).equals(safe(n.getId()));
                 }
 
-                /** Utility to avoid null-safety issues in comparisons. */
-                private String safe(String s) {
-                    return s == null ? "" : s;
-                }
+                private String safe(String s) { return s == null ? "" : s; }
             };
 
-    /**
-     * Provides a stable long ID for each profile based on its document ID.
-     *
-     * @param position adapter position
-     * @return a stable hash value
-     */
     @Override
     public long getItemId(int position) {
         String id = getItem(position).getId();
@@ -98,6 +55,7 @@ public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAd
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        // Reuse the existing item layout, but we will hide the menu button
         ItemAdminProfileBinding b = ItemAdminProfileBinding.inflate(
                 LayoutInflater.from(parent.getContext()), parent, false
         );
@@ -107,12 +65,9 @@ public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAd
     @Override
     public void onBindViewHolder(@NonNull VH h, int position) {
         UserProfile p = getItem(position);
-        h.bind(p, onClick);
+        if (p != null) h.bind(p, onClick);
     }
 
-    /**
-     * ViewHolder for profile rows inside the admin-style list.
-     */
     static class VH extends RecyclerView.ViewHolder {
         private final ItemAdminProfileBinding b;
 
@@ -121,14 +76,21 @@ public class ProfilesListAdapter extends ListAdapter<UserProfile, ProfilesListAd
             this.b = binding;
         }
 
-        /**
-         * Binds the given profile data into the UI.
-         *
-         * @param p       the profile to display
-         * @param onClick click listener for the row
-         */
         void bind(UserProfile p, OnProfileClick onClick) {
             b.tvName.setText(p.getName() == null ? "User" : p.getName());
+            b.tvEmail.setText(p.getEmail());
+
+            // Show Role
+            String role = p.getRole();
+            if (role != null && !role.isEmpty()) {
+                String displayRole = role.substring(0, 1).toUpperCase(Locale.ROOT) + role.substring(1);
+                b.tvRole.setText(displayRole);
+            } else {
+                b.tvRole.setText("Entrant");
+            }
+
+            // Hide the Admin Menu (Three Dots) - Critical Fix for Security
+            b.ivMenu.setVisibility(android.view.View.GONE);
 
             Glide.with(b.getRoot().getContext())
                     .load(p.getProfilePictureUrl())

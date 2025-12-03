@@ -1,5 +1,6 @@
 package com.example.ballerevents;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -23,15 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Fragment displaying two lists for the current organizer:
- * <ul>
- * <li><b>Following</b> – Users the organizer is following.</li>
- * <li><b>Followers</b> – Users who follow the organizer.</li>
- * </ul>
- *
- * <p><b>Update:</b> The numerical counts for these lists are now displayed in the
- * parent {@link OrganizerActivity} header to avoid duplication. This fragment
- * focuses solely on rendering the lists using {@link AdminProfilesAdapter}.</p>
+ * Fragment displaying Following/Followers lists.
+ * Uses ProfilesListAdapter (read-only) to prevent deletion.
  */
 public class OrganizerFollowingFragment extends Fragment {
 
@@ -42,17 +36,11 @@ public class OrganizerFollowingFragment extends Fragment {
     private FirebaseAuth mAuth;
     private String currentUserId;
 
-    private AdminProfilesAdapter followingAdapter;
-    private AdminProfilesAdapter followersAdapter;
+    // Changed Adapter Type to the Safe Read-Only Adapter
+    private ProfilesListAdapter followingAdapter;
+    private ProfilesListAdapter followersAdapter;
     private ListenerRegistration userListener;
 
-    /**
-     * Called to do initial creation of a fragment.
-     * Initializes Firebase instances and retrieves current user ID.
-     *
-     * @param savedInstanceState If the fragment is being re-created from
-     * a previous saved state, this is the state.
-     */
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,17 +51,6 @@ public class OrganizerFollowingFragment extends Fragment {
         }
     }
 
-    /**
-     * Creates and returns the view hierarchy associated with the fragment.
-     *
-     * @param inflater The LayoutInflater object that can be used to inflate
-     * any views in the fragment.
-     * @param container If non-null, this is the parent view that the fragment's
-     * UI should be attached to.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed
-     * from a previous saved state.
-     * @return Return the View for the fragment's UI.
-     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -81,14 +58,6 @@ public class OrganizerFollowingFragment extends Fragment {
         return binding.getRoot();
     }
 
-    /**
-     * Called immediately after {@link #onCreateView}.
-     * Sets up the RecyclerViews and handles the case where the user is not logged in.
-     *
-     * @param view The View returned by {@link #onCreateView}.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed
-     * from a previous saved state.
-     */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -96,17 +65,11 @@ public class OrganizerFollowingFragment extends Fragment {
 
         if (currentUserId == null) {
             Toast.makeText(getContext(), "Error: Not logged in.", Toast.LENGTH_SHORT).show();
-            binding.emptyFollowing.setText("Could not load. Please log in again.");
             binding.emptyFollowing.setVisibility(View.VISIBLE);
-            binding.emptyFollowers.setText("Could not load. Please log in again.");
             binding.emptyFollowers.setVisibility(View.VISIBLE);
         }
     }
 
-    /**
-     * Called when the Fragment is visible to the user.
-     * Starts listening for real-time updates to the organizer's profile.
-     */
     @Override
     public void onStart() {
         super.onStart();
@@ -115,10 +78,6 @@ public class OrganizerFollowingFragment extends Fragment {
         }
     }
 
-    /**
-     * Called when the Fragment is no longer started.
-     * Removes the Firestore listener to prevent memory leaks.
-     */
     @Override
     public void onStop() {
         super.onStop();
@@ -127,36 +86,27 @@ public class OrganizerFollowingFragment extends Fragment {
         }
     }
 
-    /**
-     * Configures the RecyclerViews for "Following" and "Followers" lists.
-     * Sets the LayoutManager and Adapter for each.
-     */
     private void setupRecyclerViews() {
-        // Adapter: Following
-        followingAdapter = new AdminProfilesAdapter(profile -> {
-            // TODO: Implement navigation to the clicked user's profile
+        // Safe Adapter: Clicking opens profile details
+        followingAdapter = new ProfilesListAdapter(profile -> {
+            Intent intent = new Intent(getContext(), ProfileDetailsActivity.class);
+            intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, profile.getId());
+            startActivity(intent);
         });
+
         binding.rvFollowing.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvFollowing.setAdapter(followingAdapter);
 
-        // Adapter: Followers
-        followersAdapter = new AdminProfilesAdapter(profile -> {
-            // TODO: Implement navigation to the clicked user's profile
+        followersAdapter = new ProfilesListAdapter(profile -> {
+            Intent intent = new Intent(getContext(), ProfileDetailsActivity.class);
+            intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, profile.getId());
+            startActivity(intent);
         });
+
         binding.rvFollowers.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvFollowers.setAdapter(followersAdapter);
     }
 
-    /**
-     * Attaches a real-time listener to the current user's document.
-     * <p>
-     * When the document updates (e.g., a new follower is added), this method:
-     * <ol>
-     * <li>Extracts the lists of following/follower IDs.</li>
-     * <li>Calls {@link #loadProfileLists} to fetch the full profile data.</li>
-     * </ol>
-     * Note: Stat counting logic has been removed from here as it resides in {@link OrganizerActivity}.
-     */
     private void loadOrganizerProfile() {
         DocumentReference userRef = db.collection("users").document(currentUserId);
 
@@ -170,7 +120,6 @@ public class OrganizerFollowingFragment extends Fragment {
                 UserProfile userProfile = snapshot.toObject(UserProfile.class);
 
                 if (userProfile != null) {
-                    // Load lists from Firestore based on the IDs found in the profile
                     loadProfileLists(
                             userProfile.getFollowingIds(),
                             followingAdapter,
@@ -185,21 +134,11 @@ public class OrganizerFollowingFragment extends Fragment {
                             "No followers yet."
                     );
                 }
-            } else {
-                Log.d(TAG, "No such document");
             }
         });
     }
 
-    /**
-     * Helper method to query Firestore for a list of UserProfiles.
-     *
-     * @param ids          The list of document IDs (UIDs) to fetch.
-     * @param adapter      The adapter to populate with results.
-     * @param emptyView    The TextView to show if the result is empty.
-     * @param emptyMessage The message to display in the emptyView.
-     */
-    private void loadProfileLists(List<String> ids, AdminProfilesAdapter adapter, View emptyView, String emptyMessage) {
+    private void loadProfileLists(List<String> ids, ProfilesListAdapter adapter, View emptyView, String emptyMessage) {
         if (ids == null || ids.isEmpty()) {
             adapter.submitList(new ArrayList<>());
             emptyView.setVisibility(View.VISIBLE);
@@ -209,27 +148,31 @@ public class OrganizerFollowingFragment extends Fragment {
             return;
         }
 
-        // Firestore 'whereIn' query to fetch full profile objects for the list of IDs
+        // Firestore 'whereIn' query limited to 10 for safety in this snippet,
+        // ideally paginate or chunk if lists are large.
+        List<String> chunk = ids.subList(0, Math.min(ids.size(), 10));
+
         db.collection("users")
-                .whereIn(FieldPath.documentId(), ids)
+                .whereIn(FieldPath.documentId(), chunk)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<UserProfile> profiles = queryDocumentSnapshots.toObjects(UserProfile.class);
+                    List<UserProfile> profiles = new ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                        UserProfile p = doc.toObject(UserProfile.class);
+                        if (p != null) {
+                            p.setUid(doc.getId());
+                            profiles.add(p);
+                        }
+                    }
                     adapter.submitList(profiles);
                     emptyView.setVisibility(profiles.isEmpty() ? View.VISIBLE : View.GONE);
                 })
                 .addOnFailureListener(e -> {
                     Log.w(TAG, "Error fetching profile list", e);
                     emptyView.setVisibility(View.VISIBLE);
-                    if (emptyView instanceof android.widget.TextView) {
-                        ((android.widget.TextView) emptyView).setText("Error loading list.");
-                    }
                 });
     }
 
-    /**
-     * Cleans up the binding when the view is destroyed to prevent memory leaks.
-     */
     @Override
     public void onDestroyView() {
         super.onDestroyView();

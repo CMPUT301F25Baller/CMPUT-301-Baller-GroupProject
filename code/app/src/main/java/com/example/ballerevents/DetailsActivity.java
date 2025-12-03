@@ -1,8 +1,8 @@
 package com.example.ballerevents;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Location; // Requires android.location
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -15,7 +15,6 @@ import androidx.core.app.ActivityCompat;
 
 import com.bumptech.glide.Glide;
 import com.example.ballerevents.databinding.EntrantEventDetailsBinding;
-// The lines below REQUIRE the play-services-location dependency
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.firebase.auth.FirebaseAuth;
@@ -25,7 +24,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.google.firebase.firestore.ListenerRegistration;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +43,6 @@ public class DetailsActivity extends AppCompatActivity {
     private Event mEvent;
     private UserProfile organizerProfile;
 
-    // Permission Launcher
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
@@ -64,8 +61,6 @@ public class DetailsActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
-
-        // This line will fail if dependency is missing
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         if (auth.getCurrentUser() != null) {
@@ -81,14 +76,9 @@ public class DetailsActivity extends AppCompatActivity {
         setupButtons();
     }
 
-    // ... (Keep existing methods: onStart, onStop, updateUI, updateStatusUI, setupButtons) ...
-    // Paste the rest of the methods from my previous response here to ensure completeness.
-    // I am abbreviating to save space, but the key fix is the IMPORTS above.
-
     @Override
     protected void onStart() {
         super.onStart();
-        // Listen to event changes in real-time
         eventListener = db.collection("events").document(eventId)
                 .addSnapshotListener((snapshot, e) -> {
                     if (e != null) {
@@ -117,7 +107,6 @@ public class DetailsActivity extends AppCompatActivity {
         binding.tvDate.setText(mEvent.getDate() + " at " + mEvent.getTime());
         binding.tvLocation.setText(mEvent.getLocationName());
 
-        // Update Waitlist Count (US 01.05.04)
         int waitingCount = (mEvent.getWaitlistUserIds() != null) ? mEvent.getWaitlistUserIds().size() : 0;
         binding.tvWaitlistCount.setText("👤 " + waitingCount + " Waiting");
 
@@ -126,17 +115,28 @@ public class DetailsActivity extends AppCompatActivity {
             userRef.get().addOnSuccessListener(documentSnapshot -> {
                 if (documentSnapshot.exists()) {
                     organizerProfile = documentSnapshot.toObject(UserProfile.class);
+                    if (organizerProfile != null) organizerProfile.setId(documentSnapshot.getId());
                 }
+
                 if (organizerProfile != null) {
                     binding.tvOrganizerName.setText(organizerProfile.getName());
                     Glide.with(this)
                             .load(organizerProfile.getProfilePictureUrl())
                             .placeholder(R.drawable.placeholder_avatar1)
                             .into(binding.ivOrganizerAvatar);
-                } else if (mEvent.getOrganizer() != null) {
-                    binding.tvOrganizerName.setText(mEvent.getOrganizer());
+
+                    // --- NEW: CLICK LISTENER TO VIEW PROFILE ---
+                    View.OnClickListener viewProfile = v -> {
+                        Intent intent = new Intent(DetailsActivity.this, ProfileDetailsActivity.class);
+                        intent.putExtra(ProfileDetailsActivity.EXTRA_PROFILE_ID, organizerProfile.getId());
+                        startActivity(intent);
+                    };
+                    binding.tvOrganizerName.setOnClickListener(viewProfile);
+                    binding.ivOrganizerAvatar.setOnClickListener(viewProfile);
+                    // -------------------------------------------
+
                 } else {
-                    binding.tvOrganizerName.setText("Unknown Organizer");
+                    binding.tvOrganizerName.setText(mEvent.getOrganizer() != null ? mEvent.getOrganizer() : "Unknown");
                 }
             });
         }
@@ -149,71 +149,55 @@ public class DetailsActivity extends AppCompatActivity {
         updateStatusUI();
     }
 
-    /**
-     * Determines which buttons/status text to show based on User's lottery status.
-     */
     private void updateStatusUI() {
         if (currentUserId == null) return;
 
         boolean isWaitlisted = mEvent.getWaitlistUserIds() != null && mEvent.getWaitlistUserIds().contains(currentUserId);
         boolean isSelected = mEvent.getSelectedUserIds() != null && mEvent.getSelectedUserIds().contains(currentUserId);
         boolean isCancelled = mEvent.getCancelledUserIds() != null && mEvent.getCancelledUserIds().contains(currentUserId);
-        boolean isFull = mEvent.getWaitlistUserIds() != null && (mEvent.getMaxAttendees() == mEvent.getWaitlistUserIds().size());
+        boolean isFull = mEvent.getWaitlistUserIds() != null && (mEvent.getMaxAttendees() > 0 && mEvent.getWaitlistUserIds().size() >= mEvent.getMaxAttendees());
 
         String status = "unknown";
         if (mEvent.getInvitationStatus() != null) {
             status = mEvent.getInvitationStatus().getOrDefault(currentUserId, "pending");
         }
 
-        // Reset visibility
         binding.btnJoinWaitlist.setVisibility(View.GONE);
         binding.layoutInviteActions.setVisibility(View.GONE);
         binding.tvStatusMessage.setVisibility(View.GONE);
 
         if (isSelected) {
             if ("accepted".equals(status)) {
-                // CONFIRMED
                 binding.tvStatusMessage.setText("You are going! ✅");
                 binding.tvStatusMessage.setVisibility(View.VISIBLE);
                 binding.tvStatusMessage.setTextColor(getColor(android.R.color.holo_green_dark));
             } else {
-                // PENDING INVITE (WON LOTTERY)
                 binding.tvStatusMessage.setText("🎉 You won the lottery! Accept to confirm.");
                 binding.tvStatusMessage.setVisibility(View.VISIBLE);
                 binding.layoutInviteActions.setVisibility(View.VISIBLE);
             }
         } else if (isWaitlisted) {
-            // STILL WAITING
             binding.tvStatusMessage.setText("You are on the waitlist. Check notifications for rules! 🤞");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
             binding.tvStatusMessage.setTextColor(getColor(android.R.color.darker_gray));
         } else if (isCancelled) {
-            // DECLINED
             binding.tvStatusMessage.setText("You declined this invitation.");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
             binding.tvStatusMessage.setTextColor(getColor(android.R.color.holo_red_dark));
         } else if (isFull) {
-            // FULL
             binding.tvStatusMessage.setText("The waitlist is currently full!");
             binding.tvStatusMessage.setVisibility(View.VISIBLE);
         } else {
-            // NEW USER
             binding.btnJoinWaitlist.setVisibility(View.VISIBLE);
             binding.btnJoinWaitlist.setText("Join Waitlist");
         }
     }
 
     private void setupButtons() {
-        // Back Button Logic
-        if (binding.btnBack != null) {
-            binding.btnBack.setOnClickListener(v -> finish());
-        }
+        if (binding.btnBack != null) binding.btnBack.setOnClickListener(v -> finish());
 
-        // Join Waitlist Logic
         binding.btnJoinWaitlist.setOnClickListener(v -> {
             if (mEvent == null) return;
-
-            // Check Geolocation Requirement
             if (mEvent.isGeolocationRequired()) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
@@ -225,10 +209,7 @@ public class DetailsActivity extends AppCompatActivity {
             }
         });
 
-        // Accept Logic
         binding.btnAccept.setOnClickListener(v -> respondToInvite("accepted"));
-
-        // Decline Logic
         binding.btnDecline.setOnClickListener(v -> respondToInvite("declined"));
     }
 
@@ -247,42 +228,34 @@ public class DetailsActivity extends AppCompatActivity {
 
     private void joinWaitlist(GeoPoint location) {
         if (mEvent == null) return;
-
-        // 1. Add ID to waitlist
         db.collection("events").document(eventId)
                 .update("waitlistUserIds", FieldValue.arrayUnion(currentUserId));
 
-        // 2. Add Location if available
         if (location != null) {
             db.collection("events").document(eventId)
                     .update("entrantLocations." + currentUserId, location);
         }
 
-        // 3. Add to User's applied list
         db.collection("users").document(currentUserId)
                 .update("appliedEventIds", FieldValue.arrayUnion(eventId))
-                .addOnSuccessListener(a -> {
-                    Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show();
-                    // Automatically send the guidelines notification (US 01.05.05)
-                    // sendLotteryGuidelinesNotification(); // Uncomment if you have this method
-                });
+                .addOnSuccessListener(a -> Toast.makeText(this, "Joined Waitlist!", Toast.LENGTH_SHORT).show());
     }
 
     private void respondToInvite(String response) {
         if (mEvent == null) return;
-
         Map<String, Object> updates = new HashMap<>();
         updates.put("invitationStatus." + currentUserId, response);
 
         if ("declined".equals(response)) {
-            // If declined, move from Selected -> Cancelled
-            // This frees up the slot for the Organizer to re-draw.
             updates.put("selectedUserIds", FieldValue.arrayRemove(currentUserId));
             updates.put("cancelledUserIds", FieldValue.arrayUnion(currentUserId));
         }
 
         db.collection("events").document(eventId).update(updates)
-                .addOnSuccessListener(a -> Toast.makeText(this, "Response sent: " + response, Toast.LENGTH_SHORT).show())
+                .addOnSuccessListener(a -> {
+                    Toast.makeText(this, "Response sent: " + response, Toast.LENGTH_SHORT).show();
+                    updateStatusUI();
+                })
                 .addOnFailureListener(e -> Toast.makeText(this, "Error sending response", Toast.LENGTH_SHORT).show());
     }
 }
