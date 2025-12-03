@@ -30,13 +30,11 @@ public class FirestoreEventRepository {
         void onError(Exception e);
     }
 
-    /** Simple callback for operations that don't return data. */
     public interface VoidCallback {
         void onSuccess();
         void onError(Exception e);
     }
 
-    /** Helper: convert QuerySnapshot -> List<Event> and set document id. */
     private static List<Event> mapToEvents(QuerySnapshot snap) {
         List<Event> out = new ArrayList<>();
         if (snap == null) return out;
@@ -50,18 +48,35 @@ public class FirestoreEventRepository {
         return out;
     }
 
-    /** "Trending" events (prototype). */
-    public void fetchTrending(ListCallback<Event> cb) {
+    /**
+     * NEW: Fetches top 3 events by Waitlist Size.
+     * Since Firestore cannot sort by array size, we fetch events and sort client-side.
+     */
+    public void fetchPopularEvents(ListCallback<Event> cb) {
         db.collection("events")
-                //.whereEqualTo("isTrending", true)
-                .orderBy("title", Query.Direction.ASCENDING)
-                .limit(20)
+                .limit(100) // Safety limit
                 .get()
-                .addOnSuccessListener(snap -> cb.onSuccess(mapToEvents(snap)))
+                .addOnSuccessListener(snap -> {
+                    List<Event> events = mapToEvents(snap);
+
+                    // Sort descending by waitlist size
+                    Collections.sort(events, (e1, e2) ->
+                            Integer.compare(e2.getWaitlistCount(), e1.getWaitlistCount())
+                    );
+
+                    // Take top 3
+                    List<Event> top3 = events.subList(0, Math.min(events.size(), 3));
+                    cb.onSuccess(top3);
+                })
                 .addOnFailureListener(cb::onError);
     }
 
-    /** "Near you" prototype – same as trending for now. */
+    /** "Trending" events (legacy prototype). */
+    public void fetchTrending(ListCallback<Event> cb) {
+        fetchPopularEvents(cb); // Redirect to new logic
+    }
+
+    /** "Near you" prototype. */
     public void fetchNearYou(ListCallback<Event> cb) {
         db.collection("events")
                 .orderBy("title", Query.Direction.ASCENDING)
@@ -84,7 +99,6 @@ public class FirestoreEventRepository {
                 });
     }
 
-    /** Events for one organizer. */
     public void fetchByOrganizer(String organizerId, ListCallback<Event> cb) {
         db.collection("events")
                 .whereEqualTo("organizerId", organizerId)
@@ -94,7 +108,6 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Single event by id. */
     public void fetchById(String id, ItemCallback<Event> cb) {
         db.collection("events").document(id)
                 .get()
@@ -106,87 +119,18 @@ public class FirestoreEventRepository {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Create a new event document. */
     public void create(Event e, ItemCallback<String> cb) {
         db.collection("events").add(e)
                 .addOnSuccessListener(ref -> cb.onSuccess(ref.getId()))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * US29: Send notifications to all "chosen" entrants of an event who have not yet been notified.
-     */
-    public void sendWinnerNotifications(String eventId, VoidCallback cb) {
-        CollectionReference entrantsRef = db.collection("events")
-                .document(eventId)
-                .collection("entrants");
-
-        entrantsRef
-                .whereEqualTo("status", "chosen")
-                .whereEqualTo("winnerNotified", false)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-
-                    if (querySnapshot.isEmpty()) {
-                        if (cb != null) cb.onSuccess();
-                        return;
-                    }
-
-                    WriteBatch batch = db.batch();
-
-                    for (DocumentSnapshot snap : querySnapshot.getDocuments()) {
-                        String userId = snap.getString("userId");
-                        if (userId == null) continue;
-
-                        // 1) Notification for this user
-                        DocumentReference notifRef = db.collection("users")
-                                .document(userId)
-                                .collection("notifications")
-                                .document();
-
-                        java.util.Map<String, Object> notif = new java.util.HashMap<>();
-                        notif.put("eventId", eventId);
-                        notif.put("title", "You won the lottery!");
-                        notif.put("message",
-                                "You have been selected for this event. Open the app to confirm your spot.");
-                        notif.put("timestamp", FieldValue.serverTimestamp());
-                        notif.put("read", false);
-
-                        batch.set(notifRef, notif);
-
-                        // 2) Mark entrant as invited + notified
-                        DocumentReference entrantRef = snap.getReference();
-                        batch.update(entrantRef,
-                                "winnerNotified", true,
-                                "status", "invited");
-                    }
-
-                    batch.commit()
-                            .addOnSuccessListener(unused -> {
-                                if (cb != null) cb.onSuccess();
-                            })
-                            .addOnFailureListener(e -> {
-                                if (cb != null) cb.onError(e);
-                            });
-                })
-                .addOnFailureListener(e -> {
-                    if (cb != null) cb.onError(e);
-                });
-    }
-
-    /**
-     * US30 + US29 together: Randomly sample waiting entrants AND automatically send
-     * winner notifications for the chosen entrants.
-     *
-     * Organizer calls this once per event with a sample size; system handles both
-     * selection and notification.
-     */
+    // US29 & US30 Logic (Notifications/Sampling)
     public void sampleAttendeesAndNotify(String eventId, int sampleSize, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)
                 .collection("entrants");
 
-        // 1) get all waiting entrants
         entrantsRef
                 .whereEqualTo("status", "waiting")
                 .get()
@@ -194,12 +138,10 @@ public class FirestoreEventRepository {
                     List<DocumentSnapshot> docs = querySnapshot.getDocuments();
 
                     if (docs.isEmpty()) {
-                        // Nothing to sample; just call back success
                         if (cb != null) cb.onSuccess();
                         return;
                     }
 
-                    // 2) shuffle & pick N
                     Collections.shuffle(docs);
                     int n = Math.min(sampleSize, docs.size());
                     List<DocumentSnapshot> chosen = docs.subList(0, n);
@@ -212,12 +154,8 @@ public class FirestoreEventRepository {
                                 "winnerNotified", false);
                     }
 
-                    // 3) commit the chosen ones, then automatically send notifications
                     batch.commit()
-                            .addOnSuccessListener(unused -> {
-                                // Immediately send notifications to chosen entrants
-                                sendWinnerNotifications(eventId, cb);
-                            })
+                            .addOnSuccessListener(unused -> sendWinnerNotifications(eventId, cb))
                             .addOnFailureListener(e -> {
                                 if (cb != null) cb.onError(e);
                             });
@@ -227,40 +165,26 @@ public class FirestoreEventRepository {
                 });
     }
 
-    /**
-     * US31 (optional extra): Cancel entrants who were invited but did not sign up / confirm.
-     */
-    /**
-     * US31: Cancel entrants who were invited but did not sign up / confirm,
-     * and send them a cancellation notification.
-     */
-    /**
-     * US31: Cancel entrants who were invited but did not sign up / confirm,
-     * and send them a cancellation notification.
-     */
-    public void cancelUnresponsiveEntrants(String eventId, VoidCallback cb) {
+    public void sendWinnerNotifications(String eventId, VoidCallback cb) {
         CollectionReference entrantsRef = db.collection("events")
                 .document(eventId)
                 .collection("entrants");
 
         entrantsRef
-                .whereEqualTo("status", "invited")
+                .whereEqualTo("status", "chosen")
+                .whereEqualTo("winnerNotified", false)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    List<DocumentSnapshot> docs = querySnapshot.getDocuments();
-
-                    if (docs.isEmpty()) {
+                    if (querySnapshot.isEmpty()) {
                         if (cb != null) cb.onSuccess();
                         return;
                     }
 
                     WriteBatch batch = db.batch();
-
-                    for (DocumentSnapshot snap : docs) {
+                    for (DocumentSnapshot snap : querySnapshot.getDocuments()) {
                         String userId = snap.getString("userId");
                         if (userId == null) continue;
 
-                        // (a) cancellation notification
                         DocumentReference notifRef = db.collection("users")
                                 .document(userId)
                                 .collection("notifications")
@@ -268,31 +192,22 @@ public class FirestoreEventRepository {
 
                         java.util.Map<String, Object> notif = new java.util.HashMap<>();
                         notif.put("eventId", eventId);
-                        notif.put("title", "Your invitation was cancelled");
-                        notif.put("message",
-                                "Your spot for this event has been cancelled by the organizer.");
-                        notif.put("type", "cancellation");
-                        notif.put("actionRequired", false);
+                        notif.put("title", "You won the lottery!");
+                        notif.put("message", "You have been selected for this event.");
                         notif.put("timestamp", FieldValue.serverTimestamp());
                         notif.put("read", false);
+                        notif.put("type", "invitation");
 
                         batch.set(notifRef, notif);
 
-                        // (b) update entrant status
                         DocumentReference entrantRef = snap.getReference();
-                        batch.update(entrantRef, "status", "cancelled");
+                        batch.update(entrantRef, "winnerNotified", true, "status", "invited");
                     }
 
                     batch.commit()
-                            .addOnSuccessListener(unused -> {
-                                if (cb != null) cb.onSuccess();
-                            })
-                            .addOnFailureListener(e -> {
-                                if (cb != null) cb.onError(e);
-                            });
+                            .addOnSuccessListener(unused -> { if (cb != null) cb.onSuccess(); })
+                            .addOnFailureListener(e -> { if (cb != null) cb.onError(e); });
                 })
-                .addOnFailureListener(e -> {
-                    if (cb != null) cb.onError(e);
-                });
+                .addOnFailureListener(e -> { if (cb != null) cb.onError(e); });
     }
 }

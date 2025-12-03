@@ -14,7 +14,6 @@ import java.util.Map;
 /**
  * Model class for Events.
  * Includes support for Geolocation, Registration Windows, and Banners.
- * COMPATIBILITY UPDATE: Includes both 'Selected' and 'Chosen' getters.
  */
 public class Event implements Parcelable {
 
@@ -55,6 +54,12 @@ public class Event implements Parcelable {
     private long registrationCloseAtMillis = 0;
 
     public Event() {}
+
+    // --- NEW HELPER FOR POPULARITY ---
+    public int getWaitlistCount() {
+        return waitlistUserIds != null ? waitlistUserIds.size() : 0;
+    }
+    // ---------------------------------
 
     // --- GETTERS & SETTERS ---
 
@@ -106,8 +111,6 @@ public class Event implements Parcelable {
     public List<String> getWaitlistUserIds() { return waitlistUserIds; }
     public void setWaitlistUserIds(List<String> waitlistUserIds) { this.waitlistUserIds = waitlistUserIds; }
 
-    // --- CRITICAL FIX: BOTH GETTERS ---
-    // Used by Legacy Activities
     public List<String> getChosenUserIds() {
         return chosenUserIds == null ? new ArrayList<>() : chosenUserIds;
     }
@@ -115,10 +118,8 @@ public class Event implements Parcelable {
         this.chosenUserIds = chosenUserIds;
     }
 
-    // Used by New Activities (Alias)
     public List<String> getSelectedUserIds() { return getChosenUserIds(); }
     public void setSelectedUserIds(List<String> chosenUserIds) { setChosenUserIds(chosenUserIds); }
-    // ----------------------------------
 
     public List<String> getCancelledUserIds() { return cancelledUserIds; }
     public void setCancelledUserIds(List<String> cancelledUserIds) { this.cancelledUserIds = cancelledUserIds; }

@@ -4,9 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +23,7 @@ import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +35,7 @@ public class EntrantMainActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private FirebaseAuth auth;
 
-    private TrendingEventAdapter trendingAdapter;
+    private TrendingEventAdapter trendingAdapter; // Used for "Popular"
     private NearEventAdapter nearAdapter;
     private TrendingEventAdapter searchAdapter;
 
@@ -44,7 +43,6 @@ public class EntrantMainActivity extends AppCompatActivity {
     private List<String> selectedTags = new ArrayList<>();
     private ListenerRegistration allEventsListener;
 
-    // Filter Date Range (Null if cleared)
     private Date startDateFilter = null;
     private Date endDateFilter = null;
 
@@ -114,19 +112,31 @@ public class EntrantMainActivity extends AppCompatActivity {
                     if (e != null || snap == null) return;
 
                     allEvents.clear();
-                    List<Event> trending = new ArrayList<>();
-                    List<Event> near = new ArrayList<>();
-
                     for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
                         Event event = doc.toObject(Event.class);
-                        if (event == null) continue;
-                        allEvents.add(event);
-                        if (event.isTrending()) trending.add(event);
-                        else near.add(event);
+                        if (event != null) {
+                            event.setId(doc.getId());
+                            allEvents.add(event);
+                        }
                     }
 
-                    trendingAdapter.submitList(new ArrayList<>(trending));
-                    nearAdapter.submitList(new ArrayList<>(near));
+                    // --- IMPLEMENT POPULAR LOGIC ---
+                    // 1. Create copy
+                    List<Event> popularList = new ArrayList<>(allEvents);
+
+                    // 2. Sort by waitlist size (descending)
+                    Collections.sort(popularList, (e1, e2) ->
+                            Integer.compare(e2.getWaitlistCount(), e1.getWaitlistCount())
+                    );
+
+                    // 3. Take Top 3
+                    List<Event> top3 = popularList.subList(0, Math.min(popularList.size(), 3));
+                    trendingAdapter.submitList(top3);
+                    // -------------------------------
+
+                    // "Near You" (For now, just showing all, or logic can be added later)
+                    nearAdapter.submitList(new ArrayList<>(allEvents));
+
                     performSearchAndFilter();
                 });
     }
@@ -146,7 +156,6 @@ public class EntrantMainActivity extends AppCompatActivity {
         setupChipListener(binding.chipStandUp);
         setupChipListener(binding.chipTheater);
 
-        // NEW: Date Filter Listener
         binding.btnFilterDate.setOnClickListener(v -> showDatePicker());
     }
 
@@ -177,6 +186,8 @@ public class EntrantMainActivity extends AppCompatActivity {
                 .addOnSuccessListener(doc -> {
                     if (doc.exists() && "organizer".equals(doc.getString("role"))) {
                         startActivity(new Intent(this, OrganizerActivity.class));
+                    } else if (doc.exists() && "admin".equals(doc.getString("role"))) {
+                        startActivity(new Intent(this, AdminMainActivity.class));
                     } else {
                         startActivity(new Intent(this, ProfileActivity.class));
                     }
@@ -194,14 +205,11 @@ public class EntrantMainActivity extends AppCompatActivity {
 
     private void performSearchAndFilter() {
         String query = binding.etSearch.getText().toString();
-
-        // If all filters match defaults/empty, show main layout
         boolean hasFilters = !query.isEmpty() || !selectedTags.isEmpty() || startDateFilter != null;
 
         if (!hasFilters) {
             binding.originalContentLayout.setVisibility(View.VISIBLE);
             binding.searchResultsLayout.setVisibility(View.GONE);
-            // Reset Date Button Text
             binding.btnFilterDate.setText("Date");
             return;
         }
